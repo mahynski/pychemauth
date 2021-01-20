@@ -39,9 +39,9 @@ class PLSDA:
 
     def __init__(
         self,
+        n_components,
         alpha=0.05,
         gamma=0.05,
-        n_components=2,
         not_assigned=-1,
         style="soft",
     ):
@@ -50,12 +50,12 @@ class PLSDA:
 
         Parameters
         ----------
+        n_components : int
+            Number of dimensions to project into with PLS stage.
         alpha : float
             Type I error rate (signficance level).
         gamma : float
             Significance level for determining outliers.
-        n_components : int
-            Number of dimensions to project into with PLS stage.
         not_assigned : int, str
             Category to give a point in soft version if not assigned to any
             known class.
@@ -274,7 +274,7 @@ class PLSDA:
 
     def transform(self, X):
         """
-        Predict the class(es) for a given set of features.
+        Project X into the feature subspace.
 
         Parameters
         ----------

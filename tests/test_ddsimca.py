@@ -1,22 +1,22 @@
 """
-Unittests for PLSDA.
+Unittests for DDSIMCA.
 
 author: nam
 """
 import unittest
 
-from classifier.plsda import PLSDA
+from classifier.simca import DDSIMCA
 
 
-class TestPLSDA(unittest.TestCase):
-    """Test PLSDA class."""
+class TestDDSIMCA(unittest.TestCase):
+    """Test DDSIMCA class."""
 
     def test_sklearn_compatibility(self):
         """Check compatible with sklearn's estimator API."""
         from sklearn.utils.estimator_checks import check_estimator
 
         try:
-            check_estimator(PLSDA(n_components=1))
+            check_estimator(DDSIMCA(n_components=1))
         except Exception as e:
             error = str(e)
         else:
