@@ -23,3 +23,13 @@ $ source ~/.bashrc
 ~~~ python
 import chemometrics
 ~~~
+
+## Example
+~~~ python
+>>> from chemometrics.plsda import PLSDA
+>>> X_train, X_test, y_train, y_test = load_data(...)
+>>> sp = PLSDA(n_components=30, style='soft')
+>>> _ = sp.fit(X_train.values, y_train.values)
+>>> pred = sp.predict(X_train.values)
+>>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
+~~~
