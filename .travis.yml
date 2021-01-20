@@ -9,6 +9,8 @@ before_install:
   - pip install -U pip
   - pip install -r requirements.txt
   - pip install codecov
+env:
+  - CODECOV_TOKEN="b83163ee-4cd1-4810-927a-17249b3a6f97"
 script: python -m unittest discover tests/
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - codecov
