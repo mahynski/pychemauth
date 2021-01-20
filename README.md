@@ -24,9 +24,14 @@ $ source ~/.bashrc
 import chemometrics
 ~~~
 
+## Unittests
+~~~ bash
+$ python -m unittest discover tests/
+~~~
+
 ## Example
 ~~~ python
->>> from chemometrics.plsda import PLSDA
+>>> from chemometrics.classifier.plsda import PLSDA
 >>> X_train, X_test, y_train, y_test = load_data(...)
 >>> sp = PLSDA(n_components=30, style='soft')
 >>> _ = sp.fit(X_train.values, y_train.values)

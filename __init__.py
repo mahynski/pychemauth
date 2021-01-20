@@ -3,5 +3,5 @@ Load all modules.
 
 @author: nam
 """
-__all__ = ["plsda"]
-from . import plsda
+__all__ = ["classifier"]
+from . import classifier
