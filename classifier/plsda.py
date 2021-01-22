@@ -39,7 +39,7 @@ class PLSDA:
 
     def __init__(
         self,
-        n_components,
+        n_components=1,
         alpha=0.05,
         gamma=0.05,
         not_assigned=-1,
