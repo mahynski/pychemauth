@@ -25,8 +25,10 @@ class PLSDA:
     -----
     * Note that alpha and gamma are only relevant for the soft version.
     * The soft version can become unstable if n_components is too small and
-    return negative distances to class centers; this results in an error -
-    try increasing n_components if this happens.
+    can return negative distances to class centers; this results in an error -
+    try increasing n_components if this happens. This is linked to instabilities
+    in computing matrix inverses, etc. and is generally remedied as described
+    above.
     * If y is going to be passed as strings, 'not_assigned' should also be
     set to a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
@@ -200,6 +202,7 @@ class PLSDA:
         # Thus we compute the scatter matrix directly and do not use the
         # covariance of (T-means).T
         self.__S_ = {}
+        """
         for i in range(len(self.__ohencoder_.categories_[0])):
             self.__S_[i] = np.zeros(
                 (self.__T_train_.shape[1], self.__T_train_.shape[1]),
@@ -213,6 +216,50 @@ class PLSDA:
                     .dot((t - self.__class_centers_[i]).reshape(-1, 1).T)
                 )
             self.__S_[i] /= np.sum(self.__class_mask_[i])
+        """
+        # We need to take the centers as the average of the available data
+        # not the projections to make S a positive semi-definite matrix
+        # so that the Mahalanobis distance can be correctly computed.
+        """self.__class_centers_soft_ = {}
+        for i in range(len(self.__ohencoder_.categories_[0])):
+            self.__class_centers_soft_[i] = np.mean(
+            self.__T_train_[self.__class_mask_[i]], axis=0)
+            self.__S_[i] = np.zeros(
+                (self.__T_train_.shape[1], self.__T_train_.shape[1]),
+                dtype=np.float64,
+            )
+            for t in self.__T_train_[self.__class_mask_[i]]:
+                # Same as an outer product
+                self.__S_[i] += (
+                    (t - self.__class_centers_soft_[i])
+                    .reshape(-1, 1)
+                    .dot((t - self.__class_centers_soft_[i]).reshape(-1, 1).T)
+                )
+            self.__S_[i] /= np.sum(self.__class_mask_[i])
+        """
+        for i in range(len(self.__ohencoder_.categories_[0])):
+            t = (
+                self.__T_train_[self.__class_mask_[i]]
+                - self.__class_centers_[i]
+            )
+            self.__S_[i] = np.zeros(
+                (self.__T_train_.shape[1], self.__T_train_.shape[1]),
+                dtype=np.float64,
+            )
+            for j in range(t.shape[0]):
+                self.__S_[i] += np.dot(
+                    t[j, :].reshape(t.shape[1], 1),
+                    t[j, :].reshape(t.shape[1], 1).T,
+                )
+            self.__S_[i] /= t.shape[0]
+            try:
+                np.linalg.cholesky(self.__S_[i])
+            except Exception as e:
+                raise Exception(
+                    "Unable to compute scatter matrix for class {} : {}".format(
+                        self.__ohencoder_.categories_[0][i], e
+                    )
+                )
 
         # 4. continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
@@ -252,6 +299,7 @@ class PLSDA:
         # We can only assess outliers on the training data
         # Others in test set will be "not assigned" and should be assumed
         # correct - just the training stage where we can look at bad data.
+
         outliers = [False] * self.__X_.shape[0]
         for j, t in enumerate(self.__T_train_):
             # Find which class entry j belongs to

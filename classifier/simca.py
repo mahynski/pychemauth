@@ -147,8 +147,8 @@ class SIMCA:
             JJ - KK
         )
 
-        X_pred = np.matmul(self.transform(self.__X_), self.__pca.components_)
-        OD2 = np.sum((self.__ss.transform(self.__X_) - X_pred) ** 2, axis=1)
+        X_pred = np.matmul(self.transform(self.__X_), self.__pca_.components_)
+        OD2 = np.sum((self.__ss_.transform(self.__X_) - X_pred) ** 2, axis=1)
         denom = np.sum(OD2) / ((JJ - KK) * (II - KK - 1))
 
         # F-score for each distance
