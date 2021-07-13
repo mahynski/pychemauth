@@ -180,8 +180,7 @@ class PLSDA:
         )
         if self.n_components > upper_bound:
             raise Exception(
-                "n_components for PLS Regression should be in [1,\
-                min(n_samples, n_features, n_targets)]."
+                "n_components must [1, min(n_samples, n_features, n_targets)]."
             )
         self.__plsda_ = PLSRegression(
             n_components=self.n_components,
