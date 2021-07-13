@@ -54,6 +54,8 @@ class PLSDA:
         ----------
         n_components : int
             Number of dimensions to project into with PLS stage.
+            Should be in [1, min(n_samples, n_features, n_targets)].
+            See scikit-learn documentation for more details.
         alpha : float
             Type I error rate (signficance level).
         gamma : float
@@ -62,7 +64,7 @@ class PLSDA:
             Category to give a point in soft version if not assigned to any
             known class.
         style : str
-            PLS style; can be "sfot" or "hard".
+            PLS style; can be "soft" or "hard".
         """
         self.set_params(
             **{
@@ -169,9 +171,21 @@ class PLSDA:
         self.__X_ = self.__x_pls_scaler_.fit_transform(self.__X_)
 
         # 2. PLS2
+        upper_bound = np.min(
+            [
+                self.__X_.shape[0],
+                self.__X_.shape[1],
+                len(self.__ohencoder_.categories_),
+            ]
+        )
+        if self.n_components > upper_bound:
+            raise Exception(
+                "n_components for PLS Regression should be in [1,\
+                min(n_samples, n_features, n_targets)]."
+            )
         self.__plsda_ = PLSRegression(
             n_components=self.n_components,
-            max_iter=5000,
+            max_iter=10000,
             tol=1.0e-9,
             scale=False,
         )  # Already scaled, centered as needed
@@ -202,41 +216,6 @@ class PLSDA:
         # Thus we compute the scatter matrix directly and do not use the
         # covariance of (T-means).T
         self.__S_ = {}
-        """
-        for i in range(len(self.__ohencoder_.categories_[0])):
-            self.__S_[i] = np.zeros(
-                (self.__T_train_.shape[1], self.__T_train_.shape[1]),
-                dtype=np.float64,
-            )
-            for t in self.__T_train_[self.__class_mask_[i]]:
-                # Same as an outer product
-                self.__S_[i] += (
-                    (t - self.__class_centers_[i])
-                    .reshape(-1, 1)
-                    .dot((t - self.__class_centers_[i]).reshape(-1, 1).T)
-                )
-            self.__S_[i] /= np.sum(self.__class_mask_[i])
-        """
-        # We need to take the centers as the average of the available data
-        # not the projections to make S a positive semi-definite matrix
-        # so that the Mahalanobis distance can be correctly computed.
-        """self.__class_centers_soft_ = {}
-        for i in range(len(self.__ohencoder_.categories_[0])):
-            self.__class_centers_soft_[i] = np.mean(
-            self.__T_train_[self.__class_mask_[i]], axis=0)
-            self.__S_[i] = np.zeros(
-                (self.__T_train_.shape[1], self.__T_train_.shape[1]),
-                dtype=np.float64,
-            )
-            for t in self.__T_train_[self.__class_mask_[i]]:
-                # Same as an outer product
-                self.__S_[i] += (
-                    (t - self.__class_centers_soft_[i])
-                    .reshape(-1, 1)
-                    .dot((t - self.__class_centers_soft_[i]).reshape(-1, 1).T)
-                )
-            self.__S_[i] /= np.sum(self.__class_mask_[i])
-        """
         for i in range(len(self.__ohencoder_.categories_[0])):
             t = (
                 self.__T_train_[self.__class_mask_[i]]
@@ -246,6 +225,9 @@ class PLSDA:
                 (self.__T_train_.shape[1], self.__T_train_.shape[1]),
                 dtype=np.float64,
             )
+            # Outer product
+            # https://medium.com/@raghavan99o/scatter-matrix-covariance-
+            # and-correlation-explained-14921741ca56
             for j in range(t.shape[0]):
                 self.__S_[i] += np.dot(
                     t[j, :].reshape(t.shape[1], 1),
@@ -253,6 +235,16 @@ class PLSDA:
                 )
             self.__S_[i] /= t.shape[0]
             try:
+                # This is just a dummy check to make sure S is positive
+                # semi-definite, since this is not always guaranteed
+                # numerically.  Proper covariance matrices are always
+                # pos. semi-def. and even this scatter matrix should
+                # have similar properties, but numerically we have
+                # observed a number of issues.  You can also test if
+                # S^-1 * S = I; if not, there are numerical problems.
+                # https://stats.stackexchange.com/questions/52976/is-a-
+                # sample-covariance-matrix-always-symmetric-and-positive-
+                # definite
                 np.linalg.cholesky(self.__S_[i])
             except Exception as e:
                 raise Exception(
