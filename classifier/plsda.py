@@ -171,16 +171,22 @@ class PLSDA:
         self.__X_ = self.__x_pls_scaler_.fit_transform(self.__X_)
 
         # 2. PLS2
-        upper_bound = np.min(
+        upper_bound = np.max(
             [
                 self.__X_.shape[0],
                 self.__X_.shape[1],
-                len(self.__ohencoder_.categories_),
+                len(self.__ohencoder_.categories_[0]),
             ]
         )
         if self.n_components > upper_bound:
             raise Exception(
-                "n_components must [1, min(n_samples, n_features, n_targets)]."
+                "n_components must [1, max(n_samples [{}], \
+n_features [{}], n_targets [{}])] = [1, {}].".format(
+                    self.__X_.shape[0],
+                    self.__X_.shape[1],
+                    len(self.__ohencoder_.categories_),
+                    upper_bound,
+                )
             )
         self.__plsda_ = PLSRegression(
             n_components=self.n_components,
@@ -214,43 +220,45 @@ class PLSDA:
         # example, NOT the mean of class 1.
         # Thus we compute the scatter matrix directly and do not use the
         # covariance of (T-means).T
-        self.__S_ = {}
-        for i in range(len(self.__ohencoder_.categories_[0])):
-            t = (
-                self.__T_train_[self.__class_mask_[i]]
-                - self.__class_centers_[i]
-            )
-            self.__S_[i] = np.zeros(
-                (self.__T_train_.shape[1], self.__T_train_.shape[1]),
-                dtype=np.float64,
-            )
-            # Outer product
-            # https://medium.com/@raghavan99o/scatter-matrix-covariance-
-            # and-correlation-explained-14921741ca56
-            for j in range(t.shape[0]):
-                self.__S_[i] += np.dot(
-                    t[j, :].reshape(t.shape[1], 1),
-                    t[j, :].reshape(t.shape[1], 1).T,
+        if self.style == "soft":
+            self.__S_ = {}
+            for i in range(len(self.__ohencoder_.categories_[0])):
+                t = (
+                    self.__T_train_[self.__class_mask_[i]]
+                    - self.__class_centers_[i]
                 )
-            self.__S_[i] /= t.shape[0]
-            try:
-                # This is just a dummy check to make sure S is positive
-                # semi-definite, since this is not always guaranteed
-                # numerically.  Proper covariance matrices are always
-                # pos. semi-def. and even this scatter matrix should
-                # have similar properties, but numerically we have
-                # observed a number of issues.  You can also test if
-                # S^-1 * S = I; if not, there are numerical problems.
-                # https://stats.stackexchange.com/questions/52976/is-a-
-                # sample-covariance-matrix-always-symmetric-and-positive-
-                # definite
-                np.linalg.cholesky(self.__S_[i])
-            except Exception as e:
-                raise Exception(
-                    "Unable to compute scatter matrix for class {} : {}".format(
-                        self.__ohencoder_.categories_[0][i], e
+                self.__S_[i] = np.zeros(
+                    (self.__T_train_.shape[1], self.__T_train_.shape[1]),
+                    dtype=np.float64,
+                )
+                # Outer product
+                # https://medium.com/@raghavan99o/scatter-matrix-covariance-
+                # and-correlation-explained-14921741ca56
+                for j in range(t.shape[0]):
+                    self.__S_[i] += np.dot(
+                        t[j, :].reshape(t.shape[1], 1),
+                        t[j, :].reshape(t.shape[1], 1).T,
                     )
-                )
+                self.__S_[i] /= t.shape[0]
+                try:
+                    # This is just a dummy check to make sure S is positive
+                    # semi-definite, since this is not always guaranteed
+                    # numerically.  Proper covariance matrices are always
+                    # pos. semi-def. and even this scatter matrix should
+                    # have similar properties, but numerically we have
+                    # observed a number of issues.  You can also test if
+                    # S^-1 * S = I; if not, there are numerical problems.
+                    # https://stats.stackexchange.com/questions/52976/is-a-
+                    # sample-covariance-matrix-always-symmetric-and-positive-
+                    # definite
+                    np.linalg.cholesky(self.__S_[i])
+                except Exception as e:
+                    raise Exception(
+                        "Unable to compute scatter matrix for class {} : \
+{}".format(
+                            self.__ohencoder_.categories_[0][i], e
+                        )
+                    )
 
         # 4. continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
