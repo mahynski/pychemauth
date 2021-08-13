@@ -171,7 +171,7 @@ class PLSDA:
         self.__X_ = self.__x_pls_scaler_.fit_transform(self.__X_)
 
         # 2. PLS2
-        upper_bound = np.max(
+        upper_bound = np.min(
             [
                 self.__X_.shape[0],
                 self.__X_.shape[1],
@@ -180,11 +180,11 @@ class PLSDA:
         )
         if self.n_components > upper_bound:
             raise Exception(
-                "n_components must [1, max(n_samples [{}], \
+                "n_components must [1, min(n_samples [{}], \
 n_features [{}], n_targets [{}])] = [1, {}].".format(
                     self.__X_.shape[0],
                     self.__X_.shape[1],
-                    len(self.__ohencoder_.categories_),
+                    len(self.__ohencoder_.categories_[0]),
                     upper_bound,
                 )
             )

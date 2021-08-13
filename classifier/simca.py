@@ -3,10 +3,145 @@ Soft independent modeling of class analogies.
 
 author: nam
 """
+import copy
+
 import numpy as np
 import scipy
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+
+
+class SIMCA_Classifier:
+    """SIMCA for an ensemble of classes."""
+
+    def __init__(
+        self, n_components=1, alpha=0.05, target_class=None, style="simca"
+    ):
+        """
+        Instantiate the classifier.
+
+        Parameters
+        ----------
+        n_components : int
+            Number of components to use in the SIMCA model.
+        alpha : float
+            Significance level for SIMCA model.
+        target_class : str or int
+            The class used fit fitting ht SIMCA model; the rest are used
+            to test specificity.
+        style : str
+            Type of SIMCA to use ("simca" or "dd-simca")
+        """
+        self.set_params(
+            **{
+                "n_components": n_components,
+                "alpha": alpha,
+                "target_class": target_class,
+                "style": style,
+            }
+        )
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with sklearn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with sklearn's estimator API."""
+        return {
+            "n_components": self.n_components,
+            "alpha": self.alpha,
+            "target_class": self.target_class,
+            "style": self.style,
+        }
+
+    def fit(self, X, y):
+        """
+        Fit the SIMCA model.
+
+        Only data of the target class will be used for fitting, though more
+        can be provided. This is important in the case that, for example,
+        SMOTE is used to up-sampled minority classes; in that case, those
+        must be part of the pipeline for those steps to work automatically.
+        However, a user may manually provide only the data of interest.
+
+        Parameters
+        ----------
+        X : ndarray
+            Inputs
+        y : ndarray
+            Class labels or indices. Should include some data of
+            'target_class'.
+        """
+        # Fit model to target data
+        if self.style == "simca":
+            self.__model_ = SIMCA(
+                n_components=self.n_components, alpha=self.alpha
+            )
+        elif self.style == "dd-simca":
+            self.__model_ = DDSIMCA(
+                n_components=self.n_components, alpha=self.alpha
+            )
+        else:
+            raise ValueError("{} is not a recognized style.".format(self.style))
+
+        assert self.target_class in np.unique(
+            y
+        ), "target_class not in training set"
+        self.__model_.fit(X[y == self.target_class])
+
+    @property
+    def CSPS(self):
+        """Class specificities."""
+        return copy.deepcopy(self.__CSPS_)
+
+    @property
+    def TSNS(self):
+        """Total sensitivity of the model."""
+        return copy.deepcopy(self.__TSNS_)
+
+    @property
+    def TSPS(self):
+        """Total specificity of the model."""
+        return copy.deepcopy(self.__TSPS_)
+
+    def score(self, X, y):
+        """
+        Score the model (uses total efficiency as score).
+
+        Parameters
+        ----------
+        X : ndarray
+            Inputs
+        y : ndarray
+            Class labels or indices
+        """
+        self.__alternatives_ = [
+            c for c in sorted(np.unique(y)) if c != self.target_class
+        ]
+
+        mask = y == self.target_class
+        self.__TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
+            mask
+        )  # TSNS = CSNS for SIMCA
+
+        self.__CSPS_ = {}
+        for class_ in self.__alternatives_:
+            mask = y == class_
+            self.__CSPS_[class_] = 1.0 - np.sum(
+                self.__model_.predict(X[mask])
+            ) / np.sum(mask)
+
+        mask = y != self.target_class
+        self.__TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(
+            mask
+        )
+
+        TEFF = np.sqrt(self.__TSNS_ * self.__TSPS_)
+
+        return TEFF
 
 
 class SIMCA:
@@ -79,7 +214,7 @@ class SIMCA:
         ----------
         X : matrix-like
             Columns of features; observations are rows which correspond to the
-            clas being modeled - this will be converted to a numpy array
+            class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
