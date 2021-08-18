@@ -12,7 +12,18 @@ from sklearn.preprocessing import StandardScaler
 
 
 class SIMCA_Classifier:
-    """SIMCA for an ensemble of classes."""
+    """
+    SIMCA against an ensemble of classes.
+
+    Essentially, a SIMCA model is trained for each classe provided in the
+    .fit() step (training set).  During testing (.score()) each point is
+    run through each model to see if it is predicted to belong to the
+    target class or not.  The target is set when the class is instantiated
+    and must be one of the classes found in the training set (this is
+    checked automatically).  This allows you to pass points that belong to
+    other classes, they are just ignored.  This is important so this can
+    integrate with other scikit-learn, etc. workflows.
+    """
 
     def __init__(
         self, n_components=1, alpha=0.05, target_class=None, style="simca"
@@ -27,7 +38,7 @@ class SIMCA_Classifier:
         alpha : float
             Significance level for SIMCA model.
         target_class : str or int
-            The class used fit fitting ht SIMCA model; the rest are used
+            The class used to fit the SIMCA model; the rest are used
             to test specificity.
         style : str
             Type of SIMCA to use ("simca" or "dd-simca")
