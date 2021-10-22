@@ -170,21 +170,26 @@ class PLSDA:
         )
         self.__X_ = self.__x_pls_scaler_.fit_transform(self.__X_)
 
-        # 2. PLS2
+        # 2. PLS2 - bounds based on Rodionova & Pomerantsev but other
+        # suggestions exist. sklearn suggests an upper bound of
+        # "number of classes" but other chemometrics toolkits do not
+        # follow this.
         upper_bound = np.min(
             [
-                self.__X_.shape[0],
+                self.__X_.shape[0] - 1,
                 self.__X_.shape[1],
-                len(self.__ohencoder_.categories_[0]),
             ]
         )
-        if self.n_components > upper_bound:
+        # lb = len(self.__ohencoder_.categories_[0])-1 sometimes rule of thumb
+        lower_bound = 1
+        if self.n_components > upper_bound or self.n_components < lower_bound:
             raise Exception(
-                "n_components must [1, min(n_samples [{}], \
-n_features [{}], n_targets [{}])] = [1, {}].".format(
-                    self.__X_.shape[0],
+                "n_components must [{}, min(n_samples-1 [{}], \
+n_features [{}])] = [{}, {}].".format(
+                    lower_bound,
+                    self.__X_.shape[0] - 1,
                     self.__X_.shape[1],
-                    len(self.__ohencoder_.categories_[0]),
+                    lower_bound,
                     upper_bound,
                 )
             )

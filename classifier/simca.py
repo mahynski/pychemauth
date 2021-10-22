@@ -236,6 +236,9 @@ class SIMCA:
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
 
+        if self.n_components > self.n_features_in_:
+            raise Exception("Reduce the number of PCA components")
+
         # 1. Standardize X
         self.__ss_ = StandardScaler(with_mean=True, with_std=True)
 
@@ -431,6 +434,9 @@ class DDSIMCA:
         self.__X_ = np.array(X).copy()
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
+
+        if self.n_components > self.n_features_in_:
+            raise Exception("Reduce the number of PCA components")
 
         # 1. Standardize X
         self.__ss_ = StandardScaler(with_mean=True, with_std=True)
