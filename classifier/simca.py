@@ -262,7 +262,7 @@ class SIMCA:
         ----------
         X : matrix-like
             Columns of features; observations are rows which correspond to the
-            clas being modeled - this will be converted to a numpy array
+            class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
