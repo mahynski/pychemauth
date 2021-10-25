@@ -54,8 +54,11 @@ class PLSDA:
         ----------
         n_components : int
             Number of dimensions to project into with PLS stage.
-            Should be in [1, min(n_samples, n_features, n_targets)].
-            See scikit-learn documentation for more details.
+            Should be in [1, min(n_samples-1, n_features)].
+            See scikit-learn documentation for more details. Sometimes
+            K-1 is used as a lower bound instead of 1, where K is
+            the number of classes.  This can assist in stability
+            issues with the soft version.
         alpha : float
             Type I error rate (signficance level).
         gamma : float
