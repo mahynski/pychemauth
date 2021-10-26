@@ -5,6 +5,7 @@ author: nam
 """
 import copy
 
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 from sklearn.decomposition import PCA
@@ -173,6 +174,8 @@ class SIMCA:
     79 (2005) 10-21.
     2. "Pattern recognition by means of disjoint principal components models,"
     S. Wold, Pattern Recognition 8 (1976) 127–139.
+    3. De Maesschalk et al., Chemometrics and Intelligent Laboratory Systems
+    47 (1999) 65-77.
     """
 
     def __init__(self, n_components, alpha=0.05):
@@ -248,8 +251,12 @@ class SIMCA:
 
         # 3. Compute critical F value
         II, JJ, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
+        if II > JJ:  # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
+            self.__a_ = JJ
+        else:
+            self.__a_ = II - 1
         self.__f_crit_ = scipy.stats.f.ppf(
-            1.0 - self.alpha, JJ - KK, (JJ - KK) * (II - KK - 1)
+            1.0 - self.alpha, self.__a_ - KK, (self.__a_ - KK) * (II - KK - 1)
         )
 
         return self
@@ -287,18 +294,20 @@ class SIMCA:
         predictions : ndarray
             F value for each observation.
         """
-        II, JJ, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
+        II, _, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
         X = self.matrix_X_(X)
 
         X_pred = np.matmul(self.transform(X), self.__pca_.components_)
+        # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
         numer = np.sum((self.__ss_.transform(X) - X_pred) ** 2, axis=1) / (
-            JJ - KK
+            self.__a_ - KK
         )
 
         X_pred = np.matmul(self.transform(self.__X_), self.__pca_.components_)
+        # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
         OD2 = np.sum((self.__ss_.transform(self.__X_) - X_pred) ** 2, axis=1)
-        denom = np.sum(OD2) / ((JJ - KK) * (II - KK - 1))
+        denom = np.sum(OD2) / ((self.__a_ - KK) * (II - KK - 1))
 
         # F-score for each distance
         F = numer / denom
@@ -546,7 +555,7 @@ class DDSIMCA:
 
     def distance(self, X):
         """
-        Compute the distance of points to this class.
+        Compute how far away points are from this class.
 
         Parameters
         ----------
@@ -581,6 +590,61 @@ class DDSIMCA:
         """
         # If c < c_crit, it belongs to the class
         return self.distance(self.matrix_X_(X)) < self.__c_crit_
+
+    def visualize(self, X, y, ax=None):
+        """
+        Plot the chi-squared acceptance area with various observations.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : matrix-like
+            Labels for observations in X.
+        ax : matplotlib.pyplot.axes
+            Axis object to plot on (optional).
+        """
+        h_lim = np.linspace(0, self.__c_crit_ * self.__h0_ / self.__Nh_, 1000)
+        q_lim = (
+            (self.__c_crit_ - self.__Nh_ / self.__h0_ * h_lim)
+            * self.__q0_
+            / self.__Nq_
+        )
+
+        if ax is None:
+            fig = plt.figure()
+            axis = fig.gca()
+        else:
+            axis = ax
+
+        axis.plot(
+            np.log(1.0 + h_lim / self.__h0_),
+            np.log(1.0 + q_lim / self.__q0_),
+            "r-",
+        )
+        xlim, ylim = 0, 0
+        X_ = self.matrix_X_(X)
+        y_ = np.array(y)
+        for i, class_ in enumerate(sorted(np.unique(y_))):
+            h_, q_ = self.h_q_(X_[y_ == class_])
+            axis.plot(
+                np.log(1.0 + h_ / self.__h0_),
+                np.log(1.0 + q_ / self.__q0_),
+                color="C{}".format(i),
+                label=class_,
+                lw=0,
+                marker="o",
+            )
+            xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
+            ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
+        axis.legend(loc="best")
+        axis.set_xlim(0, xlim)
+        axis.set_ylim(0, ylim)
+        axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$")
+        axis.set_ylabel(r"${\rm ln(1 + q/q_0)}$")
+
+        return axis
 
     def _get_tags(self):
         """For compatibility with sklearn >=0.21."""
