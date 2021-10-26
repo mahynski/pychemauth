@@ -274,7 +274,7 @@ class SIMCA:
 
     def distance(self, X):
         """
-        Compute observations.
+        Compute the F score (distance) for a given set of observations.
 
         Parameters
         ----------
