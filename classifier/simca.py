@@ -272,9 +272,9 @@ class SIMCA:
         """
         return self.__pca_.transform(self.__ss_.transform(self.matrix_X_(X)))
 
-    def predict(self, X):
+    def distance(self, X):
         """
-        Predict the class(es) for a given set of features.
+        Compute observations.
 
         Parameters
         ----------
@@ -285,7 +285,7 @@ class SIMCA:
         Returns
         -------
         predictions : ndarray
-            Bolean array of whether a point belongs to this class.
+            F value for each observation.
         """
         II, JJ, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
@@ -302,6 +302,25 @@ class SIMCA:
 
         # F-score for each distance
         F = numer / denom
+
+        return F
+
+    def predict(self, X):
+        """
+        Predict the class(es) for a given set of features.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        Returns
+        -------
+        predictions : ndarray
+            Bolean array of whether a point belongs to this class.
+        """
+        F = self.distance(X)
 
         # If f < f_crit, it belongs to the class
         return F < self.__f_crit_
