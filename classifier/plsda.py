@@ -185,6 +185,13 @@ class PLSDA:
         )
         # lb = len(self.__ohencoder_.categories_[0])-1 sometimes rule of thumb
         lower_bound = 1
+
+        # Note that sklearn currently has a typo in its documentation. Only
+        # PLSCanonical has an upper bound of min(n_samples, n_features,
+        # n_targets) whereas PLSRegression only is bounded by min(n_samples,
+        # n_features). We have further lowered the n_samples by 1 for
+        # statistical corrections. See  https://scikit-learn.org/stable/\
+        # modules/cross_decomposition.html#cross-decomposition
         if self.n_components > upper_bound or self.n_components < lower_bound:
             raise Exception(
                 "n_components must [{}, min(n_samples-1 [{}], \
