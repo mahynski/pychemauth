@@ -190,7 +190,8 @@ class PLSDA:
         # PLSCanonical has an upper bound of min(n_samples, n_features,
         # n_targets) whereas PLSRegression only is bounded by min(n_samples,
         # n_features). We have further lowered the n_samples by 1 for
-        # statistical corrections. See  https://scikit-learn.org/stable/\
+        # statistical corrections because X is centered, removing 1 DoF.
+        # For more discussion see https://scikit-learn.org/stable/\
         # modules/cross_decomposition.html#cross-decomposition
         if self.n_components > upper_bound or self.n_components < lower_bound:
             raise Exception(
@@ -208,7 +209,7 @@ n_features [{}])] = [{}, {}].".format(
             max_iter=10000,
             tol=1.0e-9,
             scale=False,
-        )  # Already scaled, centered as needed
+        )  # Already scaled as needed, centering is automatic
         _ = self.__plsda_.fit(self.__X_, self.__y_)
         y_hat_train = self.__plsda_.predict(self.__X_)
 
