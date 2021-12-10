@@ -40,3 +40,13 @@ $ python -m unittest discover tests/
 >>> pred = sp.predict(X_train.values)
 >>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
 ~~~
+
+## Available Classifiers
+* PLS-DA (soft and hard variants)
+* SIMCA
+* DD-SIMCA
+
+## Available Regressors (To Do)
+* PCA
+* PCR
+* PLS(2) Regression

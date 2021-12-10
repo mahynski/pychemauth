@@ -152,7 +152,7 @@ class PLSDA:
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = StandardScaler(
             with_mean=True, with_std=True
-        )  # Center and scale X
+        )  # Center and scale X - normal PLS does not scale X
         self.__y_pls_scaler_ = StandardScaler(
             with_mean=True, with_std=False
         )  # Center do not scale Y
