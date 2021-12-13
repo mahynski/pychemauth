@@ -76,7 +76,9 @@ class PLSDA:
             PLS style; can be "soft" or "hard".
         scale_x : bool
             Whether or not to scale the X matrix during the PLS(2) stage.
-            X and Y are always centered, Y is never scaled.
+            This depends on the meaning of X and is up to the user to
+            determine if scaling it (by the standard deviation) makes sense.
+            Note that X and Y are always centered, Y is never scaled.
         """
         self.set_params(
             **{
@@ -163,8 +165,7 @@ class PLSDA:
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = StandardScaler(
             with_mean=True, with_std=self.scale_x
-        )  # Center and maybe scale X - conventionally PLS1 does not
-        # scale X, but PLS2 might.
+        )  # Center and maybe scale X
         self.__y_pls_scaler_ = StandardScaler(
             with_mean=True, with_std=False
         )  # Center do not scale Y
@@ -297,6 +298,8 @@ n_features [{}])] = [{}, {}].".format(
             * self.__pca_.explained_variance_,
         )
         self.__L_ = L
+        if self.__L_.ndim == 0:  # When we have a binary problem
+            self.__L_ = np.array([[self.__L_]])
 
         # 5. Compute Mahalanobis critical distance
         self.__d_crit_ = scipy.stats.chi2.ppf(
