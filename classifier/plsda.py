@@ -21,6 +21,11 @@ class PLSDA:
     or >1 classes, while the hard PLS-DA always assigns exactly one class
     to a point.
 
+    This relies on `sklearn.cross_decomposition.PLSRegression` which can
+    perform either PLS1 or PLS2; however, here we default to PLS2 and
+    always one-hot-encode multiple classes, even in the instance of binary
+    classification where PLS1 could be used instead.
+
     Notes
     -----
     * Note that alpha and gamma are only relevant for the soft version.
@@ -43,9 +48,10 @@ class PLSDA:
         self,
         n_components=1,
         alpha=0.05,
-        gamma=0.05,
+        gamma=0.01,
         not_assigned=-1,
         style="soft",
+        scale_x=True,
     ):
         """
         Instantiate the class.
@@ -68,6 +74,9 @@ class PLSDA:
             known class.
         style : str
             PLS style; can be "soft" or "hard".
+        scale_x : bool
+            Whether or not to scale the X matrix during the PLS(2) stage.
+            X and Y are always centered, Y is never scaled.
         """
         self.set_params(
             **{
@@ -76,6 +85,7 @@ class PLSDA:
                 "n_components": n_components,
                 "not_assigned": not_assigned,
                 "style": style,
+                "scale_x": scale_x,
             }
         )
 
@@ -93,6 +103,7 @@ class PLSDA:
             "n_components": self.n_components,
             "not_assigned": self.not_assigned,
             "style": self.style,
+            "scale_x": self.scale_x,
         }
 
     def check_category_type_(self, y):
@@ -151,8 +162,9 @@ class PLSDA:
             sparse=False
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = StandardScaler(
-            with_mean=True, with_std=True
-        )  # Center and scale X - normal PLS does not scale X
+            with_mean=True, with_std=self.scale_x
+        )  # Center and maybe scale X - conventionally PLS1 does not
+        # scale X, but PLS2 might.
         self.__y_pls_scaler_ = StandardScaler(
             with_mean=True, with_std=False
         )  # Center do not scale Y
@@ -222,7 +234,6 @@ n_features [{}])] = [{}, {}].".format(
         self.__T_train_ = self.__pca_.fit_transform(
             self.__y_pca_scaler_.fit_transform(y_hat_train)
         )
-
         self.__class_centers_ = self.__pca_.transform(
             self.__y_pca_scaler_.transform(
                 np.eye(len(self.__ohencoder_.categories_[0]))
