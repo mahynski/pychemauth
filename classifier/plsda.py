@@ -8,7 +8,63 @@ import pandas as pd
 import scipy
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+
+
+class CustomScaler:
+    """
+    Perform standard scaling on data.
+
+    Custom standard scaler which reduces the degrees of freedom
+    by one in the standard deviation, unlike sklearn's default.
+    """
+
+    def __init__(self, with_mean=True, with_std=True):
+        """
+        Instantiate the class.
+
+        Parameters
+        ----------
+        with_mean : bool
+            Center the data using the mean.
+        with_std : bool
+            Scale the data using the (corrected) sample standard deviation
+            which uses N-1 degrees of freedom instead of N.
+        """
+        self.set_params(**{"with_mean": with_mean, "with_std": with_std})
+        self.isfit = False
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with sklearn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+
+        return self
+
+    def fit(self, X):
+        """Fit the scaler using some training data."""
+        X = np.array(X)
+        self.__mean_ = np.mean(X, axis=0)
+        self.__std_ = np.std(X, axis=0, ddof=1)
+        self.isfit = True
+
+    def transform(self, X):
+        """Transform (center and possibly scale) the data after fitting."""
+        if not self.isfit:
+            raise Exception("CustomScaler has not been fit yet.")
+        result = np.array(X)
+        if self.with_mean:
+            result -= self.__mean_
+        if self.with_std:
+            result /= self.__std_
+
+        return result
+
+    def fit_transform(self, X):
+        """Fit and then transform some data."""
+        self.fit(X)
+
+        return self.transform(X)
 
 
 class PLSDA:
@@ -163,10 +219,10 @@ class PLSDA:
         self.__ohencoder_ = OneHotEncoder(
             sparse=False
         )  # Convert integers to OHE
-        self.__x_pls_scaler_ = StandardScaler(
+        self.__x_pls_scaler_ = CustomScaler(
             with_mean=True, with_std=self.scale_x
         )  # Center and maybe scale X
-        self.__y_pls_scaler_ = StandardScaler(
+        self.__y_pls_scaler_ = CustomScaler(
             with_mean=True, with_std=False
         )  # Center do not scale Y
 
@@ -217,28 +273,32 @@ n_features [{}])] = [{}, {}].".format(
                     upper_bound,
                 )
             )
-        self.__plsda_ = PLSRegression(
+        self.__pls_ = PLSRegression(
             n_components=self.n_components,
             max_iter=10000,
             tol=1.0e-9,
             scale=False,
         )  # Already scaled as needed, centering is automatic
-        _ = self.__plsda_.fit(self.__X_, self.__y_)
-        y_hat_train = self.__plsda_.predict(self.__X_)
+        _ = self.__pls_.fit(self.__X_, self.__y_)
+        y_hat_train = self.__pls_.predict(self.__X_)
 
-        # 3. Perform PCA on y_hat_train
-        self.__y_pca_scaler_ = StandardScaler(with_mean=True, with_std=False)
+        # 3. Perform PCA on y_hat_train using Y data
         self.__pca_ = PCA(
             n_components=len(self.__ohencoder_.categories_[0]) - 1,
             random_state=0,
         )
+
+        # According to [1], center on the basis of Y not Y_hat
+        # sklearn's pca internally re-centers - must do this manually
         self.__T_train_ = self.__pca_.fit_transform(
-            self.__y_pca_scaler_.fit_transform(y_hat_train)
+            self.__y_pls_scaler_.transform(y_hat_train)
         )
-        self.__class_centers_ = self.__pca_.transform(
-            self.__y_pca_scaler_.transform(
+
+        self.__class_centers_ = np.matmul(
+            self.__y_pls_scaler_.transform(
                 np.eye(len(self.__ohencoder_.categories_[0]))
-            )
+            ),
+            self.__pca_.components_.T,
         )
 
         # 4. Compute within-class scatter from training set for soft version
@@ -368,10 +428,10 @@ n_features [{}])] = [{}, {}].".format(
         assert X.shape[1] == self.n_features_in_
         X = self.__x_pls_scaler_.transform(X)
 
-        y_hat_test = self.__plsda_.predict(X)
+        y_hat_test = self.__pls_.predict(X)
 
         T_test = self.__pca_.transform(
-            self.__y_pca_scaler_.transform(y_hat_test)
+            self.__y_pls_scaler_.transform(y_hat_test)
         )
 
         return T_test
@@ -390,7 +450,7 @@ n_features [{}])] = [{}, {}].".format(
         -------
         predictions : list(list)
             Predicted classes for each observation.  There may be multiple
-            predictions for each entry, and are listed fro left to right in
+            predictions for each entry, and are listed from left to right in
             order of decreasing likelihood.
         """
         T_test = self.transform(X)
@@ -443,11 +503,16 @@ n_features [{}])] = [{}, {}].".format(
 
             predictions.append(belongs_to)
 
+        self.__distances_ = distances  # Store internally
         return predictions
 
     def figures_of_merit(self, predictions, actual):
         """
         Compute figures of merit for PLS-DA approaches as in [1].
+
+        When making predictions about extraneous classes (not in training set)
+        class efficiency (CEFF) is given as simply class specificity (CSPS)
+        since class sensitivity (CSNS) cannot be calculated.
 
         Parameters
         ----------
@@ -542,7 +607,7 @@ n_features [{}])] = [{}, {}].".format(
         )
 
         # If CSNS can't be calculated, using CSPS as efficiency
-        # Oliveri & Downey introduced this "efficiency" used by P&R
+        # Oliveri & Downey introduced this "efficiency" used in [1]
         CEFF = pd.Series(
             [
                 np.sqrt(CSNS[c] * CSPS[c]) if not np.isnan(CSNS[c]) else CSPS[c]
@@ -578,8 +643,10 @@ n_features [{}])] = [{}, {}].".format(
         # Only return FoM for classes seen during training
         return (
             df[
-                [c for c in df.columns if c != self.not_assigned]
+                [c for c in df.columns if c in trained_classes]
                 + [self.not_assigned]
+            ][
+                [x in np.unique(actual) for x in df.index]
             ],  # Re-order for easy visualization
             Itot,
             CSNS,
