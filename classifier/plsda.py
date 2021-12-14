@@ -3,6 +3,9 @@ Partial-least squares (Projection to Latent Structures) discriminant analysis.
 
 author: nam
 """
+import copy
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
@@ -142,7 +145,7 @@ class PLSDA:
                 "gamma": gamma,
                 "n_components": n_components,
                 "not_assigned": not_assigned,
-                "style": style,
+                "style": style.lower(),
                 "scale_x": scale_x,
             }
         )
@@ -207,6 +210,7 @@ class PLSDA:
         """
         self.__X_ = np.array(X).copy()
         self.__y_ = self.column_y_(y)
+        self.__raw_y_ = copy.copy(self.__y_)
         self.n_features_in_ = self.__X_.shape[1]
 
         if self.__X_.shape[0] != self.__y_.shape[0]:
@@ -388,6 +392,8 @@ n_features [{}])] = [{}, {}].".format(
         # We can only assess outliers on the training data
         # Others in test set will be "not assigned" and should be assumed
         # correct - just the training stage where we can look at bad data.
+        if self.style != "soft":
+            raise Exception("Can only perform outlier check with 'soft' PLSDA")
 
         outliers = [False] * self.__X_.shape[0]
         for j, t in enumerate(self.__T_train_):
@@ -561,7 +567,7 @@ n_features [{}])] = [{}, {}].".format(
         n_classes = len(all_classes)
         use_classes = encoder.classes_[encoder.classes_ != self.not_assigned]
 
-        n = np.zeros((n_classes, n_classes), dtype=np.int)
+        n = np.zeros((n_classes, n_classes), dtype=int)
         for row, actual_class in zip(predictions, actual):
             kk = encoder.transform([actual_class])[0]
             for entry in row:
@@ -621,10 +627,12 @@ n_features [{}])] = [{}, {}].".format(
         # Evaluates overall ability to recognize a class is itself.  If you
         # show the model some class it hasn't trained on, it can't be predicted
         # so no contribution to the diagonal.  We will normalize by total
-        # number of points shown.  If a model is trained on classes that
-        # correspond to 80% of the training set, and all of those are
-        # classified perfectly, then TSNS = 0.8.
-        TSNS = np.sum([df[kk][kk] for kk in use_classes]) / np.sum(Itot)
+        # number of points shown [1].  If some classes being tested were seen in
+        # training they contribute, otherwise TSNS goes down for a class never
+        # seen before.  This might seem unfair, but TSNS only makes sense if
+        # (1) you are examining what you have trained on or (2) you are
+        # examining extraneous objects so you don't calculate this at all.
+        TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / np.sum(Itot)
 
         # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
         # won't contribute to df[use_classes].sum().sum().  Also, unseen
@@ -636,11 +644,17 @@ n_features [{}])] = [{}, {}].".format(
         ) / np.sum(Itot)
 
         # A very bad classifier could assign wrong classes often and with soft
-        # method TSPS < 0 is possible.
+        # method TSPS < 0 is possible (because of multiple assignments).
         TSPS = np.max([0, TSPS])
-        TEFF = np.sqrt(TSPS * TSNS)
+        if np.any([c_ not in trained_classes for c_ in use_classes]):
+            # When tesing ANY extraneous objects, default to reporting TEFF
+            # as TSPS - this is consistent with the choice of CEFF vs. CSPS
+            # above and also allows TEFF to be used more safely as an objective
+            # function value when using this as the "score" for CV optimization.
+            TEFF = TSPS
+        else:
+            TEFF = np.sqrt(TSPS * TSNS)
 
-        # Only return FoM for classes seen during training
         return (
             df[
                 [c for c in df.columns if c in trained_classes]
@@ -684,6 +698,247 @@ n_features [{}])] = [{}, {}].".format(
         )
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
         return metrics[use.lower()]
+
+    def visualize_2d(self, styles=None, ax=None):
+        """
+        Plot 2D training data results.
+
+        This can only be done when we have K=3 training classes because the
+        one-hot-encoded classes are projected into K-1=2 dimensions.  This
+        can still be a helpful visualization tool if you consider 3 classes
+        at a time.
+
+        Also note that the test set can contain other (more) classes, it is
+        just that the training stage must rely on only 3 for this to work.
+
+        You can plot test set results on the axes first, then pass that object
+        to view these results on the same plot.
+
+        Parameters
+        ----------
+        styles : list
+            List of styles to plot, e.g., ["hard", "soft"]. This can always
+            include ["hard"], but "soft" is only possible if the class was
+            instantiated to be use the "soft" style boundaries.
+        ax : matplotlib.pyplot.Axes
+            Axes to plot results on.  If None, a new figure is created.
+        """
+
+        def soft_boundaries_2d(rmax=10.0, rbins=1000, tbins=90):
+            """
+            Compute the bounding ellipse around for "soft" classification.
+
+            Parameters
+            ----------
+            rmax : float
+                Radius to do from class center to look for boundary.
+                Since these are in normalized score space (projection of OHE
+                simplex) one order of magnitude higher (i.e., 10) is usually a
+                good bound.
+            rbins : int
+                Number of points to seach from class center (r=0 to r=rmax) for
+                boundary.
+            tbins : int
+                Number of bins to split [0, 2*pi) into around the class center.
+
+            Returns
+            -------
+            list(ndarray)
+                2D array of points for each class (ordered according to
+                class_centers).
+            """
+
+            def estimate_boundary(rmax, rbins, tbins, style="cutoff"):
+                cutoff = []
+                for i in range(len(self.__class_centers_)):
+                    cutoff.append([])
+                    c = self.__class_centers_[i]
+                    # For each center, choose a systematic orientation
+                    for theta in np.linspace(0, 2 * np.pi, tbins):
+                        # Walk "outward" until you meet the threshold
+                        for r in np.linspace(0, rmax, rbins):
+                            sPC = c + r * np.array(
+                                [np.cos(theta), np.sin(theta)]
+                            )
+
+                            d = np.matmul(
+                                np.matmul(
+                                    (sPC - c),
+                                    np.linalg.inv(self.__S_[i]),
+                                ),
+                                (sPC - c).reshape(-1, 1),
+                            )[0]
+                            if d > (
+                                self.__d_crit_
+                                if style == "cutoff"
+                                else self.__d_out_[i]
+                            ):
+                                cutoff[i].append(sPC)
+                                break
+                return [np.array(x) for x in cutoff]
+
+            cutoff = estimate_boundary(
+                rmax=rmax, rbins=rbins, tbins=tbins, style="cutoff"
+            )
+            outlier = estimate_boundary(
+                rmax=rmax, rbins=rbins, tbins=tbins, style="outlier"
+            )
+
+            return cutoff, outlier
+
+        def hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05):
+            """
+            Obtain points along the hard boundaries between classes.
+
+            Parameters
+            ----------
+            maxp : int
+                Maximum number of points to use along a line.
+            rmax : float
+                Maximum radius from intersection to compute lines.
+            dx : float
+                Delta x along lines.
+
+            Returns
+            -------
+            dict(tuple, ndarray)
+                Dictionary of class index pairs (e.g., (0,1) based on
+                class_center ordering) and (x,y) coordinates in sPC space
+                which define the discriminating line between classes.
+            """
+
+            def get_v(i):
+                """Eq. 9 in [1]."""
+                return (
+                    np.matmul(
+                        np.matmul(
+                            self.__class_centers_[i], np.linalg.inv(self.__L_)
+                        ),
+                        self.__class_centers_.T[:, i],
+                    )
+                    / 2.0
+                )
+
+            def get_w(i):
+                """Eq. 9 in [1]."""
+                return np.matmul(
+                    self.__class_centers_[i], np.linalg.inv(self.__L_)
+                )
+
+            def get_nebr_pairs(t0):
+                """Neighbors are ordered counterclockwise on a circle."""
+                angle = {}
+                for i in range(len(self.__class_centers_)):
+                    dv = self.__class_centers_[i] - t0
+                    angle[i] = np.arctan2(dv[1], dv[0]) + 2 * np.pi
+
+                cc_order = sorted(angle, key=lambda x: angle[x])
+                unrolled = cc_order + cc_order + cc_order
+                lco = len(cc_order)
+                pairs = list(
+                    zip(
+                        unrolled[lco : lco + lco],
+                        unrolled[lco + 1 : lco + lco + 1],
+                    )
+                )
+
+                return pairs
+
+            # Eq. 10 in [1]
+            t0 = np.matmul(
+                np.matmul(
+                    np.array(
+                        [get_v(i) for i in range(len(self.__class_centers_))]
+                    ),
+                    self.__pca_.components_.T,
+                ),
+                self.__L_,
+            )
+            pairs = get_nebr_pairs(t0)
+
+            # Determine which direction is "outward" from t0 for each pair
+            sign = []
+            for i, j in pairs:
+                mid = (
+                    self.__class_centers_[i] + self.__class_centers_[j]
+                ) / 2.0
+                sign.append(np.sign(mid[0] - t0[0]))
+
+            lines = {}
+            for sign, (i, j) in list(zip(sign, pairs)):
+                dv = get_v(i) - get_v(j)
+                dw = get_w(i) - get_w(j)
+
+                pts = [t0.tolist()]
+                for k in range(1, maxp):
+                    x_ = pts[-1][0] + float(dx) * sign
+                    pts.append([x_, (dw[0] * x_ - dv) / -dw[1]])
+                    # Stop after (if) some rmax is reached
+                    if (
+                        np.sqrt(
+                            (pts[-1][0] - t0[0]) ** 2
+                            + (pts[-1][1] - t0[1]) ** 2
+                        )
+                        > rmax
+                    ):
+                        break
+                lines[(i, j)] = np.array(pts)
+
+            return lines
+
+        if styles is None:
+            styles = [self.style]
+        else:
+            styles = [a.lower() for a in styles]
+
+        if "soft" in styles and self.style != "soft":
+            raise ValueError(
+                "Style must be 'soft' to visualize soft boundaries."
+            )
+
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.gca()
+
+        for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+            mask = self.__raw_y_.ravel() == c_
+            ax.plot(
+                self.__T_train_[mask, 0],
+                self.__T_train_[mask, 1],
+                "o",
+                alpha=0.5,
+                color="C{}".format(i),
+                label=c_ + " (Training)",
+            )
+        ax.plot(
+            self.__class_centers_[:, 0],
+            self.__class_centers_[:, 1],
+            "ks",
+            alpha=1,
+            label="Training Class Centers",
+        )
+        ax.axis("equal")
+        ax.set_xlabel("sPC1")
+        ax.set_ylabel("sPC2")
+
+        if "soft" in styles:
+            cutoff, outlier = soft_boundaries_2d(
+                rmax=10.0, rbins=1000, tbins=90
+            )
+            for i in range(len(cutoff)):
+                ax.plot(cutoff[i][:, 0], cutoff[i][:, 1], color="C{}".format(i))
+                ax.plot(
+                    outlier[i][:, 0],
+                    outlier[i][:, 1],
+                    linestyle="--",
+                    color="C{}".format(i),
+                )
+        if "hard" in styles:
+            lines = hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05)
+            for k in lines.keys():
+                ax.plot(lines[k][:, 0], lines[k][:, 1], "k-")
+
+        ax.legend(loc="best")
 
     def _get_tags(self):
         """For compatibility with sklearn >=0.21."""
