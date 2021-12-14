@@ -11,7 +11,7 @@ Common chemometric analysis methods implemented in python.  These methods are de
 ## Installation
 
 ~~~ bash
-$ git clone https://github.com/mahynski/chemomtrics.git
+$ git clone https://github.com/mahynski/chemometrics.git
 $ pip install -r requirements.txt
 ~~~
 
@@ -31,16 +31,6 @@ import chemometrics
 $ python -m unittest discover tests/
 ~~~
 
-## Example
-~~~ python
->>> from chemometrics.classifier.plsda import PLSDA
->>> X_train, X_test, y_train, y_test = load_data(...)
->>> sp = PLSDA(n_components=30, style='soft')
->>> _ = sp.fit(X_train.values, y_train.values)
->>> pred = sp.predict(X_train.values)
->>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
-~~~
-
 ## Available Classifiers
 * PLS-DA (soft and hard variants)
 * SIMCA
@@ -50,3 +40,15 @@ $ python -m unittest discover tests/
 * PCA
 * PCR
 * PLS(2) Regression
+
+## Example Usage
+~~~ python
+>>> from chemometrics.classifier.plsda import PLSDA
+>>> X_train, X_test, y_train, y_test = load_data(...)
+>>> sp = PLSDA(n_components=30, style='soft')
+>>> _ = sp.fit(X_train.values, y_train.values)
+>>> pred = sp.predict(X_train.values)
+>>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
+~~~
+
+## Deploying on Google Colab
