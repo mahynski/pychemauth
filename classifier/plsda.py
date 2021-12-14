@@ -9,9 +9,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 
 class CustomScaler:
@@ -35,7 +37,7 @@ class CustomScaler:
             which uses N-1 degrees of freedom instead of N.
         """
         self.set_params(**{"with_mean": with_mean, "with_std": with_std})
-        self.isfit = False
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -44,18 +46,21 @@ class CustomScaler:
 
         return self
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         """Fit the scaler using some training data."""
-        X = np.array(X)
+        X = check_array(X, accept_sparse=False)
+        # X = np.array(X)
+
         self.__mean_ = np.mean(X, axis=0)
         self.__std_ = np.std(X, axis=0, ddof=1)
-        self.isfit = True
+        self.is_fitted_ = True
 
     def transform(self, X):
         """Transform (center and possibly scale) the data after fitting."""
-        if not self.isfit:
-            raise Exception("CustomScaler has not been fit yet.")
-        result = np.array(X)
+        X = check_array(X, accept_sparse=False)
+        check_is_fitted(self, "is_fitted_")
+
+        result = np.array(X, dtype=np.float64)
         if self.with_mean:
             result -= self.__mean_
         if self.with_std:
@@ -70,7 +75,7 @@ class CustomScaler:
         return self.transform(X)
 
 
-class PLSDA:
+class PLSDA(ClassifierMixin, BaseEstimator):
     """
     PLS-DA for classification.
 
@@ -145,7 +150,7 @@ class PLSDA:
                 "gamma": gamma,
                 "n_components": n_components,
                 "not_assigned": not_assigned,
-                "style": style.lower(),
+                "style": style,
                 "scale_x": scale_x,
             }
         )
@@ -180,7 +185,7 @@ class PLSDA:
             raise ValueError(
                 "You must set the 'not_assigned' variable type ({}) the same \
                 as y, e.g., both must be int or str".format(
-                    use_type
+                    [type(y_) for y_ in y]
                 )
             )
 
@@ -188,7 +193,8 @@ class PLSDA:
         """Convert y to column format."""
         y = np.array(y)
         if y.ndim != 2:
-            y = y.reshape(-1, 1)
+            y = y[:, np.newaxis]
+
         return y
 
     def fit(self, X, y):
@@ -208,13 +214,24 @@ class PLSDA:
         -------
         self
         """
+        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
+            raise ValueError("Cannot use sparse data.")
         self.__X_ = np.array(X).copy()
-        self.__y_ = self.column_y_(y)
+        self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
+        self.__y_ = self.column_y_(
+            y
+        )  # sklearn expects 1D array, convert to columns
+        # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
+
         self.__raw_y_ = copy.copy(self.__y_)
         self.n_features_in_ = self.__X_.shape[1]
 
         if self.__X_.shape[0] != self.__y_.shape[0]:
-            raise ValueError("X and y shapes are not compatible")
+            raise ValueError(
+                "X ({}) and y ({}) shapes are not compatible".format(
+                    self.__X_.shape, self.__y_.shape
+                )
+            )
 
         # Dummy check that not_assigned and y have same data types
         self.check_category_type_(self.__y_.ravel())
@@ -312,7 +329,7 @@ n_features [{}])] = [{}, {}].".format(
         # example, NOT the mean of class 1.
         # Thus we compute the scatter matrix directly and do not use the
         # covariance of (T-means).T
-        if self.style == "soft":
+        if self.style.lower() == "soft":
             self.__S_ = {}
             for i in range(len(self.__ohencoder_.categories_[0])):
                 t = (
@@ -332,7 +349,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
                 self.__S_[i] /= t.shape[0]
-                try:
+                """try:
                     # This is just a dummy check to make sure S is positive
                     # semi-definite, since this is not always guaranteed
                     # numerically.  Proper covariance matrices are always
@@ -350,7 +367,7 @@ n_features [{}])] = [{}, {}].".format(
 {}".format(
                             self.__ohencoder_.categories_[0][i], e
                         )
-                    )
+                    )"""
 
         # 4. continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
@@ -377,6 +394,7 @@ n_features [{}])] = [{}, {}].".format(
             for i in range(len(self.__ohencoder_.categories_[0]))
         ]  # Outlier cutoff - these can only be checked for the training set
 
+        self.is_fitted_ = True
         return self
 
     def check_outliers(self):
@@ -389,10 +407,12 @@ n_features [{}])] = [{}, {}].".format(
             Boolean mask of X_train used in fit() of if each point is
             considered an outlier.
         """
+        check_is_fitted(self, "is_fitted_")
+
         # We can only assess outliers on the training data
         # Others in test set will be "not assigned" and should be assumed
         # correct - just the training stage where we can look at bad data.
-        if self.style != "soft":
+        if self.style.lower() != "soft":
             raise Exception("Can only perform outlier check with 'soft' PLSDA")
 
         outliers = [False] * self.__X_.shape[0]
@@ -430,6 +450,9 @@ n_features [{}])] = [{}, {}].".format(
         t-scores : matrix-like
             Projection of X via PLS, then by PCA into a score space.
         """
+        check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False)
+
         X = np.array(X)
         assert X.shape[1] == self.n_features_in_
         X = self.__x_pls_scaler_.transform(X)
@@ -441,6 +464,11 @@ n_features [{}])] = [{}, {}].".format(
         )
 
         return T_test
+
+    def fit_transform(self, X, y):
+        """Fit and transform."""
+        self.fit(X, y)
+        return self.transform(X)
 
     def predict(self, X):
         """
@@ -459,11 +487,15 @@ n_features [{}])] = [{}, {}].".format(
             predictions for each entry, and are listed from left to right in
             order of decreasing likelihood.
         """
+        check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False)
+        assert X.shape[1] == self.n_features_in_
+
         T_test = self.transform(X)
 
         distances = []
         for t in T_test:
-            if self.style == "soft":  # This 'soft' rule is based on QDA
+            if self.style.lower() == "soft":  # This 'soft' rule is based on QDA
                 distances.append(
                     [
                         np.matmul(
@@ -498,7 +530,7 @@ n_features [{}])] = [{}, {}].".format(
             d = sorted(
                 zip(self.__ohencoder_.categories_[0], row), key=lambda x: x[1]
             )  # The lower d, the higher the certainty of that class
-            if self.style == "soft":
+            if self.style.lower() == "soft":
                 belongs_to = [x[0] for x in d if x[1] < self.__d_crit_]
                 if len(belongs_to) == 0:
                     belongs_to = [self.not_assigned]
@@ -509,7 +541,7 @@ n_features [{}])] = [{}, {}].".format(
 
             predictions.append(belongs_to)
 
-        self.__distances_ = distances  # Store internally
+        # self.__distances_ = distances  # Store internally
         return predictions
 
     def figures_of_merit(self, predictions, actual):
@@ -549,6 +581,8 @@ n_features [{}])] = [{}, {}].".format(
         TEFF : float64
             Total efficiency.
         """
+        check_is_fitted(self, "is_fitted_")
+
         trained_classes = np.unique(self.__ohencoder_.categories_)
 
         # Dummy check that not_assigned and y have same data types
@@ -692,6 +726,8 @@ n_features [{}])] = [{}, {}].".format(
         score : float
             Score
         """
+        check_is_fitted(self, "is_fitted_")
+
         X, y = np.array(X), np.array(y)
         df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = self.figures_of_merit(
             self.predict(X), y
@@ -723,6 +759,7 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.Axes
             Axes to plot results on.  If None, a new figure is created.
         """
+        check_is_fitted(self, "is_fitted_")
 
         def soft_boundaries_2d(rmax=10.0, rbins=1000, tbins=90):
             """
@@ -887,11 +924,11 @@ n_features [{}])] = [{}, {}].".format(
             return lines
 
         if styles is None:
-            styles = [self.style]
+            styles = [self.style.lower()]
         else:
             styles = [a.lower() for a in styles]
 
-        if "soft" in styles and self.style != "soft":
+        if "soft" in styles and self.style.lower() != "soft":
             raise ValueError(
                 "Style must be 'soft' to visualize soft boundaries."
             )
@@ -951,7 +988,6 @@ n_features [{}])] = [{}, {}].".format(
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64],
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,
