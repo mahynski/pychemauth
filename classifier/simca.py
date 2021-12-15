@@ -10,7 +10,8 @@ import numpy as np
 import scipy
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
+
+from .utils import CustomScaler
 
 
 class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
@@ -188,7 +189,7 @@ class SIMCA(ClassifierMixin, BaseEstimator):
     47 (1999) 65-77.
     """
 
-    def __init__(self, n_components, alpha=0.05):
+    def __init__(self, n_components, alpha=0.05, scale_x=True):
         """
         Instantiate the class.
 
@@ -198,8 +199,15 @@ class SIMCA(ClassifierMixin, BaseEstimator):
             Number of PCA components to use to model this class.
         alpha : float
             Significance level.
+        scale_x : bool
+            Whether or not to scale X by its sample standard deviation or not.
+            This depends on the meaning of X and is up to the user to
+            determine if scaling it (by the standard deviation) makes sense.
+            Note that X is always centered.
         """
-        self.set_params(**{"n_components": n_components, "alpha": alpha})
+        self.set_params(
+            **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
+        )
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -209,7 +217,11 @@ class SIMCA(ClassifierMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with sklearn's estimator API."""
-        return {"n_components": self.n_components, "alpha": self.alpha}
+        return {
+            "n_components": self.n_components,
+            "alpha": self.alpha,
+            "scale_x": self.scale_x,
+        }
 
     def column_y_(self, y):
         """Convert y to column format."""
@@ -249,11 +261,14 @@ class SIMCA(ClassifierMixin, BaseEstimator):
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
 
-        if self.n_components > self.n_features_in_:
+        if (
+            self.n_components
+            > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+        ):
             raise Exception("Reduce the number of PCA components")
 
         # 1. Standardize X
-        self.__ss_ = StandardScaler(with_mean=True, with_std=True)
+        self.__ss_ = CustomScaler(with_mean=True, with_std=self.scale_x)
 
         # 2. Perform PCA on standardized coordinates
         self.__pca_ = PCA(n_components=self.n_components, random_state=0)
@@ -382,7 +397,6 @@ class SIMCA(ClassifierMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64],
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,
@@ -412,7 +426,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     """
 
-    def __init__(self, n_components, alpha=0.05):
+    def __init__(self, n_components, alpha=0.05, scale_x=True):
         """
         Instantiate the class.
 
@@ -422,8 +436,15 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             Number of PCA components to use to model this class.
         alpha : float
             Significance level.
+        scale_x : bool
+            Whether or not to scale X by its sample standard deviation or not.
+            This depends on the meaning of X and is up to the user to
+            determine if scaling it (by the standard deviation) makes sense.
+            Note that X is always centered.
         """
-        self.set_params(**{"n_components": n_components, "alpha": alpha})
+        self.set_params(
+            **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
+        )
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -433,7 +454,11 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with sklearn's estimator API."""
-        return {"n_components": self.n_components, "alpha": self.alpha}
+        return {
+            "n_components": self.n_components,
+            "alpha": self.alpha,
+            "scale_x": self.scale_x,
+        }
 
     def column_y_(self, y):
         """Convert y to column format."""
@@ -473,11 +498,14 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
 
-        if self.n_components > self.n_features_in_:
+        if (
+            self.n_components
+            > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+        ):
             raise Exception("Reduce the number of PCA components")
 
         # 1. Standardize X
-        self.__ss_ = StandardScaler(with_mean=True, with_std=True)
+        self.__ss_ = CustomScaler(with_mean=True, with_std=self.scale_x)
 
         # 2. Perform PCA on standardized coordinates
         self.__pca_ = PCA(n_components=self.n_components, random_state=0)
@@ -502,7 +530,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         ----------
         X : matrix-like
             Columns of features; observations are rows which correspond to the
-            clas being modeled - this will be converted to a numpy array
+            class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
@@ -514,7 +542,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
 
     def h_q_(self, X_raw):
         """Compute the h (OD) and q (SD) distances."""
-        X_raw_std = self.__ss_.transform(X_raw)
+        X_raw_std = self.__ss_.transform(self.matrix_X_(X_raw))
         T = self.__pca_.transform(X_raw_std)
         X_pred = np.matmul(T, self.__pca_.components_)
 
@@ -522,7 +550,9 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
 
         # SD
-        h_vals = np.sum(T ** 2 / self.__pca_.explained_variance_, axis=1)
+        h_vals = np.sum(T ** 2 / self.__pca_.explained_variance_, axis=1) / (
+            self.__X_.shape[0] - 1
+        )
 
         return h_vals, q_vals
 
@@ -667,7 +697,6 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64],
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,

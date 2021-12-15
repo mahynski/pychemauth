@@ -41,7 +41,7 @@ $ python -m unittest discover tests/
 * PCR
 * PLS(2) Regression
 
-## Example Usage
+## Example Usage (Pseudocode)
 ~~~ python
 >>> from chemometrics.classifier.plsda import PLSDA
 >>> X_train, X_test, y_train, y_test = load_data(...)
@@ -52,3 +52,6 @@ $ python -m unittest discover tests/
 ~~~
 
 ## Deploying on Google Colab
+
+<!-- have some examples with using grid searc cv -->
+<!-- beef examples? -->
