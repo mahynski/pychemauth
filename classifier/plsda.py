@@ -96,10 +96,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     * The soft version can become unstable if n_components is too small and
     can return negative distances to class centers; this results in an error -
     try increasing n_components if this happens. This is linked to instabilities
-    in computing matrix inverses, etc. and is generally remedied as described
-    above.
-    * If y is going to be passed as strings, 'not_assigned' should also be
-    set to a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
+    in computing matrix inverses, etc. and is generally remedied by
+    increasing n_components.
+    * If y values are going to be passed as strings, 'not_assigned' should
+    also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
     only relevant for the soft version.
 
@@ -735,6 +735,178 @@ n_features [{}])] = [{}, {}].".format(
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
         return metrics[use.lower()]
 
+    def visualize_1d(self, styles=None, ax=None):
+        """
+        Plot 1D trainin results.
+
+        This can only be done when we have K=2 training classes because the
+        one-hot-encoded classes are projected into K-1=1 dimensions.  This
+        can still be a helpful visualization tool if you consider 2 classes
+        at a time.
+
+        Also note that the test set can contain other (more) classes, it is
+        just that the training stage must rely on only 2 for this to work.
+
+        You can plot test set results on the axes first, then pass that object
+        to view these results on the same plot.
+
+        Parameters
+        ----------
+        styles : list
+            List of styles to plot, e.g., ["hard", "soft"]. This can always
+            include ["hard"], but "soft" is only possible if the class was
+            instantiated to be use the "soft" style boundaries.
+        ax : matplotlib.pyplot.Axes
+            Axes to plot results on.  If None, a new figure is created.
+
+        Returns
+        -------
+        matplotlib.pyplot.Axes
+            Figure axes being plotted on.
+        """
+        check_is_fitted(self, "is_fitted_")
+        if len(self.__class_centers_) != 2:
+            raise Exception(
+                "Can only do 1D visualization with systems trained on 2 classes."
+            )
+
+        def soft_boundaries_1d(rmax=10.0, rbins=1000):
+            """
+            Compute the bounding ellipse around for "soft" classification.
+
+            Parameters
+            ----------
+            rmax : float
+                Radius to go from class center to look for boundary.
+                Since these are in normalized score space (projection of OHE
+                simplex) one order of magnitude higher (i.e., 10) is usually a
+                good bound.
+            rbins : int
+                Number of points to seach from class center (r=0 to r=rmax) for
+                boundary.
+
+            Returns
+            -------
+            list(ndarray)
+                2D array of points for each class (ordered according to
+                class_centers).
+            """
+
+            def estimate_boundary(rmax, rbins, style="cutoff"):
+                cutoff = []
+                for i in range(len(self.__class_centers_)):
+                    cutoff.append([])
+                    c = self.__class_centers_[i]
+                    # For each center, choose a systematic orientation
+                    for direction in [+1, -1]:
+                        # Walk "outward" until you meet the threshold
+                        for r in np.linspace(0, rmax, rbins):
+                            sPC = c + r * direction
+                            d = np.matmul(
+                                np.matmul(
+                                    (sPC - c),
+                                    np.linalg.inv(self.__S_[i]),
+                                ),
+                                (sPC - c).reshape(-1, 1),
+                            )[0]
+                            if d > (
+                                self.__d_crit_
+                                if style == "cutoff"
+                                else self.__d_out_[i]
+                            ):
+                                cutoff[i].append(sPC)
+                                break
+                return [np.array(x) for x in cutoff]
+
+            cutoff = estimate_boundary(rmax=rmax, rbins=rbins, style="cutoff")
+            outlier = estimate_boundary(rmax=rmax, rbins=rbins, style="outlier")
+
+            return cutoff, outlier
+
+        def hard_boundaries_1d():
+            """
+            Obtain the hard boundary between the two classes.
+
+            Returns
+            -------
+            float
+                t0 is the threshold sPC dividing the two classes.
+            """
+
+            def get_v(i):
+                """Eq. 9 in [1]."""
+                return (
+                    np.matmul(
+                        np.matmul(
+                            self.__class_centers_[i], np.linalg.inv(self.__L_)
+                        ),
+                        self.__class_centers_.T[:, i],
+                    )
+                    / 2.0
+                )
+
+            # Eq. 10 in [1]
+            t0 = np.matmul(
+                np.matmul(
+                    np.array(
+                        [get_v(i) for i in range(len(self.__class_centers_))]
+                    ),
+                    self.__pca_.components_.T,
+                ),
+                self.__L_,
+            )
+
+            return t0
+
+        if styles is None:
+            styles = [self.style.lower()]
+        else:
+            styles = [a.lower() for a in styles]
+
+        if "soft" in styles and self.style.lower() != "soft":
+            raise ValueError(
+                "Style must be 'soft' to visualize soft boundaries."
+            )
+
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.gca()
+
+        for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+            mask = self.__raw_y_.ravel() == c_
+            ax.plot(
+                self.__T_train_[mask],
+                [i] * np.sum(mask),
+                "o",
+                alpha=0.5,
+                color="C{}".format(i),
+                label=c_ + " (Training)",
+            )
+            ax.plot(
+                self.__class_centers_[i],
+                [i],
+                "ks",
+                alpha=1,
+            )
+        ax.set_xlabel("sPC1")
+
+        if "soft" in styles:
+            cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
+            for i in range(len(cutoff)):
+                ax.axvline(cutoff[i][0], color="C{}".format(i))
+                ax.axvline(cutoff[i][1], color="C{}".format(i))
+                ax.axvline(outlier[i][0], linestyle="--", color="C{}".format(i))
+                ax.axvline(outlier[i][1], linestyle="--", color="C{}".format(i))
+        if "hard" in styles:
+            t0 = hard_boundaries_1d()
+            ax.axvline(t0, color="k")
+
+        ax.legend(loc="best")
+        ax.set_ylim(-0.25, 0.25 + len(self.__class_centers_) - 1)
+        ax.set_yticks([])
+
+        return ax
+
     def visualize_2d(self, styles=None, ax=None):
         """
         Plot 2D training data results.
@@ -758,8 +930,17 @@ n_features [{}])] = [{}, {}].".format(
             instantiated to be use the "soft" style boundaries.
         ax : matplotlib.pyplot.Axes
             Axes to plot results on.  If None, a new figure is created.
+
+        Returns
+        -------
+        matplotlib.pyplot.Axes
+            Figure axes being plotted on.
         """
         check_is_fitted(self, "is_fitted_")
+        if len(self.__class_centers_) != 3:
+            raise Exception(
+                "Can only do 2D visualization with systems trained on 3 classes."
+            )
 
         def soft_boundaries_2d(rmax=10.0, rbins=1000, tbins=90):
             """
@@ -768,7 +949,7 @@ n_features [{}])] = [{}, {}].".format(
             Parameters
             ----------
             rmax : float
-                Radius to do from class center to look for boundary.
+                Radius to g from class center to look for boundary.
                 Since these are in normalized score space (projection of OHE
                 simplex) one order of magnitude higher (i.e., 10) is usually a
                 good bound.
@@ -843,10 +1024,6 @@ n_features [{}])] = [{}, {}].".format(
                 class_center ordering) and (x,y) coordinates in sPC space
                 which define the discriminating line between classes.
             """
-            if len(self.__class_centers_) != 3:
-                raise Exception(
-                    "Can only do 2D visualization with systems trained on 3 classes."
-                )
 
             def get_v(i):
                 """Eq. 9 in [1]."""
@@ -980,6 +1157,8 @@ n_features [{}])] = [{}, {}].".format(
                 ax.plot(lines[k][:, 0], lines[k][:, 1], "k-")
 
         ax.legend(loc="best")
+
+        return ax
 
     def _get_tags(self):
         """For compatibility with sklearn >=0.21."""
