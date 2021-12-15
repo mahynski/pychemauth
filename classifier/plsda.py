@@ -541,7 +541,7 @@ n_features [{}])] = [{}, {}].".format(
 
             predictions.append(belongs_to)
 
-        # self.__distances_ = distances  # Store internally
+        self.__distances_ = distances  # Store internally
         return predictions
 
     def figures_of_merit(self, predictions, actual):
@@ -843,6 +843,10 @@ n_features [{}])] = [{}, {}].".format(
                 class_center ordering) and (x,y) coordinates in sPC space
                 which define the discriminating line between classes.
             """
+            if len(self.__class_centers_) != 3:
+                raise Exception(
+                    "Can only do 2D visualization with systems trained on 3 classes."
+                )
 
             def get_v(i):
                 """Eq. 9 in [1]."""
