@@ -8,11 +8,12 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 
-class SIMCA_Classifier:
+class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     """
     SIMCA against an ensemble of classes.
 
@@ -87,6 +88,11 @@ class SIMCA_Classifier:
             Class labels or indices. Should include some data of
             'target_class'.
         """
+        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
+            raise ValueError("Cannot use sparse data.")
+        X, y = check_X_y(X, y, accept_sparse=False)
+        self.n_features_in_ = self.__X_.shape[1]
+
         # Fit model to target data
         if self.style == "simca":
             self.__model_ = SIMCA(
@@ -103,6 +109,7 @@ class SIMCA_Classifier:
             y
         ), "target_class not in training set"
         self.__model_.fit(X[y == self.target_class])
+        self.is_fitted_ = True
 
     @property
     def CSPS(self):
@@ -130,6 +137,9 @@ class SIMCA_Classifier:
         y : ndarray
             Class labels or indices
         """
+        check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False)
+
         self.__alternatives_ = [
             c for c in sorted(np.unique(y)) if c != self.target_class
         ]
@@ -156,7 +166,7 @@ class SIMCA_Classifier:
         return TEFF
 
 
-class SIMCA:
+class SIMCA(ClassifierMixin, BaseEstimator):
     """
     SIMCA classifier for a single class.
 
@@ -385,7 +395,7 @@ class SIMCA:
         }
 
 
-class DDSIMCA:
+class DDSIMCA(ClassifierMixin, BaseEstimator):
     """
     Data-driven SIMCA.
 

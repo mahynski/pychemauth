@@ -349,7 +349,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
                 self.__S_[i] /= t.shape[0]
-                """try:
+                try:
                     # This is just a dummy check to make sure S is positive
                     # semi-definite, since this is not always guaranteed
                     # numerically.  Proper covariance matrices are always
@@ -367,7 +367,7 @@ n_features [{}])] = [{}, {}].".format(
 {}".format(
                             self.__ohencoder_.categories_[0][i], e
                         )
-                    )"""
+                    )
 
         # 4. continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
