@@ -514,7 +514,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         # 3. Compute critical distance
         h_vals, q_vals = self.h_q_(self.__X_)
         self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = self.estimate_dof_(h_vals, q_vals)
+        self.__Nh_, self.__Nq_ = 3, 7  # self.estimate_dof_(h_vals, q_vals)
 
         self.__c_crit_ = scipy.stats.chi2.ppf(
             1.0 - self.alpha, self.__Nh_ + self.__Nq_
