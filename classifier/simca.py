@@ -139,7 +139,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         assert self.target_class in np.unique(
             y
         ), "target_class not in training set"
-        self.__model_.fit(X[y == self.target_class])
+        self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
         self.is_fitted_ = True
 
         return self
@@ -159,28 +159,43 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 
         This is not very relevant, but is necessary for scikit-learn compatibility.
         """
-        self.fit(X, y)
+        _ = self.fit(X, y)
         return self.transform(X)
+
+    def predict(self, X):
+        """Make a prediction."""
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.predict(X)
 
     @property
     def CSPS(self):
         """Class specificities."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__CSPS_)
 
     @property
     def TSNS(self):
         """Total sensitivity of the model."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__TSNS_)
 
     @property
     def TSPS(self):
         """Total specificity of the model."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__TSPS_)
 
     @property
     def TEFF(self):
         """Total efficiency of the model."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__TEFF_)
+
+    @property
+    def model(self):
+        """Trained undelying SIMCA Model."""
+        check_is_fitted(self, "is_fitted_")
+        return copy.deepcopy(self.__model_)
 
     def score(self, X, y=None):
         """
@@ -866,7 +881,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         X_ = self.matrix_X_(X)
         y_ = np.array(y)
         markers = [
-            ".",
             "o",
             "v",
             "s",
@@ -886,9 +900,30 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             in_mask = self.predict(X_[y_ == class_])
             ext_mask, out_mask = self.check_outliers(X_[y_ == class_])
             for c, mask, label in [
-                ("g", in_mask, self.__label_),
-                ("orange", ext_mask, "Extreme"),
-                ("r", out_mask, "Outlier"),
+                (
+                    "g",
+                    in_mask,
+                    class_
+                    + " = "
+                    + self.__label_
+                    + " ({})".format(np.sum(in_mask)),
+                ),
+                (
+                    "orange",
+                    ext_mask,
+                    class_
+                    + " = Extreme "
+                    + self.__label_
+                    + " ({})".format(np.sum(ext_mask)),
+                ),
+                (
+                    "r",
+                    out_mask,
+                    class_
+                    + " = Outlier "
+                    + self.__label_
+                    + " ({})".format(np.sum(out_mask)),
+                ),
             ]:
                 axis.plot(
                     np.log(1.0 + h_[mask] / self.__h0_),
@@ -897,10 +932,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                     marker=markers[i % len(markers)],
                     lw=0,
                     color=c,
+                    alpha=0.35,
                 )
             xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
             ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
-        axis.legend(loc="best")
+        axis.legend(bbox_to_anchor=(1, 1))
         axis.set_xlim(0, xlim)
         axis.set_ylim(0, ylim)
         axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$")
