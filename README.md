@@ -79,6 +79,7 @@ df = pd.read_csv(io.StringIO(uploaded[''].decode('utf-8')), sep=';')
 ~~~python
 # Clone chemometrics repo
 !git clone https://github.com/mahynski/chemometrics.git
+!pip install -r requirements.txt
 ~~~~
 
 ~~~python
