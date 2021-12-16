@@ -680,7 +680,7 @@ n_features [{}])] = [{}, {}].".format(
 
     def visualize_1d(self, styles=None, ax=None):
         """
-        Plot 1D trainin results.
+        Plot 1D training results.
 
         This can only be done when we have K=2 training classes because the
         one-hot-encoded classes are projected into K-1=1 dimensions.  This
