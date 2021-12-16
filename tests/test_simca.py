@@ -1,22 +1,22 @@
 """
-Unittests for SIMCA.
+Unittests for SIMCA_Model.
 
 author: nam
 """
 import unittest
 
-from classifier.simca import SIMCA
+from classifier.simca import SIMCA_Model
 
 
-class TestSIMCA(unittest.TestCase):
-    """Test SIMCA class."""
+class TestSIMCA_Model(unittest.TestCase):
+    """Test SIMCA_Model class."""
 
     def test_sklearn_compatibility(self):
         """Check compatible with sklearn's estimator API."""
         from sklearn.utils.estimator_checks import check_estimator
 
         try:
-            check_estimator(SIMCA(n_components=1))
+            check_estimator(SIMCA_Model(n_components=1))
         except Exception as e:
             error = str(e)
         else:

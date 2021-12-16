@@ -30,7 +30,8 @@ class TestPLSDA(unittest.TestCase):
     def test_plsda3_hard(self):
         """Test PLSDA on a 3-class example with hard decision boundaries."""
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda3_train.csv"
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda3_train.csv"
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df["Class"].values, dtype=str)
@@ -152,7 +153,8 @@ class TestPLSDA(unittest.TestCase):
 
         # Check test set
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda3_test.csv",
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda3_test.csv",
             header=None,
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
@@ -195,7 +197,8 @@ class TestPLSDA(unittest.TestCase):
     def test_plsda3_soft(self):
         """Test PLSDA on a 3-class example with soft decision boundaries."""
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda3_train.csv"
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda3_train.csv"
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df["Class"].values, dtype=str)
@@ -310,7 +313,8 @@ class TestPLSDA(unittest.TestCase):
 
         # Check test set
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda3_test.csv",
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda3_test.csv",
             header=None,
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
@@ -354,7 +358,8 @@ class TestPLSDA(unittest.TestCase):
     def test_plsda2_hard(self):
         """Test PLSDA on a 2-class example with hard decision boundaries."""
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda2_train.csv"
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda2_train.csv"
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df["Class"].values, dtype=str)
@@ -450,7 +455,8 @@ class TestPLSDA(unittest.TestCase):
 
         # Check test set
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda2_test.csv",
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda2_test.csv",
             header=None,
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
@@ -489,7 +495,8 @@ class TestPLSDA(unittest.TestCase):
     def test_plsda2_soft(self):
         """Test PLSDA on a 2-class example with soft decision boundaries."""
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda2_train.csv"
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda2_train.csv"
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df["Class"].values, dtype=str)
@@ -595,7 +602,8 @@ class TestPLSDA(unittest.TestCase):
 
         # Check test set
         df = pd.read_csv(
-            os.path.dirname(os.path.realpath(__file__)) + "/plsda2_test.csv",
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/plsda2_test.csv",
             header=None,
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
