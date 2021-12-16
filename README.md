@@ -51,7 +51,38 @@ $ python -m unittest discover tests/
 >>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
 ~~~
 
+Refer to `examples/` for example usage and more explicit details.
+
 ## Deploying on Google Colab
 
-<!-- have some examples with using grid searc cv -->
-<!-- beef examples? -->
+You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
+Follow the instructions to set up an account if you do not already have one. 
+Then, enter the following cells at the start of a new notebook:
+
+~~~python
+# 1. Upload your data as a .csv file
+
+from google.colab import files
+uploaded = files.upload() # Currently there are some issues with this on Firefox
+
+for fn in uploaded.keys():
+  print('User uploaded file "{name}" with length {length} bytes'.format(
+      name=fn, length=len(uploaded[fn])))
+~~~
+
+~~~python
+# 2. Read your csv data into a Pandas DataFrame - split into test/train later
+import pandas as pd
+df = pd.read_csv(io.StringIO(uploaded[''].decode('utf-8')), sep=';')
+~~~
+
+~~~python
+# Clone chemometrics repo
+!git clone https://github.com/mahynski/chemometrics.git
+~~~~
+
+~~~python
+import chemometrics
+
+# Begin analysis ...
+~~~
