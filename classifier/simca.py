@@ -142,6 +142,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         self.__model_.fit(X[y == self.target_class])
         self.is_fitted_ = True
 
+        return self
+
     def transform(self, X):
         """
         Transform into the SIMCA subspace.
