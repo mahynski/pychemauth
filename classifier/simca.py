@@ -10,29 +10,43 @@ import numpy as np
 import scipy
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from .utils import CustomScaler
 
 
 class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     """
-    SIMCA against an ensemble of classes.
+    Train a SIMCA model for a target class.
 
-    Essentially, a SIMCA model is trained for each classe provided in the
-    .fit() step (training set).  During testing (.score()) each point is
-    run through each model to see if it is predicted to belong to the
-    target class or not.  The target is set when the class is instantiated
-    and must be one of the classes found in the training set (this is
-    checked automatically).  This allows you to pass points that belong to
-    other classes, they are just ignored.  This is important so this can
-    integrate with other scikit-learn, etc. workflows.
+    Essentially, a SIMCA model is trained for one target class. The target is
+    set when this class is instantiated and must be one of (but doesn't need
+    to be the only) class found in the training set (this is checked
+    automatically).  During testing (.score()), points are broken up by
+    alternative class and run through the model to see how well the target class
+    can be distinguished from each alternative.  This allows you to pass points
+    that belong to other classes during training - they are just ignored.  This
+    is important for integration with other scikit-learn, etc. workflows.
     """
 
     def __init__(
-        self, n_components=1, alpha=0.05, target_class=None, style="simca"
+        self,
+        n_components=1,
+        alpha=0.05,
+        target_class=None,
+        style="dd-simca",
+        use="TEFF",
+        scale_x=True,
     ):
         """
         Instantiate the classifier.
+
+        Outlier detection may be done on a per-class basis, but is not
+        part of the "overall" model.  This ultimately performs K different
+        checks for the K classes tested on, to see if the target class can be
+        differentiated from them.  This relies on the type I error (alpha) only.
+        The final metric used to rate the overall model can be set to TEFF or TSPS,
+        for example, if you wish to change how the model is evaluated.
 
         Parameters
         ----------
@@ -45,6 +59,14 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             to test specificity.
         style : str
             Type of SIMCA to use ("simca" or "dd-simca")
+        use : str
+            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
+            (default=TEFF).
+        scale_x : bool
+            Whether or not to scale X by its sample standard deviation or not.
+            This depends on the meaning of X and is up to the user to
+            determine if scaling it (by the standard deviation) makes sense.
+            Note that X is always centered.
         """
         self.set_params(
             **{
@@ -52,6 +74,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 "alpha": alpha,
                 "target_class": target_class,
                 "style": style,
+                "use": use,
+                "scale_x": scale_x,
             }
         )
 
@@ -69,6 +93,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "target_class": self.target_class,
             "style": self.style,
+            "use": self.use,
+            "scale_x": self.scale_x,
         }
 
     def fit(self, X, y):
@@ -76,7 +102,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         Fit the SIMCA model.
 
         Only data of the target class will be used for fitting, though more
-        can be provided. This is important in the case that, for example,
+        can be provided. This is important in pipelines, for example, when
         SMOTE is used to up-sampled minority classes; in that case, those
         must be part of the pipeline for those steps to work automatically.
         However, a user may manually provide only the data of interest.
@@ -92,16 +118,20 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
         X, y = check_X_y(X, y, accept_sparse=False)
-        self.n_features_in_ = self.__X_.shape[1]
+        self.n_features_in_ = X.shape[1]
 
         # Fit model to target data
         if self.style == "simca":
-            self.__model_ = SIMCA(
-                n_components=self.n_components, alpha=self.alpha
+            self.__model_ = SIMCA_Model(
+                n_components=self.n_components,
+                alpha=self.alpha,
+                scale_x=self.scale_x,
             )
         elif self.style == "dd-simca":
-            self.__model_ = DDSIMCA(
-                n_components=self.n_components, alpha=self.alpha
+            self.__model_ = DDSIMCA_Model(
+                n_components=self.n_components,
+                alpha=self.alpha,
+                scale_x=self.scale_x,
             )
         else:
             raise ValueError("{} is not a recognized style.".format(self.style))
@@ -111,6 +141,24 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         ), "target_class not in training set"
         self.__model_.fit(X[y == self.target_class])
         self.is_fitted_ = True
+
+    def transform(self, X):
+        """
+        Transform into the SIMCA subspace.
+
+        This is not very relevant, but is necessary for scikit-learn compatibility.
+        """
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.transform(X)
+
+    def fit_transform(self, X, y):
+        """
+        Fit and transform.
+
+        This is not very relevant, but is necessary for scikit-learn compatibility.
+        """
+        self.fit(X, y)
+        return self.transform(X)
 
     @property
     def CSPS(self):
@@ -127,14 +175,23 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         """Total specificity of the model."""
         return copy.deepcopy(self.__TSPS_)
 
-    def score(self, X, y):
+    @property
+    def TEFF(self):
+        """Total efficiency of the model."""
+        return copy.deepcopy(self.__TEFF_)
+
+    def score(self, X, y=None):
         """
         Score the model (uses total efficiency as score).
+
+        If scoring a set with only the target class present, returns
+        TSNS.  If only alternatives present, returns TSPS.  Otherwise
+        returns TEFF as a geometric mean of the two.
 
         Parameters
         ----------
         X : ndarray
-            Inputs
+            Inputs.
         y : ndarray
             Class labels or indices
         """
@@ -145,11 +202,6 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             c for c in sorted(np.unique(y)) if c != self.target_class
         ]
 
-        mask = y == self.target_class
-        self.__TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
-            mask
-        )  # TSNS = CSNS for SIMCA
-
         self.__CSPS_ = {}
         for class_ in self.__alternatives_:
             mask = y == class_
@@ -158,18 +210,63 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             ) / np.sum(mask)
 
         mask = y != self.target_class
-        self.__TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(
-            mask
-        )
+        if np.sum(mask) == 0:
+            # Testing on nothing but the target class, can't evaluate TSPS
+            self.__TSPS_ = np.nan
+        else:
+            self.__TSPS_ = 1.0 - np.sum(
+                self.__model_.predict(X[mask])
+            ) / np.sum(mask)
 
-        TEFF = np.sqrt(self.__TSNS_ * self.__TSPS_)
+        mask = y == self.target_class
+        if np.sum(mask) == 0:
+            # Testing on nothing but alternative classes, can't evaluate TSNS
+            self.__TSNS_ = np.nan
+        else:
+            self.__TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
+                mask
+            )  # TSNS = CSNS for SIMCA
 
-        return TEFF
+        if np.isnan(self.__TSNS_):
+            self.__TEFF_ = self.__TSPS_
+        elif np.isnan(self.__TSPS_):
+            self.__TEFF_ = self.__TSNS_
+        else:
+            self.__TEFF_ = np.sqrt(self.__TSNS_ * self.__TSPS_)
+
+        metrics = {
+            "teff": self.__TEFF_,
+            "tsns": self.__TSNS_,
+            "tsps": self.__TSPS_,
+        }
+        return metrics[self.use.lower()]
+
+    def _get_tags(self):
+        """For compatibility with sklearn >=0.21."""
+        return {
+            "allow_nan": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "poor_score": False,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": True,
+            "requires_positive_y": False,
+            "_skip_test": True,  # Skip since get_tags is unstable anyway
+            "_xfail_checks": {},
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
 
-class SIMCA(ClassifierMixin, BaseEstimator):
+class SIMCA_Model(ClassifierMixin, BaseEstimator):
     """
-    SIMCA classifier for a single class.
+    SIMCA model for a single class.
 
     In general, you need a separate SIMCA object for each class in the dataset
     you wish to characterize. This code is based on implementation described in
@@ -304,6 +401,11 @@ class SIMCA(ClassifierMixin, BaseEstimator):
         """
         return self.__pca_.transform(self.__ss_.transform(self.matrix_X_(X)))
 
+    def fit_transform(self, X, y=None):
+        """Fit and transform."""
+        self.fit(X, y)
+        return self.transform(X)
+
     def distance(self, X):
         """
         Compute the F score (distance) for a given set of observations.
@@ -400,18 +502,18 @@ class SIMCA(ClassifierMixin, BaseEstimator):
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,
-            "requires_y": False,
+            "requires_y": False,  # Usually true for classifiers, but not for SIMCA
             "requires_positive_y": False,
             "_skip_test": True,  # Skip since get_tags is unstable anyway
-            "_xfail_checks": False,
+            "_xfail_checks": {},
             "stateless": False,
             "X_types": ["2darray"],
         }
 
 
-class DDSIMCA(ClassifierMixin, BaseEstimator):
+class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     """
-    Data-driven SIMCA.
+    Train a Data-driven SIMCA Model.
 
     DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared
     distribution, to determine the acceptance criteria to belong to a class.
@@ -426,7 +528,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     """
 
-    def __init__(self, n_components, alpha=0.05, scale_x=True):
+    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True):
         """
         Instantiate the class.
 
@@ -436,6 +538,8 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             Number of PCA components to use to model this class.
         alpha : float
             Significance level.
+        gamma : float
+            Outlier significance level.
         scale_x : bool
             Whether or not to scale X by its sample standard deviation or not.
             This depends on the meaning of X and is up to the user to
@@ -443,7 +547,12 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             Note that X is always centered.
         """
         self.set_params(
-            **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
+            **{
+                "n_components": n_components,
+                "alpha": alpha,
+                "gamma": gamma,
+                "scale_x": scale_x,
+            }
         )
 
     def set_params(self, **parameters):
@@ -457,6 +566,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
+            "gamma": self.gamma,
             "scale_x": self.scale_x,
         }
 
@@ -487,8 +597,14 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         ----------
         X : matrix-like
             Columns of features; observations are rows which correspond to the
-            clas being modeled - this will be converted to a numpy array
+            class being modeled - this will be converted to a numpy array
             automatically.
+        y : None, array-like
+            This option is available to be consistent with scikit-learn's
+            estimator API, however, it is ignored.  Only observations for a single
+            class at a time should be passed (i.e., all y should be the same).
+            If passed, it is checked that they are all identical and this label
+            is used; otherwise the name "Training Class" is assigned.
 
         Returns
         -------
@@ -497,6 +613,15 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         self.__X_ = np.array(X).copy()
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
+
+        if y is None:
+            self.__label_ = "Training Class"
+        else:
+            label = np.unique(y)
+            if len(label) > 1:
+                raise Exception("More than one class passed during training.")
+            else:
+                self.__label_ = str(label[0])
 
         if (
             self.n_components
@@ -520,6 +645,12 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             1.0 - self.alpha, self.__Nh_ + self.__Nq_
         )
 
+        self.__c_out_ = scipy.stats.chi2.ppf(
+            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+            self.__Nh_ + self.__Nq_,
+        )
+
+        self.is_fitted_ = True
         return self
 
     def transform(self, X):
@@ -538,7 +669,13 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         t-scores : matrix-like
             Projection of X via PCA into a score space.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.__pca_.transform(self.__ss_.transform(self.matrix_X_(X)))
+
+    def fit_transform(self, X, y=None):
+        """Fit and transform."""
+        self.fit(X, y)
+        return self.transform(X)
 
     def h_q_(self, X_raw):
         """Compute the h (OD) and q (SD) distances."""
@@ -610,11 +747,14 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         """
         Compute how far away points are from this class.
 
+        This is computed as a sum of the OD and OD to be used with acceptance
+        rule II from [1].
+
         Parameters
         ----------
         X : matrix-like
             Columns of features; observations are rows which correspond to the
-            clas being modeled - this will be converted to a numpy array
+            class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
@@ -622,6 +762,7 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         distance : ndarray
             Distance to class.
         """
+        check_is_fitted(self, "is_fitted_")
         h, q = self.h_q_(self.matrix_X_(X))
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
@@ -641,8 +782,34 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         predictions : ndarray
             Bolean array of whether a point belongs to this class.
         """
+        check_is_fitted(self, "is_fitted_")
+
         # If c < c_crit, it belongs to the class
         return self.distance(self.matrix_X_(X)) < self.__c_crit_
+
+    def check_outliers(self, X):
+        """
+        Check if outliers exist in some data.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        Returns
+        -------
+        extremes, outliers : ndarray, ndarray
+            Boolean mask of X if each point falls between acceptance threshold
+            (belongs to class) and the outlier threshold (extreme), or beyond
+            the outlier (outlier) threshold.
+        """
+        check_is_fitted(self, "is_fitted_")
+
+        dX_ = self.distance(self.matrix_X_(X))
+        extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
+        outliers = dX_ >= self.__c_out_
+        return extremes, outliers
 
     def visualize(self, X, y, ax=None):
         """
@@ -658,9 +825,18 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         ax : matplotlib.pyplot.axes
             Axis object to plot on (optional).
         """
+        check_is_fitted(self, "is_fitted_")
         h_lim = np.linspace(0, self.__c_crit_ * self.__h0_ / self.__Nh_, 1000)
+        h_lim_out = np.linspace(
+            0, self.__c_out_ * self.__h0_ / self.__Nh_, 1000
+        )
         q_lim = (
             (self.__c_crit_ - self.__Nh_ / self.__h0_ * h_lim)
+            * self.__q0_
+            / self.__Nq_
+        )
+        q_lim_out = (
+            (self.__c_out_ - self.__Nh_ / self.__h0_ * h_lim_out)
             * self.__q0_
             / self.__Nq_
         )
@@ -674,21 +850,52 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
         axis.plot(
             np.log(1.0 + h_lim / self.__h0_),
             np.log(1.0 + q_lim / self.__q0_),
+            "g-",
+        )
+        axis.plot(
+            np.log(1.0 + h_lim_out / self.__h0_),
+            np.log(1.0 + q_lim_out / self.__q0_),
             "r-",
         )
-        xlim, ylim = 0, 0
+        xlim, ylim = (
+            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_)),
+            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
+        )
         X_ = self.matrix_X_(X)
         y_ = np.array(y)
+        markers = [
+            ".",
+            "o",
+            "v",
+            "s",
+            "*",
+            "+",
+            "x",
+            "^",
+            "<",
+            ">",
+            "1",
+            "2",
+            "3",
+            "4",
+        ]
         for i, class_ in enumerate(sorted(np.unique(y_))):
             h_, q_ = self.h_q_(X_[y_ == class_])
-            axis.plot(
-                np.log(1.0 + h_ / self.__h0_),
-                np.log(1.0 + q_ / self.__q0_),
-                color="C{}".format(i),
-                label=class_,
-                lw=0,
-                marker="o",
-            )
+            in_mask = self.predict(X_[y_ == class_])
+            ext_mask, out_mask = self.check_outliers(X_[y_ == class_])
+            for c, mask, label in [
+                ("g", in_mask, self.__label_),
+                ("orange", ext_mask, "Extreme"),
+                ("r", out_mask, "Outlier"),
+            ]:
+                axis.plot(
+                    np.log(1.0 + h_[mask] / self.__h0_),
+                    np.log(1.0 + q_[mask] / self.__q0_),
+                    label=label,
+                    marker=markers[i % len(markers)],
+                    lw=0,
+                    color=c,
+                )
             xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
             ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
         axis.legend(loc="best")
@@ -713,10 +920,10 @@ class DDSIMCA(ClassifierMixin, BaseEstimator):
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,
-            "requires_y": False,
+            "requires_y": False,  # Usually true for classifiers, but not for SIMCA
             "requires_positive_y": False,
             "_skip_test": True,  # Skip since get_tags is unstable anyway
-            "_xfail_checks": False,
+            "_xfail_checks": {},
             "stateless": False,
             "X_types": ["2darray"],
         }
