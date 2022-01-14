@@ -59,7 +59,20 @@ class CustomScaler:
 
         return result
 
-    def fit_transform(self, X):
+    def inverse_transform(self, X):
+        """Invert the transformation."""
+        X = check_array(X, accept_sparse=False)
+        check_is_fitted(self, "is_fitted_")
+
+        result = np.array(X, dtype=np.float64)
+        if self.with_std:
+            result *= self.__std_
+        if self.with_mean:
+            result += self.__mean_
+
+        return result
+
+    def fit_transform(self, X, y=None):
         """Fit and then transform some data."""
         self.fit(X)
 
