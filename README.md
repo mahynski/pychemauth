@@ -9,7 +9,7 @@ Common chemometric analysis methods implemented in python.  These methods are de
 [![Build Status](https://travis-ci.com/mahynski/chemometrics.svg?branch=main)](https://travis-ci.com/mahynski/chemometrics)
 
 ## Installation
-
+check
 ~~~ bash
 $ git clone https://github.com/mahynski/chemometrics.git
 $ pip install -r requirements.txt
