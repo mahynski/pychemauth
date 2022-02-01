@@ -15,7 +15,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from .utils import CustomScaler
+from utils import CustomScaler
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):

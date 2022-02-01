@@ -12,7 +12,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from .utils import CustomScaler
+from utils import CustomScaler, estimate_dof
 
 
 class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
@@ -541,7 +541,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     for a single class.  A separate object must be trained for each class you
     wish to model.
 
-    1. "Acceptance areas for multivariate classification derived by projection
+    [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     """
 
@@ -656,7 +656,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         # 3. Compute critical distance
         h_vals, q_vals = self.h_q_(self.__X_)
         self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = self.estimate_dof_(h_vals, q_vals)
+        self.__Nh_, self.__Nq_ = estimate_dof(
+            h_vals, q_vals, self.n_components, self.n_features_in_
+        )
 
         self.__c_crit_ = scipy.stats.chi2.ppf(
             1.0 - self.alpha, self.__Nh_ + self.__Nq_
@@ -709,56 +711,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         )
 
         return h_vals, q_vals
-
-    def estimate_dof_(self, h_vals, q_vals):
-        """Estimate the degrees of freedom for the chi-squared distribution."""
-
-        def err2(N, vals):
-            """
-            Use a "robust" method for estimating DoF.
-
-            In [1] Eq. 14 suggests the IQR should be divided by the mean (h0),
-            however, the citation they provide suggests the median might be
-            a better choice; in practice, it seems that is favored since it
-            is more robust against outliers, so this is used below in that
-            spirit.
-            """
-            x0 = np.median(vals)  # np.mean(vals)
-            a = (
-                scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)
-            ) / N
-            b = scipy.stats.iqr(vals, rng=(25, 75)) / x0
-
-            return (a - b) ** 2
-
-        # As in conclusions of [1], Nh ~ n_components is expected
-        res = scipy.optimize.minimize(
-            err2, self.n_components, args=(h_vals), method="Nelder-Mead"
-        )
-        if res.success:
-            # Robust method, if possible
-            Nh = res.x[0]
-        else:
-            # Use simple estimate if this fails (Eq. 13 in [1])
-            Nh = 2.0 * np.mean(h_vals) ** 2 / np.std(h_vals, ddof=1) ** 2
-
-        # As in conclusions of [1], Nq ~ rank(X)-n_components is expected;
-        # assuming near full rank then this is min(I,J)-n_components
-        # (n_components<=J)
-        res = scipy.optimize.minimize(
-            err2,
-            np.min([len(q_vals), self.n_features_in_]) - self.n_components,
-            args=(q_vals),
-            method="Nelder-Mead",
-        )
-        if res.success:
-            # Robust method, if possible
-            Nq = res.x[0]
-        else:
-            # Use simple estimate if this fails (Eq. 23 in [1])
-            Nq = 2.0 * np.mean(q_vals) ** 2 / np.std(q_vals, ddof=1) ** 2
-
-        return Nh, Nq
 
     def distance(self, X):
         """

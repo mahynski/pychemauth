@@ -13,8 +13,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
-from classifier.utils import CustomScaler
 from regressor.pcr import PCR
+from utils import CustomScaler
 
 
 class TestPCR(unittest.TestCase):

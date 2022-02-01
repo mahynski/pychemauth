@@ -1,40 +1,38 @@
 """
-Principal Components Regression (PCR).
+Projection to Latent Structures (PLS).
 
 author: nam
 """
 import numpy as np
 import scipy
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.decomposition import PCA
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from utils import CustomScaler
+from classifier.utils import CustomScaler, estimate_dof
 
 
-class PCR(RegressorMixin, BaseEstimator):
+class PLS(RegressorMixin, BaseEstimator):
     """
-    Perform a Principal Components Regression (PCR).
-
-    This is designed to regress a single, scalar target for each observation.
-    X data is always (column) centered, but may or may not be scaled
-    by its standard deviation. Y data may or may not be centered and/or
-    scaled.
+    Perform a Partial Least Squares Regression (PLS) aka Projection to Latent Structures Regression.
 
     Notes
     -----
-    This is almost identical to
-    >>> pcr = make_pipeline(StandardScaler(), PCA(n_components=1), LinearRegression(fit_intercept=True))
-    >>> pcr.fit(X_train, y_train)
+    * X and y are always centered internally.
+    * A single, scalar output (y) is expected for each observation. This is to allow
+    for outlier detection and analysis following [1].
 
-    This implementation is more explicit. See references such as:
-
-    [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
-    [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling", Anal. Chem. 2020, 92, 2656−2664.
+    [1] "Acceptance areas for multivariate classification derived by projection
+    methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     """
 
     def __init__(
-        self, n_components=1, scale_x=False, center_y=False, scale_y=False
+        self,
+        n_components=1,
+        alpha=0.05,
+        gamma=0.01,
+        scale_x=False,
+        scale_y=False,
     ):
         """
         Instantiate the class.
@@ -43,19 +41,22 @@ class PCR(RegressorMixin, BaseEstimator):
         ----------
         n_components : int
             Number of dimensions to project into. Should be in the range
-            [1, num_features].
+            [1, min(n_samples-1, n_features)].
+        alpha : float
+            Type I error rate (signficance level).
+        gamma : float
+            Significance level for determining outliers.
         scale_x : bool
             Whether or not to scale X columns by the standard deviation.
-        center_y : bool
-            Whether ot not to center the Y responses.
         scale_y : bool
             Whether or not to scale Y by its standard deviation.
         """
         self.set_params(
             **{
                 "n_components": n_components,
+                "alpha": alpha,
+                "gamma": gamma,
                 "scale_x": scale_x,
-                "center_y": center_y,
                 "scale_y": scale_y,
             }
         )
@@ -70,8 +71,9 @@ class PCR(RegressorMixin, BaseEstimator):
         """Get parameters; for consistency with sklearn's estimator API."""
         return {
             "n_components": self.n_components,
+            "alpha": self.alpha,
+            "gamma": self.gamma,
             "scale_x": self.scale_x,
-            "center_y": self.center_y,
             "scale_y": self.scale_y,
         }
 
@@ -85,7 +87,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
     def fit(self, X, y):
         """
-        Fit the PCR model.
+        Fit the PLS model.
 
         Parameters
         ----------
@@ -122,14 +124,15 @@ class PCR(RegressorMixin, BaseEstimator):
         self.__x_scaler_ = CustomScaler(
             with_mean=True, with_std=self.scale_x
         )  # Always center and maybe scale X
+        self.__Xt_ = self.__x_scaler_.fit_transform(self.__X_)
 
         # 2. Preprocess Y data
         self.__y_scaler_ = CustomScaler(
-            with_mean=self.center_y, with_std=self.scale_y
-        )  # Maybe center and maybe scale Y
+            with_mean=True, with_std=self.scale_y
+        )  # Always center and maybe scale Y
         self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)
 
-        # 3. Perform PCA on X data
+        # 3. Perform PLS
         upper_bound = np.min(
             [
                 self.__X_.shape[0] - 1,
@@ -149,32 +152,64 @@ n_features [{}])] = [{}, {}].".format(
                 )
             )
 
-        self.__pca_ = PCA(
+        self.__pls_ = PLSRegression(
             n_components=self.n_components,
+            scale=self.scale_x,
+            max_iter=5000,
             random_state=0,
-        )
-        self.__T_train_ = self.__pca_.fit_transform(
-            self.__x_scaler_.fit_transform(self.__X_)
         )
 
         # 4. Fit the projection
-        # Add column to include an intercept term in the projected space
-        t_new = np.hstack(
-            (np.ones((self.__T_train_.shape[0], 1)), self.__T_train_)
+        T = self.__pls_.fit_transform(self.__Xt_, self.__yt_)
+
+        # 5. Characterize the shape of that projected space
+        self.__space_scaler_ = CustomScaler(with_mean=True, with_std=False)
+        T_ = self.__space_scaler_.fit_transform(T)  # Center the projected space
+        self.__eval_, self.__evec_ = np.linalg.eig(np.matmul(T_.T, T_))
+
+        h_vals, q_vals = self.h_q_(self.__X_)
+        self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
+        self.__Nh_, self.__Nq_ = estimate_dof(
+            h_vals, q_vals, self.n_components, self.n_features_in_
         )
-        Q = np.matmul(
-            np.matmul(np.linalg.inv(np.matmul(t_new.T, t_new)), t_new.T),
-            self.__yt_,
+
+        self.__c_crit_ = scipy.stats.chi2.ppf(
+            1.0 - self.alpha, self.__Nh_ + self.__Nq_
         )
-        self.__intercept_ = Q[0]
-        self.__coefs_ = Q[1:]
+
+        self.__c_out_ = scipy.stats.chi2.ppf(
+            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+            self.__Nh_ + self.__Nq_,
+        )
 
         self.is_fitted_ = True
         return self
 
+    def h_q_(self, X):
+        """Compute inner and outer distances."""
+        # h (SD) is computed relative to center of space (zeroed for simplicity)
+        h = np.sum(
+            self.__space_scaler_.transform(self.transform(X)) ** 2
+            / self.__eval_,
+            axis=1,
+        )
+
+        # Centering should cancel out during q (OD) calculation
+        q = np.sum(
+            (
+                self.__x_scaler_.inverse_transform(
+                    self.__pls_.inverse_transform(self.transform(X)) - X
+                )
+            )
+            ** 2,
+            axis=1,
+        )
+
+        return h, q
+
     def transform(self, X):
         """
-        Project X into the PCA subspace.
+        Project X into the PLS subspace.
 
         Parameters
         ----------
@@ -185,14 +220,14 @@ n_features [{}])] = [{}, {}].".format(
         Returns
         -------
         t-scores : matrix-like
-            Projection of X via PCA into a score space.
+            Projection of X via PLS into a score space.
         """
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
         X = np.array(X)
         assert X.shape[1] == self.n_features_in_
 
-        return self.__pca_.transform(self.__x_scaler_.transform(X))
+        return self.__pls_.transform(self.__x_scaler_.transform(X))
 
     def fit_transform(self, X, y):
         """Fit and transform."""
