@@ -154,8 +154,8 @@ n_features [{}])] = [{}, {}].".format(
 
         self.__pls_ = PLSRegression(
             n_components=self.n_components,
-            scale=self.scale_x,
-            max_iter=5000,
+            scale=self.scale_x,  # False
+            max_iter=10000,
             random_state=0,
         )
 
@@ -253,10 +253,8 @@ n_features [{}])] = [{}, {}].".format(
         X = check_array(X, accept_sparse=False)
         assert X.shape[1] == self.n_features_in_
 
-        T_test = self.transform(X)
-
         return self.__y_scaler_.inverse_transform(
-            self.__intercept_ + np.matmul(T_test, self.__coefs_)
+            self.__pls_.predict(self.__x_scaler_.transform(X))
         )
 
     def score(self, X, y):
