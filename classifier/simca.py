@@ -697,7 +697,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         return self.transform(X)
 
     def h_q_(self, X_raw):
-        """Compute the h (OD) and q (SD) distances."""
+        """Compute the h (SD) and q (OD) distances."""
         X_raw_std = self.__ss_.transform(self.matrix_X_(X_raw))
         T = self.__pca_.transform(X_raw_std)
         X_pred = np.matmul(T, self.__pca_.components_)
@@ -782,7 +782,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
     def visualize(self, X, y, ax=None):
         """
-        Plot the chi-squared acceptance area with various observations.
+        Plot the chi-squared acceptance area with observations.
 
         Parameters
         ----------
