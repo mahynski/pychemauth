@@ -39,7 +39,7 @@ $ python -m unittest discover tests/
 ## Available Regressors (To Do)
 * PCA
 * PCR
-* PLS(2) Regression
+* PLS
 
 ## Example Usage (Pseudocode)
 ~~~ python
@@ -56,7 +56,7 @@ Refer to `examples/` for example usage and more explicit details.
 ## Deploying on Google Colab
 
 You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
-Follow the instructions to set up an account if you do not already have one. 
+Follow the instructions to set up an account if you do not already have one.
 Then, enter the following cells at the start of a new notebook:
 
 ~~~python

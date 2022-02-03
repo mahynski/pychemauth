@@ -10,7 +10,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from ..utils import CustomScaler, estimate_dof
+from utils import CustomScaler, estimate_dof
 
 
 class PLS(RegressorMixin, BaseEstimator):
@@ -158,7 +158,7 @@ n_features [{}])] = [{}, {}].".format(
 
         self.__pls_ = PLSRegression(
             n_components=self.n_components,
-            scale=self.scale_x,  # False
+            scale=self.scale_x,
             max_iter=10000,
         )
 
