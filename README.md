@@ -8,6 +8,10 @@ Common chemometric analysis methods implemented in python.  These methods are de
 [![codecov](https://codecov.io/gh/mahynski/chemometrics/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/chemometrics)
 ![Workflow](https://github.com/mahynski/chemometrics/actions/workflows/python-app.yml/badge.svg?branch=main)
 
+## License Information
+* See LICENSE for more information. 
+* Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
+
 ## Installation
 
 ~~~ bash
