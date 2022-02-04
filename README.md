@@ -5,9 +5,12 @@ Common chemometric analysis methods implemented in python.  These methods are de
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![codecov](https://codecov.io/gh/mahynski/chemometrics/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/chemometrics)
-<!--[![Build Status](https://travis-ci.com/mahynski/chemometrics.svg?branch=main)](https://travis-ci.com/mahynski/chemometrics)-->
-![example workflow](https://github.com/mahynski/chemometrics/actions/workflows/python-app.yml/badge.svg?branch=main)
+![Workflow](https://github.com/mahynski/chemometrics/actions/workflows/python-app.yml/badge.svg?branch=main)
+<!--[![codecov](https://codecov.io/gh/mahynski/chemometrics/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/chemometrics)-->
+
+## License Information
+* See LICENSE for more information. 
+* Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
 
 ## Installation
 
@@ -61,7 +64,7 @@ Follow the instructions to set up an account if you do not already have one.
 Then, enter the following cells at the start of a new notebook:
 
 ~~~python
-# 1. Upload your data as a .csv file
+# 1. Upload your data as a .csv file (enter this code and click "Choose Files")
 
 from google.colab import files
 uploaded = files.upload() # Currently there are some issues with this on Firefox
@@ -72,15 +75,15 @@ for fn in uploaded.keys():
 ~~~
 
 ~~~python
-# 2. Read your csv data into a Pandas DataFrame - split into test/train later
+# 2. Read your csv data into a Pandas DataFrame
 import pandas as pd
-df = pd.read_csv(io.StringIO(uploaded[''].decode('utf-8')), sep=';')
+df = pd.read_csv(list(uploaded.keys())[0])
 ~~~
 
 ~~~python
 # Clone chemometrics repo
 !git clone https://github.com/mahynski/chemometrics.git
-!pip install -r requirements.txt
+!cd chemometrics; pip install -r requirements.txt
 ~~~~
 
 ~~~python
