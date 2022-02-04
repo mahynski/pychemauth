@@ -64,7 +64,7 @@ Follow the instructions to set up an account if you do not already have one.
 Then, enter the following cells at the start of a new notebook:
 
 ~~~python
-# 1. Upload your data as a .csv file
+# 1. Upload your data as a .csv file (enter this code and click "Choose Files")
 
 from google.colab import files
 uploaded = files.upload() # Currently there are some issues with this on Firefox
@@ -75,15 +75,15 @@ for fn in uploaded.keys():
 ~~~
 
 ~~~python
-# 2. Read your csv data into a Pandas DataFrame - split into test/train later
+# 2. Read your csv data into a Pandas DataFrame
 import pandas as pd
-df = pd.read_csv(io.StringIO(uploaded[''].decode('utf-8')), sep=';')
+df = pd.read_csv(list(uploaded.keys())[0])
 ~~~
 
 ~~~python
 # Clone chemometrics repo
 !git clone https://github.com/mahynski/chemometrics.git
-!pip install -r requirements.txt
+!cd chemometrics; pip install -r requirements.txt
 ~~~~
 
 ~~~python
