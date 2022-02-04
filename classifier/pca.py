@@ -272,6 +272,10 @@ n_features [{}])] = [{}, {}].".format(
         outliers = dX_ >= self.__c_out_
         return extremes, outliers
 
+    def score(self, X, y=None):
+        """Score is not implemented for PCA."""
+        raise NotImplementedError()
+
     def visualize(self, X, ax=None):
         """
         Plot the chi-squared acceptance area with observations.
