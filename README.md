@@ -32,12 +32,12 @@ $ python -m unittest discover tests/
 ~~~
 
 ## Available Classifiers
+* PCA (for data inspection)
 * PLS-DA (soft and hard variants)
 * SIMCA
 * DD-SIMCA
 
-## Available Regressors (To Do)
-* PCA
+## Available Regressors
 * PCR
 * PLS
 

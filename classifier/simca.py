@@ -758,7 +758,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
     def check_outliers(self, X):
         """
-        Check if outliers exist in some data.
+        Check if extremes and outliers exist in the data.
 
         Parameters
         ----------
