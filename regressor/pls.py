@@ -13,7 +13,7 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from utils import CustomScaler, estimate_dof
+from chemometrics.utils import CustomScaler, estimate_dof
 
 
 class PLS(RegressorMixin, BaseEstimator):

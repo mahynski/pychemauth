@@ -13,7 +13,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted
 
 sys.path.append("../")
-from utils import CustomScaler, estimate_dof
+from chemometrics.utils import CustomScaler, estimate_dof
 
 
 class PCA(ClassifierMixin, BaseEstimator):
