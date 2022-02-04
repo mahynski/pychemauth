@@ -61,9 +61,10 @@ Refer to `examples/` for example usage and more explicit details.
 
 You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
 Follow the instructions to set up an account if you do not already have one.
-Then, enter the following cells at the start of a new notebook:
 
 ![](examples/colab_example.gif)
+
+Below is the code that accompanies the gif above.
 
 ~~~python
 # 1. Upload your data as a .csv file (enter this code and click "Choose Files")
