@@ -3,12 +3,16 @@ Principal Components Analysis (PCA).
 
 author: nam
 """
+import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+import sklearn.decomposition
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.decomposition import PCA
-from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from sklearn.utils.validation import check_array, check_is_fitted
 
+sys.path.append("../")
 from utils import CustomScaler, estimate_dof
 
 
@@ -102,7 +106,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
         self.__X_ = np.array(X).copy()
-        self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
+        self.__X_ = check_array(self.__X_, accept_sparse=False)
         self.n_features_in_ = self.__X_.shape[1]
 
         # 1. Preprocess X data
@@ -130,9 +134,10 @@ n_features [{}])] = [{}, {}].".format(
                 )
             )
 
-        self.__pca_ = PCA(
-            n_components=self.n_components, random_state=0, svd_solver="auto"
+        self.__pca_ = sklearn.decomposition.PCA(
+            n_components=self.n_components, svd_solver="auto"
         )
+        self.__pca_.fit(self.__x_scaler_.fit_transform(self.__X_))
 
         self.is_fitted_ = True
 
@@ -170,7 +175,9 @@ n_features [{}])] = [{}, {}].".format(
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        return self.__pca_.transform(self.__ss_.transform(self.matrix_X_(X)))
+        return self.__pca_.transform(
+            self.__x_scaler_.transform(self.matrix_X_(X))
+        )
 
     def fit_transform(self, X, y=None):
         """Fit and transform."""
@@ -245,7 +252,7 @@ n_features [{}])] = [{}, {}].".format(
 
     def check_outliers(self, X):
         """
-        Check if extemes and outliers exist in the data.
+        Check where, if ever, extemes and outliers occur in the data.
 
         Parameters
         ----------
@@ -265,7 +272,7 @@ n_features [{}])] = [{}, {}].".format(
         outliers = dX_ >= self.__c_out_
         return extremes, outliers
 
-    def visualize(self, X, figsize=None):
+    def visualize(self, X, ax=None):
         """
         Plot the chi-squared acceptance area with observations.
 
@@ -277,7 +284,11 @@ n_features [{}])] = [{}, {}].".format(
         """
         check_is_fitted(self, "is_fitted_")
 
-        fig, axis = plt.figure(figsize=figsize)
+        if ax is None:
+            fig = plt.figure()
+            axis = plt.gca()
+        else:
+            axis = ax
 
         h_, q_ = self.h_q_(X)
         h_lim = np.linspace(0, self.__c_crit_ * self.__h0_ / self.__Nh_, 1000)
@@ -310,7 +321,7 @@ n_features [{}])] = [{}, {}].".format(
             1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
         )
 
-        ext_mask, out_mask = self.check_outliers(X_)
+        ext_mask, out_mask = self.check_outliers(X)
         in_mask = (~ext_mask) & (~out_mask)
         for c, mask, label in [
             (
@@ -362,7 +373,7 @@ n_features [{}])] = [{}, {}].".format(
             "poor_score": False,
             "requires_fit": True,
             "requires_positive_X": False,
-            "requires_y": True,
+            "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": True,  # Skip since get_tags is unstable anyway
             "_xfail_checks": False,

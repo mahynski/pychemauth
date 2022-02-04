@@ -4,6 +4,7 @@ Soft independent modeling of class analogies.
 author: nam
 """
 import copy
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +13,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
+sys.path.append("../")
 from utils import CustomScaler, estimate_dof
 
 
