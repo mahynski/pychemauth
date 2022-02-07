@@ -13,7 +13,8 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted
 
 sys.path.append("../")
-from chemometrics.utils import CustomScaler, estimate_dof
+from chemometrics.preprocessing.scaling import CorrectedScaler
+from chemometrics.utils import estimate_dof
 
 
 class PCA(ClassifierMixin, BaseEstimator):
@@ -59,6 +60,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "scale_x": scale_x,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -110,7 +112,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         self.n_features_in_ = self.__X_.shape[1]
 
         # 1. Preprocess X data
-        self.__x_scaler_ = CustomScaler(
+        self.__x_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
         )  # Always center and maybe scale X
 

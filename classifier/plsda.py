@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from chemometrics.utils import CustomScaler
+from chemometrics.preprocessing.scaling import CorrectedScaler
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):
@@ -99,6 +99,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 "scale_x": scale_x,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -185,10 +186,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.__ohencoder_ = OneHotEncoder(
             sparse=False
         )  # Convert integers to OHE
-        self.__x_pls_scaler_ = CustomScaler(
+        self.__x_pls_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
         )  # Center and maybe scale X
-        self.__y_pls_scaler_ = CustomScaler(
+        self.__y_pls_scaler_ = CorrectedScaler(
             with_mean=True, with_std=False
         )  # Center do not scale Y
 

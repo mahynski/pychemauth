@@ -13,7 +13,8 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from chemometrics.utils import CustomScaler, estimate_dof
+from chemometrics.preprocessing.scaling import CorrectedScaler
+from chemometrics.utils import estimate_dof
 
 
 class PLS(RegressorMixin, BaseEstimator):
@@ -57,6 +58,7 @@ class PLS(RegressorMixin, BaseEstimator):
                 "scale_x": scale_x,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -128,13 +130,13 @@ class PLS(RegressorMixin, BaseEstimator):
         self.n_features_in_ = self.__X_.shape[1]
 
         # 1. Preprocess X data
-        self.__x_scaler_ = CustomScaler(
+        self.__x_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
         )  # Always center and maybe scale X
         self.__x_scaler_.fit(self.__X_)
 
         # 2. Preprocess Y data
-        self.__y_scaler_ = CustomScaler(
+        self.__y_scaler_ = CorrectedScaler(
             with_mean=True, with_std=False
         )  # Always center and maybe scale Y
         self.__y_scaler_.fit(self.__y_)

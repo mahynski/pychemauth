@@ -12,7 +12,8 @@ from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from chemometrics.utils import CustomScaler, estimate_dof
+from chemometrics.preprocessing.scaling import CorrectedScaler
+from chemometrics.utils import estimate_dof
 
 
 class PCR(RegressorMixin, BaseEstimator):
@@ -74,6 +75,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 "scale_y": scale_y,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -147,12 +149,12 @@ class PCR(RegressorMixin, BaseEstimator):
         self.n_features_in_ = self.__X_.shape[1]
 
         # 1. Preprocess X data
-        self.__x_scaler_ = CustomScaler(
+        self.__x_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
         )  # Always center and maybe scale X
 
         # 2. Preprocess Y data
-        self.__y_scaler_ = CustomScaler(
+        self.__y_scaler_ = CorrectedScaler(
             with_mean=self.center_y, with_std=self.scale_y
         )  # Maybe center and maybe scale Y
         self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)

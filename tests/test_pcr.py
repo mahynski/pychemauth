@@ -13,8 +13,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
+from preprocessing.scaling import CorrectedScaler
 from regressor.pcr import PCR
-from utils import CustomScaler
 
 
 class TestPCR(unittest.TestCase):
@@ -71,7 +71,7 @@ class TestPCR(unittest.TestCase):
 
         # 1. No y centering/scaling
         pcr_pipe = make_pipeline(
-            CustomScaler(with_mean=True, with_std=False),
+            CorrectedScaler(with_mean=True, with_std=False),
             PCA(n_components=1),
             LinearRegression(fit_intercept=True),
         )
@@ -87,10 +87,10 @@ class TestPCR(unittest.TestCase):
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
 
         # 2. With y centering
-        scaler = CustomScaler(with_mean=True, with_std=False)
+        scaler = CorrectedScaler(with_mean=True, with_std=False)
         y_alt = scaler.fit_transform(y_train.reshape(-1, 1))
         pcr_pipe = make_pipeline(
-            CustomScaler(with_mean=True, with_std=False),
+            CorrectedScaler(with_mean=True, with_std=False),
             PCA(n_components=1),
             LinearRegression(fit_intercept=True),
         )
@@ -106,10 +106,10 @@ class TestPCR(unittest.TestCase):
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
 
         # 3. With y centering and scaling
-        scaler = CustomScaler(with_mean=True, with_std=True)
+        scaler = CorrectedScaler(with_mean=True, with_std=True)
         y_alt = scaler.fit_transform(y_train.reshape(-1, 1))
         pcr_pipe = make_pipeline(
-            CustomScaler(with_mean=True, with_std=False),
+            CorrectedScaler(with_mean=True, with_std=False),
             PCA(n_components=1),
             LinearRegression(fit_intercept=True),
         )
@@ -125,10 +125,10 @@ class TestPCR(unittest.TestCase):
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
 
         # 4. With y centering and scaling and X scaling
-        scaler = CustomScaler(with_mean=True, with_std=True)
+        scaler = CorrectedScaler(with_mean=True, with_std=True)
         y_alt = scaler.fit_transform(y_train.reshape(-1, 1))
         pcr_pipe = make_pipeline(
-            CustomScaler(with_mean=True, with_std=True),
+            CorrectedScaler(with_mean=True, with_std=True),
             PCA(n_components=1),
             LinearRegression(fit_intercept=True),
         )

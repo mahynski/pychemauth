@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
 from classifier.pca import PCA
-from utils import CustomScaler
 
 
 class TestPCA_Scaled(unittest.TestCase):

@@ -1,6 +1,6 @@
 chemometrics
 ============
-Common chemometric analysis methods implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.
+This is a centralized repository of common (and emerging) chemometric analysis methods implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -44,6 +44,17 @@ $ python -m unittest discover tests/
 ## Available Regressors
 * PCR
 * PLS
+
+## Available Preprocessors
+### Scaling
+* Corrected scaling (aking to sklearn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
+* Pareto Scaling (scales by square root of standard deviation)
+* Robust Scaling (scales by IQR instead of standard deviation)
+
+### Imputation
+* Iterative PCA (missing X values)
+* Iterative PLS (missing X values)
+* Limit of Detection (randomly below LOD)
 
 ## Example Usage (Pseudocode)
 ~~~ python

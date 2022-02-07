@@ -14,7 +14,8 @@ from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from chemometrics.utils import CustomScaler, estimate_dof
+from chemometrics.preprocessing.scaling import CorrectedScaler
+from chemometrics.utils import estimate_dof
 
 
 class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
@@ -80,6 +81,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 "scale_x": scale_x,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -324,6 +326,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.set_params(
             **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -384,7 +387,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             raise Exception("Reduce the number of PCA components")
 
         # 1. Standardize X
-        self.__ss_ = CustomScaler(with_mean=True, with_std=self.scale_x)
+        self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
 
         # 2. Perform PCA on standardized coordinates
         self.__pca_ = PCA(n_components=self.n_components, random_state=0)
@@ -400,6 +403,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             1.0 - self.alpha, self.__a_ - KK, (self.__a_ - KK) * (II - KK - 1)
         )
 
+        self.is_fitted_ = True
         return self
 
     def transform(self, X):
@@ -573,6 +577,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 "scale_x": scale_x,
             }
         )
+        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with sklearn's estimator API."""
@@ -649,7 +654,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             raise Exception("Reduce the number of PCA components")
 
         # 1. Standardize X
-        self.__ss_ = CustomScaler(with_mean=True, with_std=self.scale_x)
+        self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
 
         # 2. Perform PCA on standardized coordinates
         self.__pca_ = PCA(n_components=self.n_components, random_state=0)

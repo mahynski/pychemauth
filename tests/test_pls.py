@@ -13,7 +13,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
 from regressor.pls import PLS
-from utils import CustomScaler
 
 
 class TestPLS_Scaled(unittest.TestCase):
