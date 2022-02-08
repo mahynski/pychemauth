@@ -1,6 +1,6 @@
 chemometrics
 ============
-This is a centralized repository of common (and emerging) chemometric analysis methods implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.
+This is a centralized repository of common (and emerging) tools to perform chemometric analysis implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -12,7 +12,7 @@ This is a centralized repository of common (and emerging) chemometric analysis m
 * See LICENSE for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
 
-## Installation
+# Installation
 
 ~~~ bash
 $ git clone https://github.com/mahynski/chemometrics.git
@@ -30,33 +30,46 @@ $ source ~/.bashrc
 import chemometrics
 ~~~
 
-## Unittests
+You can run unittests to make sure your installation is working correctly.
+
 ~~~ bash
 $ python -m unittest discover tests/
 ~~~
 
-## Available Classifiers
-* PCA (for data inspection)
-* PLS-DA (soft and hard variants)
-* SIMCA
-* DD-SIMCA
+# Capabilities
 
-## Available Regressors
-* PCR
-* PLS
-
-## Available Preprocessors
+## Preprocessors
 ### Scaling
 * Corrected scaling (aking to sklearn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
-
 ### Imputation
-* Iterative PCA (missing X values)
-* Iterative PLS (missing X values)
+* Expectation Maximization with Iterative PCA (missing X values)
+* Expectation Maximization with Iterative PLS (missing X values)
 * Limit of Detection (randomly below LOD)
 
-## Example Usage (Pseudocode)
+## Conventional Chemometrics
+### Classifiers
+* PCA (for data inspection)
+* PLS-DA (soft and hard variants)
+* SIMCA
+* DD-SIMCA
+### Regressors
+* PCR
+* PLS
+
+## Topological Data Analysis
+* [UMAP](https://umap-learn.readthedocs.io/en/latest/)
+* [PacMAP](https://github.com/YingfanWang/PaCMAP)
+
+## Outler Detection with AI/ML
+* [pyOD](https://pyod.readthedocs.io/en/latest/)
+
+# Usage 
+
+Refer to `examples/` for example usage and more explicit details.
+
+## Example Pseudocode
 ~~~ python
 >>> from chemometrics.classifier.plsda import PLSDA
 >>> X_train, X_test, y_train, y_test = load_data(...)
@@ -66,9 +79,7 @@ $ python -m unittest discover tests/
 >>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
 ~~~
 
-Refer to `examples/` for example usage and more explicit details.
-
-## Deploying on Google Colab
+# Deploying on Google Colab
 
 You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
 Follow the instructions to set up an account if you do not already have one.
