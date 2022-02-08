@@ -45,7 +45,7 @@ $ python -m unittest discover tests/
 * Expectation Maximization with Iterative PLS (missing X values)
 * Limit of Detection (randomly below LOD)
 ### Scaling
-* Corrected scaling (aking to sklearn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
+* Corrected Scaling (aking to sklearn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
 
