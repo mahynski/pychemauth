@@ -65,6 +65,9 @@ $ python -m unittest discover tests/
 ## Outler Detection with AI/ML
 * [pyOD](https://pyod.readthedocs.io/en/latest/)
 
+## Explanations
+* [SHAP](https://shap.readthedocs.io/en/latest/)
+
 # Usage 
 
 Refer to `examples/` for example usage and more explicit details.
