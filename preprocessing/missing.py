@@ -10,7 +10,7 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
 from sklearn.impute import MissingIndicator, SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
 from chemometrics.preprocessing.scaling import CorrectedScaler
@@ -35,24 +35,13 @@ class LOD:
     If there is data that is truly missing, i.e., corrupted or not measured,
     and you wish to impute these values based on PCA_IA, for example, you need
     to indicate values that are "truly missing" vs. those that are missing
-    because < LOD with a different indicator.
+    because < LOD with a different indicator. This can be problematic - see
+    examples/imputing_examples.ipynb for an example.
 
     Example
     -------
-    >>> # Here, NaN refers to missing values AND those < LOD
-    >>> # Step 1: Turn "NaN"s into real values by imputation
-    >>> itim = PLS_IA(n_components=3, missing_values=np.nan)
-    >>> X_filled = itim.fit_transform(missing_X, raw_y.reshape(-1,1))
-    >>> # Step 2: Randomize numerical values below LOD (some may have been imputed)
-    >>> # Note that no "NaN"s will remain after Step 1, so imputation based on value
-    >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), missing_values=np.nan, seed=0)
-    >>> X_final = itim.fit_transform(X_filled)
-
-    >>> # Or, you can fill in values < LOD first - they should be indicated differently
     >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), missing_values=-1, seed=0)
     >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's for missing
-    >>> itim = PLS_IA(n_components=3, missing_values=np.nan)
-    >>> X_final = itim.fit_transform(X_lod, raw_y.reshape(-1,1))
     """
 
     def __init__(self, lod, missing_values=np.nan, seed=0):
@@ -103,19 +92,16 @@ class LOD:
         -------
         self
         """
-        X = check_array(
-            X,
+        X, self.lod = check_X_y(
+            X.T,
+            self.lod,
             accept_sparse=False,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
         )
-
-        self.lod = check_array(
-            self.lod, accept_sparse=False, force_all_finite=True, copy=True
-        )
         self.lod = self.lod.ravel()
-        if len(self.lod) != X.shape[0]:
+        if len(self.lod) != X.T.shape[0]:
             raise ValueError("LOD must be specified for each column in X")
 
         self.__rng_ = np.random.default_rng(self.seed)
@@ -167,12 +153,29 @@ class LOD:
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == len(self.lod)
+
+        temp = 0
+        mask = np.isnan(X)
+        if not np.isnan(self.missing_values) and np.any(mask):
+            # Still have NaN but being used for something else, so temporarily
+            # modify to a unique random number. This is because MissingIndicator
+            # is incompatible with np.nan if it is NOT the missing value.
+            while True:
+                temp = np.random.random()
+                if not np.any(X == temp) and temp != self.missing_values:
+                    break
+            X[mask] = temp
 
         # Find any missing values and take as below LOD
         indicator = MissingIndicator(
             missing_values=self.missing_values, features="all"
         )
         explicit_mask = indicator.fit_transform(X)
+
+        if temp > 0:
+            # Change back to nan if it was modified earlier
+            X[mask] = np.nan
 
         # We are going to impute anything explicitly missing and anything below LOD
         below_mask = (X / self.lod) < 1.0
