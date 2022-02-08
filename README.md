@@ -1,5 +1,5 @@
-chemometrics
-============
+Chemometric Authentication
+==========================
 This is a centralized repository of common (and emerging) tools to perform chemometric analysis implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
