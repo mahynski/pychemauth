@@ -172,10 +172,15 @@ class PCA_IA:
     However, other approaches may be more advisable.
 
     It is advisable to use cross-validation to identify the optimal number of PCA
-    components to use.
+    components to use. Importantly, you should only choose n_components so that it
+    is never larger than the size of any training fold otherwise an exception will
+    be thrown.
 
-    This ONLY executes during the training stage of a pipeline; X data during
-    the testing phase will be unaffected.
+    The PCA model (loadings) found during training are fixed and used during testing
+    to reconstruct test data if that is also missing.  This is necessary during
+    cross-validation, for example, because the original data set may have missing data
+    throughout and is subsequently split (repeatedly) so test folds will have some
+    elements missing.
 
     Example
     -------
@@ -258,19 +263,21 @@ class PCA_IA:
 
     def fit(self, X, y=None):
         """
-        Compute the missing data.
+        Build PCA model to compute missing values in X.
 
         Parameters
         ----------
         X : matrix-like
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
+        y : np.array
+            Ignored
 
         Returns
         -------
         self
         """
-        self.__X_ = check_array(
+        self.__Xtrain_ = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
@@ -281,8 +288,8 @@ class PCA_IA:
         # Check number of components
         upper_bound = np.min(
             [
-                self.__X_.shape[0] - 1,
-                self.__X_.shape[1],
+                self.__Xtrain_.shape[0] - 1,
+                self.__Xtrain_.shape[1],
             ]
         )
         lower_bound = 1
@@ -291,50 +298,74 @@ class PCA_IA:
                 "n_components must [{}, min(n_samples-1 [{}], \
 n_features [{}])] = [{}, {}].".format(
                     lower_bound,
-                    self.__X_.shape[0] - 1,
-                    self.__X_.shape[1],
+                    self.__Xtrain_.shape[0] - 1,
+                    self.__Xtrain_.shape[1],
                     lower_bound,
                     upper_bound,
                 )
             )
 
+        (
+            self.__scaler_,
+            self.__pca_,
+            self.__mask_,
+            self.__imputed_vals_,
+            self.__sse_,
+        ) = self.em_(self.__Xtrain_, train=True)
+
+        self.is_fitted_ = True
+        return self
+
+    def em_(self, X, train=True):
+        """Expectation-maximization iteration."""
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
+
         # Identify and record location of missing values
-        self.__indicator_ = MissingIndicator(
+        indicator = MissingIndicator(
             missing_values=self.missing_values, features="all"
         )
-        self.__mask_ = self.__indicator_.fit_transform(self.__X_)
+        mask = indicator.fit_transform(X)
 
         # First, impute any missing to mean values
         # Note this is just based on the column values, not rows as in [1].
         si = SimpleImputer(strategy="mean", missing_values=self.missing_values)
-        X = si.fit_transform(self.__X_)
-        delta = X[self.__mask_]
+        X_old = si.fit_transform(X)
+        delta_old = X_old[mask]
 
-        self.__sse_ = 0.0
+        sse = 0.0
         iteration = 0
         while iteration < self.max_iters:
             # Always center before PCA
-            ss = StandardScaler(with_std=self.scale_x, with_mean=True)
-            pca = PCA(n_components=self.n_components)
+            if train:
+                ss = StandardScaler(with_std=self.scale_x, with_mean=True)
+                pca = PCA(n_components=self.n_components)
+            else:
+                # During a transform, or test set, use previous results
+                ss = self.__scaler_
+                pca = self.__pca_
 
             # Predict
             X_new = ss.inverse_transform(
-                pca.inverse_transform(pca.fit_transform(ss.fit_transform(X)))
+                pca.inverse_transform(
+                    pca.fit_transform(ss.fit_transform(X_old))
+                )
             )
-            imputed_vals = X_new[self.__mask_]
 
             # Compute change
-            delta_new = imputed_vals - X[self.__mask_]
-            err = np.max(np.abs(delta_new - delta))
-            self.__sse_ = np.sum(
-                (self.__X_[~self.__mask_] - X_new[~self.__mask_]) ** 2
-            )  # pp 17 in [1]
+            delta_new = X_new[mask] - X_old[mask]
+            err = np.max(np.abs(delta_new - delta_old))
+            sse = np.sum((X[~mask] - X_new[~mask]) ** 2)  # pp. 17 in [1]
             if err < self.tol:
-                self.__imputed_vals_ = imputed_vals
                 break
             else:
-                X[self.__mask_] = imputed_vals
-                delta = delta_new
+                X_old[mask] = X_new[mask]
+                delta_old = delta_new
 
             iteration += 1
             if iteration == self.max_iters:
@@ -344,56 +375,73 @@ n_features [{}])] = [{}, {}].".format(
                     )
                 )
 
-        self.is_fitted_ = True
-        return self
+        return ss, pca, mask, X_new[mask], sse
 
     def fit_transform(self, X, y=None):
         """
-        Fill in the missing values of X originally fit.
+        Compute and fill in the missing values of X.
 
         Parameters
         ----------
         X : matrix-like
-            Ignored. The original X matrix is stored internally and used instead.
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : np.array
+            Ignored
 
         Returns
         -------
-        X : matrix-like
+        X_filled : matrix-like
             Matrix with missing data filled in.
         """
-        self.fit(X, y)
+        _ = self.fit(X, y)
 
-        # Replace missing values with the imputed ones
-        X_filled = self.__X_.copy()
-        X_filled[self.__mask_] = self.__imputed_vals_
-
-        return X_filled
+        return self.transform(X)
 
     def transform(self, X):
         """
-        Do nothing so that this object can be used in pipelines.
-
-        Notes
-        -----
-        * Use fit_transform() to fit and transform training data. This should not
-        execute on test data later on, so transform() should do nothing.
-        * See https://stackoverflow.com/questions/49770851/customized-transformermixin-with-data-labels-in-sklearn/49771602#49771602
-
-        Returns
-        -------
-        X : matrix-like
-            Original input is return unaffected.
-        """
-        return X
-
-    def score(self, X=None, y=None):
-        """
-        Score the imputation approach based on fitted data.
+        Fill in the missing values of X.
 
         Parameters
         ----------
-        X : np.array
-            Ignored
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        Returns
+        -------
+        X_filled : matrix-like
+            Matrix with missing data filled in.
+        """
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
+        check_is_fitted(self, "is_fitted_")
+        _, _, mask, imputed_vals, _ = self.em_(X, train=False)
+
+        X_filled = X.copy()
+        X_filled[mask] = imputed_vals
+
+        return X_filled
+
+    def score(self, X, y=None):
+        """
+        Score the imputation approach.
+
+        This computes the sum squared error on the observed parts of the data (pp. 17
+        in [1]). A value of zero implies the PCA model perfectly reconstructs the
+        observations. This actually returns the NEGATIVE sum of square error (SSE) on
+        the observed data.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
         y : np.array
             Ignored
 
@@ -402,15 +450,21 @@ n_features [{}])] = [{}, {}].".format(
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
 
-        This returns the negative sum of square error (SSE) on the observed data.
-        A value of zero implies the PCA model perfectly reconstructs the observations.
-
         Returns
         -------
         sse : np.float
         """
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
         check_is_fitted(self, "is_fitted_")
-        return -self.__sse_
+        _, _, _, _, sse = self.em_(X, train=False)
+
+        return -sse
 
 
 class PLS_IA:
