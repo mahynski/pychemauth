@@ -1,5 +1,5 @@
-chemometrics
-============
+Chemometric Authentication
+==========================
 This is a centralized repository of common (and emerging) tools to perform chemometric analysis implemented in python.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
@@ -39,14 +39,15 @@ $ python -m unittest discover tests/
 # Capabilities
 
 ## Preprocessors
+[scikit-learn](https://scikit-learn.org/stable/modules/preprocessing.html) provides a number of other simple preprocessing steps, including data standardization and imputation approaches.  Here, these are extended to include:
+### Imputing Missing Data
+* Expectation Maximization with Iterative PCA (missing X values)
+* Expectation Maximization with Iterative PLS (missing X values)
+* Limit of Detection (randomly below LOD)
 ### Scaling
 * Corrected scaling (aking to sklearn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
-### Imputation
-* Expectation Maximization with Iterative PCA (missing X values)
-* Expectation Maximization with Iterative PLS (missing X values)
-* Limit of Detection (randomly below LOD)
 
 ## Conventional Chemometrics
 ### Classifiers
@@ -64,6 +65,9 @@ $ python -m unittest discover tests/
 
 ## Outler Detection with AI/ML
 * [pyOD](https://pyod.readthedocs.io/en/latest/)
+
+## Explanations
+* [SHAP](https://shap.readthedocs.io/en/latest/)
 
 # Usage 
 
