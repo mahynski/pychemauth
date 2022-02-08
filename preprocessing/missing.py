@@ -32,13 +32,27 @@ class LOD:
     by the LOD for that column.  Note that this is done to preserve the sign
     of the measurement.
 
-    This ONLY executes during the training stage of a pipeline; X data during
-    the testing phase will be unaffected.
+    If there is data that is truly missing, i.e., corrupted or not measured,
+    and you wish to impute these values based on PCA_IA, for example, you need
+    to indicate values that are "truly missing" vs. those that are missing
+    because < LOD with a different indicator.
 
     Example
     -------
+    >>> # Here, NaN refers to missing values AND those < LOD
+    >>> # Step 1: Turn "NaN"s into real values by imputation
+    >>> itim = PLS_IA(n_components=3, missing_values=np.nan)
+    >>> X_filled = itim.fit_transform(missing_X, raw_y.reshape(-1,1))
+    >>> # Step 2: Randomize numerical values below LOD (some may have been imputed)
+    >>> # Note that no "NaN"s will remain after Step 1, so imputation based on value
     >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), missing_values=np.nan, seed=0)
-    >>> X_filled = itim.fit_transform(X_missing)
+    >>> X_final = itim.fit_transform(X_filled)
+
+    >>> # Or, you can fill in values < LOD first - they should be indicated differently
+    >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), missing_values=-1, seed=0)
+    >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's for missing
+    >>> itim = PLS_IA(n_components=3, missing_values=np.nan)
+    >>> X_final = itim.fit_transform(X_lod, raw_y.reshape(-1,1))
     """
 
     def __init__(self, lod, missing_values=np.nan, seed=0):
@@ -82,32 +96,27 @@ class LOD:
         X : matrix-like
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
+        y : np.array
+            Ignored
 
         Returns
         -------
         self
         """
-        self.__X_ = check_array(
+        X = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
         )
-        self.__indicator_ = MissingIndicator(
-            missing_values=self.missing_values, features="all"
-        )
-        explicit_mask = self.__indicator_.fit_transform(self.__X_)
+
         self.lod = check_array(
             self.lod, accept_sparse=False, force_all_finite=True, copy=True
         )
         self.lod = self.lod.ravel()
-        if len(self.lod) != self.__X_.shape[0]:
+        if len(self.lod) != X.shape[0]:
             raise ValueError("LOD must be specified for each column in X")
-
-        # We are going to impute anything explicitly missing and anything below LOD
-        below_mask = (self.__X_ / self.lod) < 1.0
-        self.__mask_ = (explicit_mask) | (below_mask)
 
         self.__rng_ = np.random.default_rng(self.seed)
 
@@ -123,6 +132,8 @@ class LOD:
         X : matrix-like
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
+        y : np.array
+            Ignored
 
         Returns
         -------
@@ -131,36 +142,58 @@ class LOD:
         """
         self.fit(X, y)
 
-        # Replace missing values with the imputed ones
-        X_scaled = self.__X_ / self.lod
-        X_scaled[self.__mask_] = self.__rng_.random(np.sum(self.__mask_))
-
-        return X_scaled * self.lod
+        return self.transform(X)
 
     def transform(self, X):
         """
-        Do nothing so that this object can be used in pipelines.
+        Fill in values of X below LOD with a random value (between 0 and LOD).
 
-        Notes
-        -----
-        * Use fit_transform() to fit and transform training data. This should not
-        execute on test data later on, so transform() should do nothing.
-        * See https://stackoverflow.com/questions/49770851/customized-transformermixin-with-data-labels-in-sklearn/49771602#49771602
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
 
         Returns
         -------
         X : matrix-like
-            Original input is return unaffected.
+            Matrix with missing data filled in.
         """
-        return X
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
+        check_is_fitted(self, "is_fitted_")
+
+        # Find any missing values and take as below LOD
+        indicator = MissingIndicator(
+            missing_values=self.missing_values, features="all"
+        )
+        explicit_mask = indicator.fit_transform(X)
+
+        # We are going to impute anything explicitly missing and anything below LOD
+        below_mask = (X / self.lod) < 1.0
+        mask = (explicit_mask) | (below_mask)
+
+        # Replace missing values with the imputed ones
+        X_scaled = X / self.lod
+        X_scaled[mask] = self.__rng_.random(np.sum(mask))
+
+        return X_scaled * self.lod
 
 
 class PCA_IA:
     """
-    Use iterative PCA to estimate missing data values.
+    Use iterative PCA to estimate any missing data values.
 
     Notes
     -----
+    If no data is missing during training, the model is still trained so it
+    can handle missing data during a test phase.
+
     First, a simple imputation to the (column) mean is performed. Then PCA is performed
     to model the data, from which the missing values can be estimated.  These
     estimates are used to construct a new feature matrix (X) and this process
@@ -308,9 +341,9 @@ n_features [{}])] = [{}, {}].".format(
         (
             self.__scaler_,
             self.__pca_,
-            self.__mask_,
-            self.__imputed_vals_,
-            self.__sse_,
+            _,
+            _,
+            _,
         ) = self.em_(self.__Xtrain_, train=True)
 
         self.is_fitted_ = True
@@ -345,21 +378,30 @@ n_features [{}])] = [{}, {}].".format(
             if train:
                 ss = StandardScaler(with_std=self.scale_x, with_mean=True)
                 pca = PCA(n_components=self.n_components)
+
+                # Predict and train
+                X_new = ss.inverse_transform(
+                    pca.inverse_transform(
+                        pca.fit_transform(ss.fit_transform(X_old))
+                    )
+                )
             else:
                 # During a transform, or test set, use previous results
                 ss = self.__scaler_
                 pca = self.__pca_
 
-            # Predict
-            X_new = ss.inverse_transform(
-                pca.inverse_transform(
-                    pca.fit_transform(ss.fit_transform(X_old))
+                # Just predict
+                X_new = ss.inverse_transform(
+                    pca.inverse_transform(pca.transform(ss.transform(X_old)))
                 )
-            )
 
             # Compute change
             delta_new = X_new[mask] - X_old[mask]
-            err = np.max(np.abs(delta_new - delta_old))
+            if np.sum(mask) == 0:
+                # No imputation needed
+                err = self.tol - 1.0e-12
+            else:
+                err = np.max(np.abs(delta_new - delta_old))
             sse = np.sum((X[~mask] - X_new[~mask]) ** 2)  # pp. 17 in [1]
             if err < self.tol:
                 break
@@ -396,17 +438,19 @@ n_features [{}])] = [{}, {}].".format(
         """
         _ = self.fit(X, y)
 
-        return self.transform(X)
+        return self.transform(X, y)
 
-    def transform(self, X):
+    def transform(self, X, y=None):
         """
-        Fill in the missing values of X.
+        Fill in any missing values of X.
 
         Parameters
         ----------
         X : matrix-like
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
+        y : np.array
+            Ignored
 
         Returns
         -------
@@ -473,6 +517,9 @@ class PLS_IA:
 
     Notes
     -----
+    If no data is missing during training, the model is still trained so it
+    can handle missing data during a test phase.
+
     First, a simple imputation to the (column) mean is performed. Then PLS is performed
     to model the data, from which the missing values can be estimated.  These
     estimates are used to construct a new feature matrix (X) and this process
@@ -482,10 +529,15 @@ class PLS_IA:
     fashion.
 
     It is advisable to use cross-validation to identify the optimal number of PLS
-    components to use.
+    components to use. Importantly, you should only choose n_components so that it
+    is never larger than the size of any training fold otherwise an exception will
+    be thrown.
 
-    This ONLY executes during the training stage of a pipeline; X data during
-    the testing phase will be unaffected.
+    The PLS model (loadings) found during training are fixed and used during testing
+    to reconstruct test data if that is also missing.  This is necessary during
+    cross-validation, for example, because the original data set may have missing data
+    throughout and is subsequently split (repeatedly) so test folds will have some
+    elements missing.
 
     Example
     -------
@@ -576,7 +628,7 @@ class PLS_IA:
 
     def fit(self, X, y):
         """
-        Estimate the missing data.
+        Build PLS model to compute missing values in X.
 
         Parameters
         ----------
@@ -591,33 +643,33 @@ class PLS_IA:
         -------
         self
         """
-        self.__X_ = check_array(
+        self.__Xtrain_ = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
         )
-        self.__y_ = check_array(
+        self.__ytrain_ = check_array(
             y, accept_sparse=False, force_all_finite=True, copy=True
         )
-        self.__y_ = self.column_y_(
-            y
+        self.__ytrain_ = self.column_y_(
+            self.__ytrain_
         )  # sklearn expects 1D array, convert to columns
-        assert self.__y_.shape[1] == 1
+        assert self.__ytrain_.shape[1] == 1
 
-        if self.__X_.shape[0] != self.__y_.shape[0]:
+        if self.__Xtrain_.shape[0] != self.__ytrain_.shape[0]:
             raise ValueError(
                 "X ({}) and y ({}) shapes are not compatible".format(
-                    self.__X_.shape, self.__y_.shape
+                    self.__Xtrain_.shape, self.__ytrain_.shape
                 )
             )
 
         # Check number of components
         upper_bound = np.min(
             [
-                self.__X_.shape[0] - 1,
-                self.__X_.shape[1],
+                self.__Xtrain_.shape[0] - 1,
+                self.__Xtrain_.shape[1],
             ]
         )
         lower_bound = 1
@@ -626,66 +678,100 @@ class PLS_IA:
                 "n_components must [{}, min(n_samples-1 [{}], \
 n_features [{}])] = [{}, {}].".format(
                     lower_bound,
-                    self.__X_.shape[0] - 1,
-                    self.__X_.shape[1],
+                    self.__Xtrain_.shape[0] - 1,
+                    self.__Xtrain_.shape[1],
                     lower_bound,
                     upper_bound,
                 )
             )
 
+        self.__x_scaler_, self.__y_scaler_, self.__pls_, _, _, _ = self.em_(
+            self.__Xtrain_, self.__ytrain_, train=True
+        )
+
+        self.is_fitted_ = True
+        return self
+
+    def em_(self, X, y=None, train=True):
+        """Expectation-maximization iteration."""
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
+
+        if train:
+            y = check_array(
+                y, accept_sparse=False, force_all_finite=True, copy=True
+            )
+            y = self.column_y_(
+                y
+            )  # sklearn expects 1D array, convert to columns
+
         # Identify and record location of missing values
-        self.__indicator_ = MissingIndicator(
+        indicator = MissingIndicator(
             missing_values=self.missing_values, features="all"
         )
-        self.__mask_ = self.__indicator_.fit_transform(self.__X_)
+        mask = indicator.fit_transform(X)
 
         # First, impute any missing to mean values
         # Note this is just based on the column values, not rows as in [1].
         # It may also be better to sort by y and interpolate as suggested by [1] as an initial guess.
         si = SimpleImputer(strategy="mean", missing_values=self.missing_values)
-        X = si.fit_transform(self.__X_)
-        delta = X[self.__mask_]
+        X_old = si.fit_transform(X)
+        delta_old = X_old[mask]
 
-        self.__sse_ = 0.0
+        sse = 0.0
         iteration = 0
         while iteration < self.max_iters:
-            # 1. Preprocess X data
-            x_scaler = CorrectedScaler(
-                with_mean=True, with_std=self.scale_x
-            )  # Always center and maybe scale X
+            if train:
+                # 1. Preprocess X data
+                x_scaler = CorrectedScaler(
+                    with_mean=True, with_std=self.scale_x
+                )  # Always center and maybe scale X
 
-            # 2. Preprocess Y data
-            y_scaler = CorrectedScaler(
-                with_mean=True, with_std=False
-            )  # Always center and maybe scale Y
+                # 2. Preprocess Y data
+                y_scaler = CorrectedScaler(
+                    with_mean=True, with_std=False
+                )  # Always center and maybe scale Y
 
-            # 3. Fit PLS
-            pls = PLSRegression(
-                n_components=self.n_components,
-                scale=self.scale_x,
-                max_iter=10000,
-            )
+                # 3. Fit PLS
+                pls = PLSRegression(
+                    n_components=self.n_components,
+                    scale=self.scale_x,
+                    max_iter=10000,
+                )
 
-            # 4. Predict
-            x_scores_, y_scores_ = pls.fit_transform(
-                x_scaler.fit_transform(X),
-                y_scaler.fit_transform(self.__y_),
-            )
+                # 4. Fit and predict
+                x_scores_, _ = pls.fit_transform(
+                    x_scaler.fit_transform(X_old),
+                    y_scaler.fit_transform(y),
+                )
+            else:
+                x_scaler = self.__x_scaler_
+                y_scaler = self.__y_scaler_
+                pls = self.__pls_
+
+                # Just predict
+                x_scores_ = pls.transform(x_scaler.transform(X_old))
+
             X_new = x_scaler.inverse_transform(pls.inverse_transform(x_scores_))
-            imputed_vals = X_new[self.__mask_]
 
             # Compute change
-            delta_new = imputed_vals - X[self.__mask_]
-            err = np.max(np.abs(delta_new - delta))
-            self.__sse_ = np.sum(
-                (self.__X_[~self.__mask_] - X_new[~self.__mask_]) ** 2
-            )  # pp 17 in [1]
+            delta_new = X_new[mask] - X_old[mask]
+            if np.sum(mask) == 0:
+                # No imputation needed
+                err = self.tol - 1.0e-12
+            else:
+                err = np.max(np.abs(delta_new - delta_old))
+            sse = np.sum((X[~mask] - X_new[~mask]) ** 2)  # pp. 17 in [1]
             if err < self.tol:
-                self.__imputed_vals_ = imputed_vals
                 break
             else:
-                X[self.__mask_] = imputed_vals
-                delta = delta_new
+                X_old[mask] = X_new[mask]
+                delta_old = delta_new
 
             iteration += 1
             if iteration == self.max_iters:
@@ -695,12 +781,11 @@ n_features [{}])] = [{}, {}].".format(
                     )
                 )
 
-        self.is_fitted_ = True
-        return self
+        return x_scaler, y_scaler, pls, mask, X_new[mask], sse
 
     def fit_transform(self, X, y):
         """
-        Fill in the missing values of X originally fit.
+        Compute and fill in the missing values of X.
 
         Parameters
         ----------
@@ -713,62 +798,79 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        X : matrix-like
+        X_filled : matrix-like
             Matrix with missing data filled in.
         """
         _ = self.fit(X, y)
 
-        # Replace missing values with the imputed ones
-        X_filled = self.__X_.copy()
-        X_filled[self.__mask_] = self.__imputed_vals_
+        return self.transform(X)
 
-        return X_filled
-
-    def transform(self, X):
+    def transform(self, X, y=None):
         """
-        Do nothing so that this object can be used in pipelines.
+        Fill in any missing values of X.
 
         Parameters
         ----------
         X : matrix-like
             Columns of features; observations are rows - will be converted to
-            numpy array automatically. [n_samples, n_features]
-
-        Notes
-        -----
-        * Use fit_transform() to fit and transform training data. This should not
-        execute on test data later on, so transform() should do nothing.
-        * See https://stackoverflow.com/questions/49770851/customized-transformermixin-with-data-labels-in-sklearn/49771602#49771602
+            numpy array automatically.
+        y : array-like
+            Ignored.
 
         Returns
         -------
-        X : matrix-like
-            Original input is return unaffected.
+        X_filled : matrix-like
+            Matrix with missing data filled in.
         """
-        return X
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
+        check_is_fitted(self, "is_fitted_")
+        _, _, _, mask, imputed_vals, _ = self.em_(X, train=False)
 
-    def score(self, X=None, y=None):
+        X_filled = X.copy()
+        X_filled[mask] = imputed_vals
+
+        return X_filled
+
+    def score(self, X, y=None):
         """
-        Score the imputation approach based on fitted data.
+        Score the imputation approach.
+
+        This computes the sum squared error on the observed parts of the data (pp. 17
+        in [1]). A value of zero implies the PLS model perfectly reconstructs the
+        observations. This actually returns the NEGATIVE sum of square error (SSE) on
+        the observed data.
 
         Parameters
         ----------
-        X : np.array
-            Ignored
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
         y : np.array
-            Ignored
+            Ignored.
 
         Notes
         -----
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
 
-        This returns the negative sum of square error (SSE) on the observed data.
-        A value of zero implies the PCA model perfectly reconstructs the observations.
-
         Returns
         -------
         sse : np.float
         """
+        X = check_array(
+            X,
+            accept_sparse=False,
+            force_all_finite="allow-nan",
+            ensure_2d=True,
+            copy=True,
+        )
         check_is_fitted(self, "is_fitted_")
-        return -self.__sse_
+        _, _, _, _, _, sse = self.em_(X, train=False)
+
+        return -sse
