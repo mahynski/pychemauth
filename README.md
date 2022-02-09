@@ -66,9 +66,9 @@ $ python -m unittest discover tests/
 * [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
 
-## Outler Detection with AI/ML
-* [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
-* [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
+## General Machine Learning
+* Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
+* Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
 ## Explanations
 * [SHAP](https://shap.readthedocs.io/en/latest/)
