@@ -71,11 +71,16 @@ $ python -m unittest discover tests/
 * Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
+## Ensemble Models
+> In machine learning, an ensemble model usually refers to a combination of (usually weaker) models that perform the same prediction task. Here, we use the term to refer to the combination of models that perform different tasks, i.e., each model is trained to predict the inlier/outlier status of a point with respect to one class.  We may combine such models so that a final prediction for an observation may be that it belongs to one class, many classes, or no known classes.  Efficiency, specificity and other metrics can then be computed from this.
+* TO DO
+
 ## Explanations
+> While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
 * [SHAP](https://shap.readthedocs.io/en/latest/)
 
 ## Diagnostics
-* Learning curves
+* Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
 
 # Usage 
 
