@@ -55,6 +55,10 @@ $ python -m unittest discover tests/
 > Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are often designed to be robust against outliers natively. These conventional methods are generally classified as [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. Algorithms designed to handle "dirty" data sets directly are [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html) routines.
 > See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection in projection methods.
 
+> These projection methods create a model of the data as 
+> `X = TP^T + E`
+> where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different decomposition which is a function of both `X` and `y` (responses). `E` is the error resulting from this model.
+
 ### Classifiers
 * PCA (for data inspection)
 * PLS-DA (soft and hard variants)
@@ -66,13 +70,16 @@ $ python -m unittest discover tests/
 
 ## Manifold Learning
 > "Manifold Learning can be thought of as an attempt to generalize linear frameworks like PCA to be sensitive to non-linear structure in data. Though supervised variants exist, the typical manifold learning problem is unsupervised: it learns the high-dimensional structure of the data from the data itself, without the use of predetermined classifications." - sklearn [documentation](https://scikit-learn.org/stable/modules/manifold.html)
-
 * [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
 * [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
 
+> These approaches may be considered intermediate in complexity between conventional, projection-based methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties like the topology of the original data; once projected into a lower dimensionsal space, statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect outliers in this score space, we favor the elliptical envelope here for its simplicity and statistical interpretability.
+* EllipticalManifold - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
+
 ## General Machine Learning
+> Usually designed to be outlier detectors (to handle dirty training sets), these routines offer the most flexible approaches.  These include alternative boundary construction methods besides ellipses.
 * Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
