@@ -40,17 +40,21 @@ $ python -m unittest discover tests/
 
 ## Preprocessors
 [scikit-learn](https://scikit-learn.org/stable/modules/preprocessing.html) provides a number of other simple preprocessing steps, including data standardization and imputation approaches.  Here, these are extended to include:
+
 ### Imputing Missing Data
 * Expectation Maximization with Iterative PCA (missing X values)
 * Expectation Maximization with Iterative PLS (missing X values)
 * Limit of Detection (randomly below LOD)
+
 ### Scaling
 * Corrected Scaling (akin to scikit-learn's [StandardScaler](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html) but uses [unbiased/corrected standard deviation](https://en.wikipedia.org/wiki/Standard_deviation#Corrected_sample_standard_deviation) instead)
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
 
 ## Conventional Chemometrics
-> Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are designed to be robust against outliers natively.
+> Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are often designed to be robust against outliers natively. These conventional methods are generally classified as [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. Algorithms designed to handle "dirty" data sets directly are [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html) routines.
+> See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection in projection methods.
+
 ### Classifiers
 * PCA (for data inspection)
 * PLS-DA (soft and hard variants)
@@ -62,6 +66,7 @@ $ python -m unittest discover tests/
 
 ## Manifold Learning
 > "Manifold Learning can be thought of as an attempt to generalize linear frameworks like PCA to be sensitive to non-linear structure in data. Though supervised variants exist, the typical manifold learning problem is unsupervised: it learns the high-dimensional structure of the data from the data itself, without the use of predetermined classifications." - sklearn [documentation](https://scikit-learn.org/stable/modules/manifold.html)
+
 * [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
 * [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
@@ -83,7 +88,6 @@ $ python -m unittest discover tests/
 * Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
 
 # Usage 
-
 Refer to `examples/` for example usage and more explicit details.
 
 ## Example Pseudocode
@@ -97,7 +101,6 @@ Refer to `examples/` for example usage and more explicit details.
 ~~~
 
 # Deploying on Google Colab
-
 You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
 Follow the instructions to set up an account if you do not already have one.
 
