@@ -65,7 +65,6 @@ $ python -m unittest discover tests/
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
 * [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
-* [PacMAP](https://github.com/YingfanWang/PaCMAP)
 
 ## Outler Detection with AI/ML
 * [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
