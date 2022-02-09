@@ -50,6 +50,7 @@ $ python -m unittest discover tests/
 * Robust Scaling (scales by IQR instead of standard deviation)
 
 ## Conventional Chemometrics
+> Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are designed to be robust against outliers natively.
 ### Classifiers
 * PCA (for data inspection)
 * PLS-DA (soft and hard variants)
