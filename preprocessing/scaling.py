@@ -67,6 +67,7 @@ class RobustScaler:
         """Fit the scaler using some training data."""
         X = check_array(X, accept_sparse=False)
 
+        self.n_features_in_ = X.shape[1]
         self.__median_ = np.median(X, axis=0)
         self.__iqr_ = scipy.stats.iqr(X, rng=self.rng, axis=0)
         self.is_fitted_ = True
@@ -77,6 +78,7 @@ class RobustScaler:
         """Transform (center and possibly scale) the data after fitting."""
         X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
 
         result = np.array(X, dtype=np.float64)
         if self.with_median:
@@ -90,6 +92,7 @@ class RobustScaler:
         """Invert the transformation."""
         X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
 
         result = np.array(X, dtype=np.float64)
         if self.with_iqr:
@@ -167,6 +170,7 @@ class CorrectedScaler:
         """Fit the scaler using some training data."""
         X = check_array(X, accept_sparse=False)
 
+        self.n_features_in_ = X.shape[1]
         self.__mean_ = np.mean(X, axis=0)
         self.__std_ = np.std(X, axis=0, ddof=(0 if self.biased else 1))
         self.is_fitted_ = True
@@ -177,6 +181,7 @@ class CorrectedScaler:
         """Transform (center and possibly scale) the data after fitting."""
         X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
 
         result = np.array(X, dtype=np.float64)
         if self.with_mean:
@@ -190,6 +195,7 @@ class CorrectedScaler:
         """Invert the transformation."""
         X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
 
         result = np.array(X, dtype=np.float64)
         if self.with_std:

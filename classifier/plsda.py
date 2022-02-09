@@ -413,7 +413,7 @@ n_features [{}])] = [{}, {}].".format(
 
     def fit_transform(self, X, y):
         """Fit and transform."""
-        self.fit(X, y)
+        _ = self.fit(X, y)
         return self.transform(X)
 
     def predict(self, X):

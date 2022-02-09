@@ -105,6 +105,7 @@ class LOD:
             raise ValueError("LOD must be specified for each column in X")
 
         self.__rng_ = np.random.default_rng(self.seed)
+        self.n_features_in_ = X.shape[1]
 
         self.is_fitted_ = True
         return self
@@ -153,7 +154,7 @@ class LOD:
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == len(self.lod)
+        assert X.shape[1] == self.n_features_in_
 
         temp = 0
         mask = np.isnan(X)
@@ -349,6 +350,8 @@ n_features [{}])] = [{}, {}].".format(
             _,
         ) = self.em_(self.__Xtrain_, train=True)
 
+        self.n_features_in_ = self.__Xtrain_.shape[1]
+
         self.is_fitted_ = True
         return self
 
@@ -361,6 +364,7 @@ n_features [{}])] = [{}, {}].".format(
             ensure_2d=True,
             copy=True,
         )
+        assert X.shape[1] == self.n_features_in_
 
         # Identify and record location of missing values
         indicator = MissingIndicator(
@@ -468,6 +472,7 @@ n_features [{}])] = [{}, {}].".format(
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
         _, _, mask, imputed_vals, _ = self.em_(X, train=False)
 
         X_filled = X.copy()
@@ -692,6 +697,8 @@ n_features [{}])] = [{}, {}].".format(
             self.__Xtrain_, self.__ytrain_, train=True
         )
 
+        self.n_features_in_ = self.__Xtrain_.shape[1]
+
         self.is_fitted_ = True
         return self
 
@@ -704,6 +711,7 @@ n_features [{}])] = [{}, {}].".format(
             ensure_2d=True,
             copy=True,
         )
+        assert X.shape[1] == self.n_features_in_
 
         if train:
             y = check_array(
@@ -833,6 +841,7 @@ n_features [{}])] = [{}, {}].".format(
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
+        assert X.shape[1] == self.n_features_in_
         _, _, _, mask, imputed_vals, _ = self.em_(X, train=False)
 
         X_filled = X.copy()
