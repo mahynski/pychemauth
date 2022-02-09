@@ -59,15 +59,23 @@ $ python -m unittest discover tests/
 * PCR
 * PLS
 
-## Topological Data Analysis
+## Manifold Learning
+> "Manifold Learning can be thought of as an attempt to generalize linear frameworks like PCA to be sensitive to non-linear structure in data. Though supervised variants exist, the typical manifold learning problem is unsupervised: it learns the high-dimensional structure of the data from the data itself, without the use of predetermined classifications." - sklearn [documentation](https://scikit-learn.org/stable/modules/manifold.html)
+* [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
+* [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
+* [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
 * [PacMAP](https://github.com/YingfanWang/PaCMAP)
 
 ## Outler Detection with AI/ML
-* [pyOD](https://pyod.readthedocs.io/en/latest/)
+* [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
+* [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
 ## Explanations
 * [SHAP](https://shap.readthedocs.io/en/latest/)
+
+## Diagnostics
+* Learning curves
 
 # Usage 
 
