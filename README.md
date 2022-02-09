@@ -52,18 +52,18 @@ $ python -m unittest discover tests/
 * Robust Scaling (scales by IQR instead of standard deviation)
 
 ## Conventional Chemometrics
-> Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are often designed to be robust against outliers natively. These conventional methods are generally classified as [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. Algorithms designed to handle "dirty" data sets directly are [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html) routines.
-> See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection in projection methods.
+> Conventional methods tend to require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically required, whereas many machine learning-based outlier detection methods are often designed to be robust against outliers natively. These conventional methods are generally classified as [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. Algorithms designed to handle "dirty" data sets directly are [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html) routines. See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection in projection methods.
 
-> These projection methods create a model of the data as 
-> `X = TP^T + E`
-> where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different decomposition which is a function of both `X` and `y` (responses). `E` is the error resulting from this model.
+> Generally, outlier detection routines make different assumptions about the distribution of valid data than novelty detection routines. See [scikit-learn's documentation](https://scikit-learn.org/stable/modules/outlier_detection.html) for a discussion of this.
+
+> These projection methods create a model of the data as: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different decomposition which is a function of both `X` and `y` (responses). `E` is the error resulting from this model.
 
 ### Classifiers
 * PCA (for data inspection)
 * PLS-DA (soft and hard variants)
 * SIMCA
 * DD-SIMCA
+
 ### Regressors
 * PCR
 * PLS
@@ -79,7 +79,7 @@ $ python -m unittest discover tests/
 * EllipticalManifold - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
 
 ## General Machine Learning
-> Usually designed to be outlier detectors (to handle dirty training sets), these routines offer the most flexible approaches.  These include alternative boundary construction methods besides ellipses.
+> These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
 * Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
