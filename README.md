@@ -22,7 +22,6 @@ Essentially, outlier detection methods characterize inliers as those points in h
 $ git clone https://github.com/mahynski/chemometrics.git
 # cd chemometrics
 $ pip install -r requirements.txt
-$ git submodule update --init --recursive
 ~~~
 
 Simply add this directory to your PYTHONPATH, or locally in each instance (i.e., sys.path.append()) and import the model as usual.
