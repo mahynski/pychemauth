@@ -1,0 +1,3 @@
+[submodule "umap"]
+	path = umap
+	url = https://github.com/lmcinnes/umap
