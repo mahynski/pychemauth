@@ -1,14 +1,16 @@
 Chemometric Authentication
 ==========================
-This is a centralized repository of common (and emerging) tools implemented in python to perform chemometric authentication.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  
-
-Authentication is typically a [one-class classification (OCC)](https://en.wikipedia.org/wiki/One-class_classification), or class modeling, problem.
-
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 ![Workflow](https://github.com/mahynski/chemometrics/actions/workflows/python-app.yml/badge.svg?branch=main)
 <!--[![codecov](https://codecov.io/gh/mahynski/chemometrics/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/chemometrics)-->
+
+This is a centralized repository of common (and emerging) tools implemented in python to perform chemometric authentication.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  Authentication is typically a [one-class classification (OCC)](https://en.wikipedia.org/wiki/One-class_classification), or class modeling, problem designed to detect anomalies.
+
+> "Outlier detection and novelty detection are both used for anomaly detection, where one is interested in detecting abnormal or unusual observations. Outlier detection is then also known as unsupervised anomaly detection and novelty detection as semi-supervised anomaly detection. In the context of outlier detection, the outliers/anomalies cannot form a dense cluster as available estimators assume that the outliers/anomalies are located in low density regions. On the contrary, in the context of novelty detection, novelties/anomalies can form a dense cluster as long as they are in a low density region of the training data, considered as normal in this context." - [scikit-learn's documentation](https://scikit-learn.org/stable/modules/outlier_detection.html)
+
+Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where an known class is found (even if it disperse). Both can be useful when attempting to detect chemometric anomalies. 
 
 ## License Information
 * See LICENSE for more information.
@@ -41,7 +43,7 @@ $ python -m unittest discover tests/
 # Capabilities
 
 ## Preprocessors
-[scikit-learn](https://scikit-learn.org/stable/modules/preprocessing.html) provides a number of other simple preprocessing steps, including data standardization and imputation approaches.  Here, these are extended to include:
+[scikit-learn](https://scikit-learn.org) provides a number of other simple [preprocessing](https://scikit-learn.org/stable/modules/preprocessing.html) steps, including data standardization and imputation approaches.  Here, these are extended to include:
 
 ### Imputing Missing Data
 * Expectation Maximization with Iterative PCA (missing X values)
@@ -53,13 +55,18 @@ $ python -m unittest discover tests/
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
 
+<!--
+### Generating Synthetic Data
+Can be used to balance classes during training, or to supplement measurements that are very hard to make.
+* [Imbalanced Learning](https://imbalanced-learn.org/stable/index.html) - SMOTE, ADASYN, etc.
+* Generative Networks (VAE, GAN)
+-->
+
 ## Conventional Chemometrics
 
-> "Outlier detection and novelty detection are both used for anomaly detection, where one is interested in detecting abnormal or unusual observations. Outlier detection is then also known as unsupervised anomaly detection and novelty detection as semi-supervised anomaly detection. In the context of outlier detection, the outliers/anomalies cannot form a dense cluster as available estimators assume that the outliers/anomalies are located in low density regions. On the contrary, in the context of novelty detection, novelties/anomalies can form a dense cluster as long as they are in a low density region of the training data, considered as normal in this context." - [scikit-learn's documentation](https://scikit-learn.org/stable/modules/outlier_detection.html)
+> Conventional chemometric authentication methods generally fall under the umbrella of multivariate regression or classification tasks.  For example, the model proposed when performing multilinear regression is  `y = MX + b`, where the matrix `M` must be solved for.  (Un)supervised classification is commonly performed via projection methods, which create a model of the data as: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different (supervised) decomposition which is a function of both `X` and `y`. `E` is the error resulting from this model.
 
-> Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where an known class is found (even if it disperse). Conventional chemometric authentication methods often require careful preparation of the training set to remove extremes and outliers so that "masking" effects, etc. do not affect your final model.  Manual data inspection is typically (but not always) required, whereas many machine learning-based outlier detection methods are often designed to be robust against outliers natively. Thus, conventional authentication methods can be considered [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection and removal in projection-based modeling.
-
-> Projection methods create a model of the data as: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different decomposition which is a function of both `X` and `y` (responses). `E` is the error resulting from this model.
+> These often require careful preparation of the training set to remove extremes and outliers so that "masking" effects do not affect your final model. Manual data inspection is typically (but not always) required, whereas many machine learning-based outlier detection methods are robust against outliers natively. Thus, conventional authentication methods can be considered [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection and removal in projection-based modeling.
 
 ### Classifiers
 * PCA (for data inspection)
@@ -89,9 +96,10 @@ $ python -m unittest discover tests/
 * Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
+<!--
 ## Ensemble Models
 > In machine learning, an ensemble model usually refers to a combination of (usually weaker) models that perform the same prediction task. Here, we use the term to refer to the combination of models that perform different tasks, i.e., each model is trained to predict the inlier/outlier status of a point with respect to one class.  We may combine such models so that a final prediction for an observation may be that it belongs to one class, many classes, or no known classes.  Efficiency, specificity and other metrics can then be computed from this.
-* TO DO
+-->
 
 ## Explanations
 > While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
