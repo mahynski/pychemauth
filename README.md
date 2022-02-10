@@ -93,7 +93,7 @@ Can be used to balance classes during training, or to supplement measurements th
 
 ## General Machine Learning [Large amount of data available]
 > These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
-* Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
+* Outlier detection with [PyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
 <!--
@@ -157,3 +157,51 @@ import chemometrics
 
 # Perform analysis ...
 ~~~
+
+# Citation
+
+If you use UMAP refer to the authors' [github repo](https://github.com/lmcinnes/umap) for information about citation.  At the very least, you should cite the manuscript associated with the software itself:
+
+``` bibtex
+@article{mcinnes2018umap-software,
+  title={UMAP: Uniform Manifold Approximation and Projection},
+  author={McInnes, Leland and Healy, John and Saul, Nathaniel and Grossberger, Lukas},
+  journal={The Journal of Open Source Software},
+  volume={3},
+  number={29},
+  pages={861},
+  year={2018}
+}
+```
+
+If you use [PyOD](https://pyod.readthedocs.io/en/latest/) be sure to cite:
+
+``` bibtex
+@article{zhao2019pyod,
+  author  = {Zhao, Yue and Nasrullah, Zain and Li, Zheng},
+  title   = {PyOD: A Python Toolbox for Scalable Outlier Detection},
+  journal = {Journal of Machine Learning Research},
+  year    = {2019},
+  volume  = {20},
+  number  = {96},
+  pages   = {1-7},
+  url     = {http://jmlr.org/papers/v20/19-011.html}
+}
+```
+
+Refer to several citations for [SHAP](https://github.com/slundberg/shap) on the authors' website, but at a minimum be sure to cite:
+
+``` bibtex
+@incollection{NIPS2017_7062,
+  title = {A Unified Approach to Interpreting Model Predictions},
+  author = {Lundberg, Scott M and Lee, Su-In},
+  booktitle = {Advances in Neural Information Processing Systems 30},
+  editor = {I. Guyon and U. V. Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett},
+  pages = {4765--4774},
+  year = {2017},
+  publisher = {Curran Associates, Inc.},
+  url = {http://papers.nips.cc/paper/7062-a-unified-approach-to-interpreting-model-predictions.pdf}
+}
+```
+
+ Refer the [PU Learn](https://github.com/pulearn/pulearn) website for citation and credit attribution.
