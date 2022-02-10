@@ -71,7 +71,7 @@ Can be used to balance classes during training, or to supplement measurements th
 
 ### Classifiers
 * PCA (for data inspection)
-* PLS-DA (soft and hard variants)
+* PLS-DA (soft and hard variants) - [discriminant analysis is not the same as OCC for authentication](https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/abs/10.1002/cem.3030).
 * SIMCA
 * DD-SIMCA
 
