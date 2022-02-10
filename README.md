@@ -62,7 +62,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * Generative Networks (VAE, GAN)
 -->
 
-## Conventional Chemometrics
+## Conventional Chemometrics [Least amount of data available]
 
 > Conventional chemometric authentication methods generally fall under the umbrella of multivariate regression or classification tasks.  For example, the model proposed when performing multilinear regression is  `y = MX + b`, where the matrix `M` must be solved for.  (Un)supervised classification is commonly performed via projection methods, which create a model of the data as: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (usually lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different (supervised) decomposition which is a function of both `X` and `y`. `E` is the error resulting from this model.
 
@@ -81,7 +81,7 @@ Can be used to balance classes during training, or to supplement measurements th
 ### Non-parametric Methods
 * SRD (Sum of Ranking Differences)
 
-## Manifold Learning
+## Manifold Learning [Moderate amount of data available]
 > "Manifold Learning can be thought of as an attempt to generalize linear frameworks like PCA to be sensitive to non-linear structure in data. Though supervised variants exist, the typical manifold learning problem is unsupervised: it learns the high-dimensional structure of the data from the data itself, without the use of predetermined classifications." - sklearn [documentation](https://scikit-learn.org/stable/modules/manifold.html)
 * [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
@@ -91,7 +91,7 @@ Can be used to balance classes during training, or to supplement measurements th
 > These approaches may be considered intermediate in complexity between conventional, projection-based methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensionsal space, statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this score space, we favor the elliptical envelope here for its simplicity and statistical interpretability.
 * EllipticalManifold - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
 
-## General Machine Learning
+## General Machine Learning [Large amount of data available]
 > These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
 * Outlier detection with [pyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
