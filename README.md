@@ -158,7 +158,7 @@ import chemometrics
 # Perform analysis ...
 ~~~
 
-## Citation
+# Citation
 
 If you use UMAP refer to the authors' [github repo](https://github.com/lmcinnes/umap) for information about citation.  At the very least, you should cite the manuscript associated with the software itself:
 
