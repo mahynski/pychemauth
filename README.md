@@ -161,6 +161,7 @@ import chemometrics
 
 # Other Tools
 Other tools used in this repository include:
+* [scikit-learn](https://scikit-learn.org/stable/)
 * [Pandas](https://pandas.pydata.org/)
 * [Bokeh](https://docs.bokeh.org/en/latest/)
 * [NumPy](https://numpy.org/)
