@@ -100,12 +100,13 @@ class LOD:
             ensure_2d=True,
             copy=True,
         )
+        self.n_features_in_ = X.shape[1]
+
         self.lod = self.lod.ravel()
         if len(self.lod) != X.T.shape[0]:
             raise ValueError("LOD must be specified for each column in X")
 
         self.__rng_ = np.random.default_rng(self.seed)
-        self.n_features_in_ = X.shape[1]
 
         self.is_fitted_ = True
         return self
@@ -127,7 +128,7 @@ class LOD:
         X : matrix-like
             Matrix with missing data filled in.
         """
-        self.fit(X, y)
+        _ = self.fit(X, y)
 
         return self.transform(X)
 
@@ -321,6 +322,7 @@ class PCA_IA:
             ensure_2d=True,
             copy=True,
         )
+        self.n_features_in_ = self.__Xtrain_.shape[1]
 
         # Check number of components
         upper_bound = np.min(
@@ -349,8 +351,6 @@ n_features [{}])] = [{}, {}].".format(
             _,
             _,
         ) = self.em_(self.__Xtrain_, train=True)
-
-        self.n_features_in_ = self.__Xtrain_.shape[1]
 
         self.is_fitted_ = True
         return self
@@ -658,6 +658,8 @@ class PLS_IA:
             ensure_2d=True,
             copy=True,
         )
+        self.n_features_in_ = self.__Xtrain_.shape[1]
+
         self.__ytrain_ = check_array(
             y, accept_sparse=False, force_all_finite=True, copy=True
         )
@@ -696,8 +698,6 @@ n_features [{}])] = [{}, {}].".format(
         self.__x_scaler_, self.__y_scaler_, self.__pls_, _, _, _ = self.em_(
             self.__Xtrain_, self.__ytrain_, train=True
         )
-
-        self.n_features_in_ = self.__Xtrain_.shape[1]
 
         self.is_fitted_ = True
         return self
