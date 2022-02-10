@@ -122,7 +122,7 @@ Refer to `examples/` for example usage and more explicit details.
 >>> df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = sp.figures_of_merit(pred, y_train.values)
 ~~~
 
-# Deploying on Google Colab
+## Deploying on Google Colab
 You can use this repo in the cloud by using [Google Colab](https://colab.research.google.com).
 Follow the instructions to set up an account if you do not already have one.
 
@@ -158,6 +158,14 @@ import chemometrics
 
 # Perform analysis ...
 ~~~
+
+# Other Tools
+Other tools used in this repository include:
+* [Pandas](https://pandas.pydata.org/)
+* [Bokeh](https://docs.bokeh.org/en/latest/)
+* [NumPy](https://numpy.org/)
+* [SciPy](https://scipy.org/)
+* [Jupyter Notebooks](https://jupyter.org/)
 
 # Citation
 
