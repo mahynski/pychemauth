@@ -681,6 +681,37 @@ n_features [{}])] = [{}, {}].".format(
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
         return metrics[use.lower()]
 
+    def visualize(self, styles=None, ax=None):
+        """
+        Plot training results in 1D or 2D automatically.
+
+        Parameters
+        ----------
+        styles : list
+            List of styles to plot, e.g., ["hard", "soft"]. This can always
+            include ["hard"], but "soft" is only possible if the class was
+            instantiated to be use the "soft" style boundaries.
+        ax : matplotlib.pyplot.Axes
+            Axes to plot results on.  If None, a new figure is created.
+
+        Returns
+        -------
+        matplotlib.pyplot.Axes
+            Figure axes being plotted on.
+        """
+        check_is_fitted(self, "is_fitted_")
+        ndim = len(self.__class_centers_) - 1
+        if ndim == 1:
+            self.visualize_1d(styles=styles, ax=ax)
+        elif ndim == 2:
+            self.visualize_2d(styles=styles, ax=ax)
+        else:
+            raise Exception(
+                "Unable to visualize {} class results ({} dimensions).".format(
+                    ndim + 1, ndim
+                )
+            )
+
     def visualize_1d(self, styles=None, ax=None):
         """
         Plot 1D training results.
