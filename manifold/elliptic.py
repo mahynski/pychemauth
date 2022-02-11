@@ -182,7 +182,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         X, y = self.sanity_(X, y, init=True)
 
         # Fit the model
-        self.model = model(**self.kwargs)
+        self.model = self.model(**self.kwargs)
         self.model.fit(X, y)
         self.is_fitted_ = True
 
