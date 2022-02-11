@@ -65,7 +65,7 @@ Can be used to balance classes during training, or to supplement measurements th
 
 ## Conventional Chemometrics [Least amount of data available]
 
-> Conventional chemometric authentication methods generally fall under the umbrella of multivariate regression or classification tasks.  For example, the model proposed when performing multilinear regression is  `y = MX + b`, where the matrix `M` must be solved for.  (Un)supervised classification is commonly performed via projection methods, which create a model of the data as: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA (unsupervised) uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different (supervised) decomposition which is a function of both `X` and `y`. `E` is the error resulting from this model.
+> [Conventional chemometric authentication methods](https://www.sciencedirect.com/science/article/pii/S0003267017306050?casa_token=7wJt53xzxFgAAAAA:LSvTEjSKSTXsoFfH71ccxnP5eOj9OX3VxnPhA1t02FYYfsKosJQjq3s-rgKJUX0VNu7sFrrYvbA) generally fall under the umbrella of multivariate regression or classification tasks.  For example, the model proposed when performing multilinear regression is  `y = MX + b`, where the matrix `M` must be solved for. (Un)supervised classification is commonly performed via [projection methods](https://www.sciencedirect.com/science/article/pii/S0169743902001077?casa_token=Drui6g1wMgQAAAAA:qG1E9HHTSWrM1UhkWnLWw2iBxFAOa0Qsi9LblalX4PvfLCHNay0m-besnzOyZwXtBfI4LLGp7wQ), which compress the data into a lower dimensional space. A common choice of data models is: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA (unsupervised) uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different (supervised) decomposition which is a function of both `X` and `y`. `E` is the error resulting from this model.
 
 > These often require careful preparation of the training set to remove extremes and outliers so that "masking" effects do not affect your final model. Manual data inspection is typically (but not always) required. Thus, conventional authentication methods can be considered [novelty detection](https://scikit-learn.org/stable/modules/outlier_detection.html) methods (no outliers in training), but many have built in capabilities to interatively "clean" the training set if outliers are assumed to be present initially. See ["Detection of Outliers in Projection-Based Modeling" by Rodionova and Pomerantsev](https://pubs.acs.org/doi/abs/10.1021/acs.analchem.9b04611) for an example of outlier detection and removal in projection-based modeling.
 
@@ -74,6 +74,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * PLS-DA (soft and hard variants) - [discriminant analysis is not the same as OCC for authentication](https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/abs/10.1002/cem.3030).
 * SIMCA
 * DD-SIMCA
+<!-- UNEQ, PFM see P. Oliveri / Analytica Chimica Acta 982 (2017) 9-19 -->
 
 ### Regressors
 * PCR
@@ -87,9 +88,10 @@ Can be used to balance classes during training, or to supplement measurements th
 * [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
 * [Locally Linear Embedding](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.LocallyLinearEmbedding.html#sklearn.manifold.LocallyLinearEmbedding)
+* [Kohonen Self-Organizing Maps (SOM)](https://pypi.org/project/sklearn-som/) <!-- https://www.analyticsvidhya.com/blog/2021/09/beginners-guide-to-anomaly-detection-using-self-organizing-maps/-->
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
 
-> These approaches may be considered intermediate between conventional, projection-based methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
+> These approaches may be considered intermediate between conventional methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
 * EllipticalManifold - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
 
 ## General Machine Learning [Large amount of data available]
@@ -214,4 +216,6 @@ Refer to several citations for [SHAP](https://github.com/slundberg/shap) on the 
 }
 ```
 
- Refer the [PU Learn](https://github.com/pulearn/pulearn) website for citation and credit attribution.
+ Refer to the [PU Learn](https://github.com/pulearn/pulearn) website for citation and credit attribution for positive and unlabeled learning.
+ 
+ Refer to the [sklearn-som](https://sklearn-som.readthedocs.io/en/latest/) website for citation and credit attribution for Kohonen Self-Organizing Maps.
