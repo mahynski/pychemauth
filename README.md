@@ -47,8 +47,8 @@ $ python -m unittest discover tests/
 [scikit-learn](https://scikit-learn.org) provides a number of other simple [preprocessing](https://scikit-learn.org/stable/modules/preprocessing.html) steps, including data standardization and imputation approaches.  Here, these are extended to include:
 
 ### Imputing Missing Data
-* Expectation Maximization with Iterative PCA (missing X values)
-* Expectation Maximization with Iterative PLS (missing X values)
+* [Expectation Maximization with Iterative PCA (missing X values)](https://www.sciencedirect.com/science/article/pii/S0169743901001319?casa_token=PJMbl_1gHmoAAAAA:0Q4M969UyZ-MYQY44S0dFMtH77aX-AOxcCRSFBaDHuvsd2UnulLO3cUxh5GlHXnyJBzSp3oneO00)
+* [Expectation Maximization with Iterative PLS (missing X values)](https://www.sciencedirect.com/science/article/pii/S0169743901001319?casa_token=PJMbl_1gHmoAAAAA:0Q4M969UyZ-MYQY44S0dFMtH77aX-AOxcCRSFBaDHuvsd2UnulLO3cUxh5GlHXnyJBzSp3oneO0)
 * Limit of Detection (randomly below LOD)
 
 ### Scaling
