@@ -2,6 +2,7 @@ matplotlib
 numpy
 pandas
 scipy
+shap
 sklearn
 umap-learn
 watermark
