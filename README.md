@@ -20,7 +20,7 @@ Essentially, outlier detection methods characterize inliers as those points in h
 
 ~~~ bash
 $ git clone https://github.com/mahynski/chemometrics.git
-# cd chemometrics
+$ cd chemometrics
 $ pip install -r requirements.txt
 ~~~
 
@@ -112,7 +112,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
 
 # Usage 
-Refer to `examples/` for example usage and more explicit details.
+Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/chemometrics/blob/master/) to explore.
 
 ## Example Pseudocode
 ~~~ python
