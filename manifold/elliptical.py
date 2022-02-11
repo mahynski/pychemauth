@@ -29,7 +29,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     soft discrimination rule can be constructed: sample i belongs to class k if the
     Mahalanobis distance is less than a threshold:
 
-    c_{crit} = \Chi^{-2}(1 - \alpha; d)
+    $c_{crit} = \Chi^{-2}(1 - \alpha; d)$
 
     where d is the dimensionality of the score space.
 
