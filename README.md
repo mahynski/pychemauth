@@ -63,7 +63,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * Generative Networks (VAE, GAN)
 -->
 
-## Conventional Chemometrics [Least amount of data available]
+## Conventional Chemometrics [Small amount of data available]
 
 > [Conventional chemometric authentication methods](https://www.sciencedirect.com/science/article/pii/S0003267017306050?casa_token=7wJt53xzxFgAAAAA:LSvTEjSKSTXsoFfH71ccxnP5eOj9OX3VxnPhA1t02FYYfsKosJQjq3s-rgKJUX0VNu7sFrrYvbA) generally fall under the umbrella of multivariate regression or classification tasks.  For example, the model proposed when performing multilinear regression is  `y = MX + b`, where the matrix `M` must be solved for. (Un)supervised classification is commonly performed via [projection methods](https://www.sciencedirect.com/science/article/pii/S0169743902001077?casa_token=Drui6g1wMgQAAAAA:qG1E9HHTSWrM1UhkWnLWw2iBxFAOa0Qsi9LblalX4PvfLCHNay0m-besnzOyZwXtBfI4LLGp7wQ), which compress the data into a lower dimensional space. A common choice of data models is: `X = TP^T + E`, where the scores matrix, `T`, represents the projection of the `X` matrix into a (lower dimensional) score space. The `P` matrix, called the [loadings matrix](http://www.statistics4u.com/fundstat_eng/cc_pca_loadscore.html), is computed in different ways.  For example, PCA (unsupervised) uses the leading eigenvectors of the covariance matrix of `X`, where as PLS uses a different (supervised) decomposition which is a function of both `X` and `y`. `E` is the error resulting from this model.
 
