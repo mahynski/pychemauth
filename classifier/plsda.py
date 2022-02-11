@@ -702,9 +702,9 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         ndim = len(self.__class_centers_) - 1
         if ndim == 1:
-            self.visualize_1d(styles=styles, ax=ax)
+            return self.visualize_1d(styles=styles, ax=ax)
         elif ndim == 2:
-            self.visualize_2d(styles=styles, ax=ax)
+            return self.visualize_2d(styles=styles, ax=ax)
         else:
             raise Exception(
                 "Unable to visualize {} class results ({} dimensions).".format(
