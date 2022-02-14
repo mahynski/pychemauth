@@ -10,7 +10,7 @@ This is a centralized repository of tools implemented in python to perform chemo
 
 > "Outlier detection and novelty detection are both used for anomaly detection, where one is interested in detecting abnormal or unusual observations. Outlier detection is then also known as unsupervised anomaly detection and novelty detection as semi-supervised anomaly detection. In the context of outlier detection, the outliers/anomalies cannot form a dense cluster as available estimators assume that the outliers/anomalies are located in low density regions. On the contrary, in the context of novelty detection, novelties/anomalies can form a dense cluster as long as they are in a low density region of the training data, considered as normal in this context." - [scikit-learn's documentation](https://scikit-learn.org/stable/modules/outlier_detection.html)
 
-Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where a known class is found (even if it disperse). Both can be useful when attempting to detect chemometric anomalies. 
+Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where a known class is found (even if it disperse). Both can be useful when attempting to detect chemometric anomalies.
 
 ## License Information
 * See LICENSE for more information.
@@ -56,12 +56,10 @@ $ python -m unittest discover tests/
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
 
-<!--
 ### Generating Synthetic Data
-Can be used to balance classes during training, or to supplement measurements that are very hard to make.
+Can be used to balance classes during training, or to supplement measurements that are very hard to make.  `imblearn` pipelines are designed to be drop-in replacements for sklearn pipelines so are often used instead.
 * [Imbalanced Learning](https://imbalanced-learn.org/stable/index.html) - SMOTE, ADASYN, etc.
 * Generative Networks (VAE, GAN)
--->
 
 ## Conventional Chemometrics [Small amount of data available]
 
@@ -120,7 +118,7 @@ Can be used to balance classes during training, or to supplement measurements th
 ## Diagnostics
 * Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
 
-# Usage 
+# Usage
 Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/chemometrics/blob/master/) to explore.
 
 ## Example Pseudocode
@@ -225,6 +223,21 @@ Refer to several citations for [SHAP](https://github.com/slundberg/shap) on the 
 }
 ```
 
+The [imbalanced-learn](https://imbalanced-learn.org/stable/index.html) package should be cited as:
+
+``` bibtex
+@article{JMLR:v18:16-365,
+  author  = {Guillaume  Lema{{\^i}}tre and Fernando Nogueira and Christos K. Aridas},
+  title   = {Imbalanced-learn: A Python Toolbox to Tackle the Curse of Imbalanced Datasets in Machine Learning},
+  journal = {Journal of Machine Learning Research},
+  year    = {2017},
+  volume  = {18},
+  number  = {17},
+  pages   = {1-5},
+  url     = {http://jmlr.org/papers/v18/16-365.html}
+}
+```
+
  Refer to the [PU Learn](https://github.com/pulearn/pulearn) website for citation and credit attribution for positive and unlabeled learning.
- 
+
  Refer to the [sklearn-som](https://sklearn-som.readthedocs.io/en/latest/) website for citation and credit attribution for Kohonen Self-Organizing Maps.
