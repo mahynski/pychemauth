@@ -316,7 +316,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Array of +1 or -1 for inliers and outliers, respectively.
         """
         d = self.mahalanobis(X, y)
-        mask = d * d > self.__d_crit_
+        mask = d > np.sqrt(self.__d_crit_)
 
         # +1/-1 follows sklearn's EllipticEnvelope API
         results = np.ones(len(X))  # Inliers
@@ -371,8 +371,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Compute the decision function for each sample.
 
         Following sklearn's EllipticEnvelope, this returns the negative Mahalanobis
-        distance shifted by the cutoff distance, so score < 0 implies an outlier
-        while score > 0 implies an inlier.
+        distance shifted by the cutoff distance, so f < 0 implies an outlier
+        while f > 0 implies an inlier.
 
         Parameters
         ----------
@@ -388,6 +388,30 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Shifted, negative Mahalanobis distance for each sample.
         """
         return self.score_samples(X, y) - (-np.sqrt(self.__d_crit_))
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the log-odds probability that observations are inliers.
+
+        Computes the logit(decision_function(X, y)) as the log-odds
+        transformation of the decision function.  This function is > 0
+        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        outlier.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        phi : ndarray
+            Logit function of the decision_function().
+        """
+        return np.log(1.0 / (1.0 + np.exp(-self.decision_function(X, y))))
 
     def score(self, X, y):
         """

@@ -724,7 +724,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Compute how far away points are from this class.
 
         This is computed as a sum of the OD and OD to be used with acceptance
-        rule II from [1].
+        rule II from [1].  This is really a "squared" distance.
 
         Parameters
         ----------
@@ -736,12 +736,59 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         distance : ndarray
-            Distance to class.
+            (squared) Distance to class.
         """
         check_is_fitted(self, "is_fitted_")
         h, q = self.h_q_(self.matrix_X_(X))
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
+
+    def decision_function(self, X, y=None):
+        """
+        Compute the decision function for each sample.
+
+        Following sklearn's EllipticEnvelope, this returns the negative
+        sqrt(Chi squared distance) shifted by the cutoff distance,
+        so f < 0 implies an outlier while f > 0 implies an inlier.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray
+            Shifted, negative distance for each sample.
+        """
+        return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the log-odds probability that observations are inliers.
+
+        Computes the logit(decision_function(X, y)) as the log-odds
+        transformation of the decision function.  This function is > 0
+        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        outlier.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        phi : ndarray
+            Logit function of the decision_function().
+        """
+        return np.log(1.0 / (1.0 + np.exp(-self.decision_function(X, y))))
 
     def predict(self, X):
         """
@@ -761,7 +808,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
 
         # If c < c_crit, it belongs to the class
-        return self.distance(self.matrix_X_(X)) < self.__c_crit_
+        return self.distance(X) < self.__c_crit_
 
     def check_outliers(self, X):
         """
