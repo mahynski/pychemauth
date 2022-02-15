@@ -3,4 +3,4 @@ Load all modules.
 
 @author: nam
 """
-__all__ = ["missing", "scaling"]
+__all__ = ["filter", "missing", "scaling"]

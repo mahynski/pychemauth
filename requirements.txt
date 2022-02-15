@@ -1,4 +1,5 @@
 imbalanced-learn
+ipywidgets
 matplotlib
 numpy
 pandas

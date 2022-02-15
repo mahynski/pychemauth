@@ -3,8 +3,156 @@ General utility functions.
 
 author: nam
 """
+import bokeh
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import scipy
+from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
+from bokeh.palettes import Spectral10
+from bokeh.plotting import figure, show
+from matplotlib.collections import LineCollection
+
+
+def color_spectrum(
+    x,
+    y,
+    importance_values,
+    cmap="coolwarm",
+    figsize=None,
+    bounds=None,
+    background=True,
+):
+    """
+    Color a spectrum based on feature importance values.
+
+    Parameters
+    ----------
+    x : array-like
+        Wavelengths (channel) measured at.
+    y : array-like
+        Spectral (signal) intensities.
+    importance_values : ndarray
+        Importance value assigned to each feature.
+    cmap : str
+        Name of colormap to use (https://matplotlib.org/stable/gallery/color/colormap_reference.html).
+    figsize : tuple
+        Size of figure to plot.
+    bounds : tuple
+        Bounds to color based on; if unspecified uses min/max of importance_values.
+    background : bool
+        Whether or not to plot the uncolored (gray) spectrum behind the colored points.
+
+    Returns
+    -------
+    axes : matplotlib.pyplot.Axes
+        Axes the result is plotted on.
+    """
+    x = np.array(x).ravel()
+    y = np.array(y).ravel()
+    importance_values = np.array(importance_values).ravel()
+    fig, axes = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+
+    # https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    if background:
+        axes.plot(x, y, color="k", alpha=0.10)
+
+    if bounds is None:
+        min_, max_ = importance_values.min(), importance_values.max()
+    else:
+        min_, max_ = bounds[0], bounds[1]
+
+    norm = plt.Normalize(min_, max_)
+    lc = LineCollection(segments, cmap=cmap, norm=norm)
+    lc.set_array(importance_values)
+
+    line = axes.add_collection(lc)
+    fig.colorbar(line, ax=axes)
+
+    axes.set_xlim(x.min(), x.max())
+    axes.set_ylim(y.min(), y.max())
+
+    return axes
+
+
+def bokeh_color_spectrum(x, y, importance_values, palette=Spectral10):
+    """
+    Color a spectrum based on feature importance values in Bokeh.
+
+    Parameters
+    ----------
+    x : array-like
+        Wavelengths (channel) measured at.
+    y : array-like
+        Spectral (signal) intensities.
+    importance_values : ndarray
+        Importance value assigned to each feature.
+    palette : str
+        Name of colormap to use (https://docs.bokeh.org/en/latest/docs/reference/palettes.html).
+    """
+    x = np.array(x).ravel()
+    y = np.array(y).ravel()
+    importance_values = np.array(importance_values).ravel()
+
+    spectrum_df = pd.DataFrame(
+        np.vstack((x, y, importance_values)).T,
+        columns=("Channel", "Signal", "Importance"),
+    )
+
+    datasource = ColumnDataSource(spectrum_df)
+    color_mapping = LinearColorMapper(
+        low=spectrum_df["Importance"].min(),
+        high=spectrum_df["Importance"].max(),
+        palette=palette,
+    )
+
+    plot_figure = figure(
+        title="Importance-Colored Signal",
+        plot_width=900,
+        plot_height=600,
+        tools=("pan, wheel_zoom, reset"),
+        x_axis_label="Channel",
+        y_axis_label="Signal",
+    )
+
+    plot_figure.add_tools(
+        HoverTool(
+            tooltips="""
+    <div>
+        <div>
+            <span style='font-size: 16px; color: #224499'>Channel:</span>
+            <span style='font-size: 18px'>@Channel</span>
+        </div>
+        <div>
+            <span style='font-size: 16px; color: #224499'>Importance Value:</span>
+            <span style='font-size: 18px'>@Importance</span>
+        </div>
+    </div>
+    """
+        )
+    )
+
+    plot_figure.line(
+        "Channel",
+        "Signal",
+        source=datasource,
+        color="black",
+        line_width=1,
+        line_alpha=0.25,
+    )
+    plot_figure.circle(
+        "Channel",
+        "Signal",
+        source=datasource,
+        color=dict(field="Importance", transform=color_mapping),
+        line_alpha=0.6,
+        fill_alpha=0.6,
+        size=4,
+    )
+    show(plot_figure)
 
 
 def estimate_dof(h_vals, q_vals, n_components, n_features_in):

@@ -374,6 +374,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         distance shifted by the cutoff distance, so f < 0 implies an outlier
         while f > 0 implies an inlier.
 
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+
         Parameters
         ----------
         X : matrix-like
@@ -391,12 +393,19 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X, y=None):
         """
-        Predict the log-odds probability that observations are inliers.
+        Predict the probability that observations are inliers.
 
-        Computes the logit(decision_function(X, y)) as the log-odds
+        Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
         outlier.
+
+        See SHAP documentation for a discussion on the utility and impact
+        of "squashing functions": https://shap.readthedocs.io/en/latest/\
+        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
+        #Probability-space-explaination
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         Parameters
         ----------
@@ -409,9 +418,14 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Returns
         -------
         phi : ndarray
-            Logit function of the decision_function().
+            2D array as sigmoid function of the decision_function(). First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
-        return np.log(1.0 / (1.0 + np.exp(-self.decision_function(X, y))))
+        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+        prob[:, 0] = p_inlier
+        prob[:, 1] = 1.0 - p_inlier
+        return prob
 
     def score(self, X, y):
         """
