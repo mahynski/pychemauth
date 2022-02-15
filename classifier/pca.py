@@ -232,6 +232,67 @@ n_features [{}])] = [{}, {}].".format(
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
 
+    def decision_function(self, X, y=None):
+        """
+        Compute the decision function for each sample.
+
+        Following sklearn's EllipticEnvelope, this returns the negative
+        sqrt(Chi squared distance) shifted by the cutoff distance,
+        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray
+            Shifted, negative distance for each sample.
+        """
+        return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the probability that observations are inliers.
+
+        Computes the sigmoid(decision_function(X, y)) as the
+        transformation of the decision function.  This function is > 0
+        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        outlier or extreme.
+
+        See SHAP documentation for a discussion on the utility and impact
+        of "squashing functions": https://shap.readthedocs.io/en/latest/\
+        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
+        #Probability-space-explaination
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        phi : ndarray
+            2D array as sigmoid function of the decision_function(). First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+        """
+        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+        prob[:, 0] = p_inlier
+        prob[:, 1] = 1.0 - p_inlier
+        return prob
+
     def predict(self, X):
         """
         Predict if the data are "regular" (NOT extremes or outliers).
@@ -274,9 +335,36 @@ n_features [{}])] = [{}, {}].".format(
         outliers = dX_ >= self.__c_out_
         return extremes, outliers
 
-    def score(self, X, y=None):
-        """Score is not implemented for PCA."""
-        raise NotImplementedError()
+    def score(self, X, y, eps=1.0e-15):
+        """
+        Compute the negative log-loss, or logistic/cross-entropy loss.
+
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Correct labels; True for inlier, False for outlier.
+        """
+        assert len(X) == len(y)
+        assert np.all(
+            [a in [True, False] for a in y]
+        ), "y should contain only True or False labels"
+
+        # Inlier = True (positive class), p[:,0]
+        # Not inlier = False (negative class), p[:,1]
+        prob = self.predict_proba(X, y)
+
+        y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
+        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+
+        # Return the negative, normalized log-loss
+        return -np.sum(
+            y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
+        ) / len(X)
 
     def visualize(self, X, ax=None):
         """

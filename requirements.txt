@@ -1,3 +1,4 @@
+bokeh
 imbalanced-learn
 ipywidgets
 matplotlib

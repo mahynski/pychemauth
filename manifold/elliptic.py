@@ -83,7 +83,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     def __init__(
         self,
         alpha,
-        model,
+        dr_model,
         kwargs,
         ndims="n_components",
         robust=True,
@@ -96,7 +96,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         ----------
         alpha : float
             Type I error rate (signficance level).
-        model : object
+        dr_model : object
             Dimensionality reduction model, such as PCA; must support fit() and transform().
         kwargs : dict
             Keyword arguments for model; EllipticManifold.model = model(**kwargs). Must
@@ -113,7 +113,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         self.set_params(
             **{
                 "alpha": alpha,
-                "model": model,
+                "dr_model": dr_model,
                 "kwargs": kwargs,
                 "ndims": ndims,
                 "robust": robust,
@@ -132,7 +132,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """Get parameters; for consistency with sklearn's estimator API."""
         return {
             "alpha": self.alpha,
-            "model": self.model,
+            "dr_model": self.dr_model,
             "kwargs": self.kwargs,
             "ndims": self.ndims,
             "robust": self.robust,
@@ -149,16 +149,16 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def sanity_(self, X, y, init=False):
         """Check data format and sanity."""
+        if init:
+            self.n_features_in_ = X.shape[1]
+        else:
+            assert X.shape[1] == self.n_features_in_, "Incorrect X matrix shape"
+
         if y is None:
             X = check_array(X, accept_sparse=False, copy=True)
         else:
             X, y = check_X_y(X, y, accept_sparse=False, copy=True)
             y = self.column_y_(y)
-
-        if init:
-            self.n_features_in_ = X.shape[1]
-        else:
-            assert X.shape[1] == self.n_features_in_, "Incorrect X matrix shape"
 
         return X, y
 
@@ -182,8 +182,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         X, y = self.sanity_(X, y, init=True)
 
         # Fit the model
-        self.model = self.model(**self.kwargs)
-        self.model.fit(X, y)
+        self.model_ = self.dr_model(**self.kwargs)
+        self.model_.fit(X, y)
         self.is_fitted_ = True
 
         # Compute (squared) Mahalanobis critical distance
@@ -241,7 +241,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
         X, y = self.sanity_(X, y)
-        return self.model.transform(X)
+        return self.model_.transform(X)
 
     def fit_transform(self, X, y=None):
         """
@@ -313,14 +313,15 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Returns
         -------
         results : ndarray
-            Array of +1 or -1 for inliers and outliers, respectively.
+            Array of +1 or 0 for inliers and outliers, respectively.
         """
         d = self.mahalanobis(X, y)
         mask = d > np.sqrt(self.__d_crit_)
 
-        # +1/-1 follows sklearn's EllipticEnvelope API
+        # +1/-1 follows sklearn's EllipticEnvelope API - this is different
+        # to be more consistent with other APIs such as how SIMCA works.
         results = np.ones(len(X))  # Inliers
-        results[mask] = -1  # Outliers
+        results[mask] = 0  # Outliers
 
         return results
 
@@ -339,7 +340,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Returns
         -------
         results : ndarray
-            Array of +1 or -1 for inliers and outliers, respectively.
+            Array of +1 or 0 for inliers and outliers, respectively.
         """
         _ = self.fit(X, y)
         return self.predict(X, y)
@@ -427,9 +428,11 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         prob[:, 1] = 1.0 - p_inlier
         return prob
 
-    def score(self, X, y):
+    def score(self, X, y, eps=1.0e-15):
         """
-        Compute the fraction of correct predictions.
+        Compute the negative log-loss, or logistic/cross-entropy loss.
+
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
 
         Parameters
         ----------
@@ -437,12 +440,24 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
         y : array-like
-            True labels; +1 for inlier, -1 for outlier.
+            True labels; +1 for inlier, 0 for outlier.
         """
-        y = np.array(y)
         assert len(X) == len(y)
-        assert np.all([a in [-1, 1] for a in y]), "y should contain only +/- 1"
-        return np.sum(self.predict(X) == y) / len(y)
+        assert np.all(
+            [a in [0, 1] for a in y]
+        ), "y should contain only 0 or 1 labels"
+
+        # Inlier = +1 (positive class), p[:,0]
+        # Not inlier = 0 (negative class), p[:,1]
+        prob = self.predict_proba(X, y)
+
+        y_in = np.array([1.0 if y_ == +1 else 0.0 for y_ in y])
+        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+
+        # Return the negative, normalized log-loss
+        return -np.sum(
+            y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
+        ) / len(X)
 
     def visualize(self, X_mats, labels, axes=None):
         """
@@ -668,7 +683,6 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         ax.set_xlabel("PC 1")
 
         ax.legend(loc="best")
-        # ax.set_ylim(-0.25, 0.25 + len(self.__class_centers_) - 1)
         ax.set_yticks([])
 
         return ax

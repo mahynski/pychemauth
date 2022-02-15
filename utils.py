@@ -72,8 +72,9 @@ def color_spectrum(
     line = axes.add_collection(lc)
     fig.colorbar(line, ax=axes)
 
+    y_range = y.max() - y.min()
     axes.set_xlim(x.min(), x.max())
-    axes.set_ylim(y.min(), y.max())
+    axes.set_ylim(y.min() - 0.05 * y_range, y.max() + 0.05 * y_range)
 
     return axes
 

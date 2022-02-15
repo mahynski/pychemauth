@@ -298,6 +298,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     different SIMCA class will result in multiple class assignments; however,
     each individual SIMCA class is binary.
 
+    Improvements have been suggested, including the use of Mahalanobis distance
+    instead of the OD (see discussion in [3]), however we implement a more
+    "classic" version here.
+
     1. "Robust classification in high dimensions based on the SIMCA Method,"
     Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems
     79 (2005) 10-21.
@@ -464,6 +468,67 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return F
 
+    def decision_function(self, X, y=None):
+        """
+        Compute the decision function for each sample.
+
+        Following sklearn's EllipticEnvelope, this returns the negative
+        sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
+        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray
+            Shifted, negative distance for each sample.
+        """
+        return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__f_crit_))
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the probability that observations are inliers.
+
+        Computes the sigmoid(decision_function(X, y)) as the
+        transformation of the decision function.  This function is > 0
+        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        outlier or extreme.
+
+        See SHAP documentation for a discussion on the utility and impact
+        of "squashing functions": https://shap.readthedocs.io/en/latest/\
+        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
+        #Probability-space-explaination
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        phi : ndarray
+            2D array as sigmoid function of the decision_function(). First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+        """
+        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+        prob[:, 0] = p_inlier
+        prob[:, 1] = 1.0 - p_inlier
+        return prob
+
     def predict(self, X):
         """
         Predict the class(es) for a given set of features.
@@ -484,9 +549,41 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         # If f < f_crit, it belongs to the class
         return F < self.__f_crit_
 
-    def score(self, X, y):
+    def score(self, X, y, eps=1.0e-15):
         """
-        Score the prediction.
+        Compute the negative log-loss, or logistic/cross-entropy loss.
+
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Correct labels; True for inlier, False for outlier.
+        """
+        assert len(X) == len(y)
+        assert np.all(
+            [a in [True, False] for a in y]
+        ), "y should contain only True or False labels"
+
+        # Inlier = True (positive class), p[:,0]
+        # Not inlier = False (negative class), p[:,1]
+        prob = self.predict_proba(X, y)
+        print(prob)
+
+        y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
+        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+
+        # Return the negative, normalized log-loss
+        return -np.sum(
+            y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
+        ) / len(X)
+
+    def accuracy(self, X, y):
+        """
+        Get the fraction of correct predictions.
 
         Parameters
         ----------
@@ -498,7 +595,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : float
+        accuracy : float
             Accuracy
         """
         y = self.column_y_(y)
@@ -824,9 +921,40 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         # If c < c_crit, it belongs to the class
         return self.distance(X) < self.__c_crit_
 
-    def score(self, X, y):
+    def score(self, X, y, eps=1.0e-15):
         """
-        Score the prediction.
+        Compute the negative log-loss, or logistic/cross-entropy loss.
+
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Correct labels; True for inlier, False for outlier.
+        """
+        assert len(X) == len(y)
+        assert np.all(
+            [a in [True, False] for a in y]
+        ), "y should contain only True or False labels"
+
+        # Inlier = True (positive class), p[:,0]
+        # Not inlier = False (negative class), p[:,1]
+        prob = self.predict_proba(X, y)
+
+        y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
+        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+
+        # Return the negative, normalized log-loss
+        return -np.sum(
+            y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
+        ) / len(X)
+
+    def accuracy(self, X, y):
+        """
+        Get the fraction of correct predictions.
 
         Parameters
         ----------
@@ -838,7 +966,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : float
+        accuracy : float
             Accuracy
         """
         y = self.column_y_(y)
