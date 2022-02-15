@@ -114,7 +114,9 @@ class TestPLSDA(unittest.TestCase):
                 ],
             ]
         )
-        err = np.all(np.abs((plsda._PLSDA__distances_ - distances)) < 1.0e-12)
+        d = plsda.mahalanobis(raw_x)
+        d = np.array([d[1], d[125], d[150]])
+        err = np.all(np.abs((d - distances)) < 1.0e-12)
         self.assertTrue(err)
 
         # Check FOM on test and train
@@ -271,7 +273,9 @@ class TestPLSDA(unittest.TestCase):
                 [28.792184657319407, 18.803339592324903, 0.06600758061716426],
             ]
         )
-        err = np.all(np.abs((plsda._PLSDA__distances_ - distances)) < 1.0e-12)
+        d = plsda.mahalanobis(raw_x)
+        d = np.array([d[1], d[125], d[150]])
+        err = np.all(np.abs((d - distances)) < 1.0e-12)
         self.assertTrue(err)
 
         # Check FOM on test and train
@@ -417,7 +421,9 @@ class TestPLSDA(unittest.TestCase):
                 [0.057084547679274567, 0.0018377660482487594],
             ]
         )
-        err = np.all(np.abs((plsda._PLSDA__distances_ - distances)) < 1.0e-12)
+        d = plsda.mahalanobis(raw_x)
+        d = np.array([d[0], d[10], d[50]])
+        err = np.all(np.abs((d - distances)) < 1.0e-12)
         self.assertTrue(err)
 
         # Check FOM on test and train
@@ -560,7 +566,9 @@ class TestPLSDA(unittest.TestCase):
                 [27.88951247330385, 1.3390553574558735],
             ]
         )
-        err = np.all(np.abs((plsda._PLSDA__distances_ - distances)) < 1.0e-12)
+        d = plsda.mahalanobis(raw_x)
+        d = np.array([d[0], d[10], d[50]])
+        err = np.all(np.abs((d - distances)) < 1.0e-12)
         self.assertTrue(err)
 
         # Check FOM on test and train

@@ -143,6 +143,12 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         return y
 
+    @property
+    def categories(self):
+        """Return the known categories."""
+        check_is_fitted(self, "is_fitted_")
+        return copy.copy(self.__ohencoder_.categories_[0])
+
     def fit(self, X, y):
         """
         Fit the PLS-DA model.
@@ -416,9 +422,9 @@ n_features [{}])] = [{}, {}].".format(
         _ = self.fit(X, y)
         return self.transform(X)
 
-    def predict(self, X):
+    def mahalanobis(self, X):
         """
-        Predict the class(es) for a given set of features.
+        Compute the (squared) Mahalanobis distance to each class center.
 
         Parameters
         ----------
@@ -428,10 +434,8 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        predictions : list(list)
-            Predicted classes for each observation.  There may be multiple
-            predictions for each entry, and are listed from left to right in
-            order of decreasing likelihood.
+        distance : ndarray
+            (squared) Distance to each class for each observation.
         """
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
@@ -467,7 +471,100 @@ n_features [{}])] = [{}, {}].".format(
                         for i in range(len(self.__ohencoder_.categories_[0]))
                     ]
                 )
-        assert np.all(np.array(distances) >= 0), "All distances must be >= 0"
+        distances = np.array(distances)
+        assert np.all(distances >= 0), "All distances must be >= 0"
+
+        return distances
+
+    def decision_function(self, X, y=None):
+        """
+        Compute the decision function for each sample.
+
+        Following sklearn's EllipticEnvelope, this returns the negative
+        sqrt(Chi squared distance) shifted by the cutoff distance,
+        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray
+            Shifted, negative distance for each sample.
+        """
+        distances = self.mahalanobis(X)
+
+        return -np.sqrt(distances) - (-np.sqrt(self.__d_crit_))
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the probability that observations are inliers for each class.
+
+        Computes the sigmoid(decision_function(X, y)) as the
+        transformation of the decision function.  This function is > 0
+        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        outlier or extreme.
+
+        This probability can be used for inspection by SHAP to help explain
+        how this makes its decisions, at least with respect to assignment of
+        individual class membership.
+
+        See SHAP documentation for a discussion on the utility and impact
+        of "squashing functions": https://shap.readthedocs.io/en/latest/\
+        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
+        #Probability-space-explaination
+
+        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+
+        Note
+        ----
+        This is a soft decision so an observation may belong to 1, >1, or 0
+        known classes.  The rows will NOT sum to 1 as is convention in sklearn.
+        Each entry is a simple binary yes/no prediction that the point is an
+        inlier for each class.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+        y : array-like
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        p_inlier : ndarray
+            2D array as sigmoid function of the decision_function(). Columns
+            are ordered according to class centers.
+        """
+        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        return p_inlier
+
+    def predict(self, X):
+        """
+        Predict the class(es) for a given set of features.
+
+        Parameters
+        ----------
+        X : matrix-like
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        Returns
+        -------
+        predictions : list(list)
+            Predicted classes for each observation.  There may be multiple
+            predictions for each entry, and are listed from left to right in
+            order of decreasing likelihood.
+        """
+        distances = self.mahalanobis(X)
 
         # Return all classes within d_crit, sorted from smallest to largest for
         # soft version. "NOT_ASSIGNED" means no assignment.
@@ -487,7 +584,6 @@ n_features [{}])] = [{}, {}].".format(
 
             predictions.append(belongs_to)
 
-        self.__distances_ = distances  # Store internally
         return predictions
 
     def figures_of_merit(self, predictions, actual):
