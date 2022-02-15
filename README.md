@@ -113,7 +113,7 @@ Can be used to balance classes during training, or to supplement measurements th
 
 ## Explanations
 > While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
-* [SHAP](https://shap.readthedocs.io/en/latest/)
+* [SHAP](https://shap.readthedocs.io/en/latest/) - "(SHapley Additive exPlanations) is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions."
 
 ## Diagnostics
 * Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
