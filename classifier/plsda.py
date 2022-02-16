@@ -61,6 +61,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         not_assigned=-1,
         style="soft",
         scale_x=True,
+        score_metric="TEFF",
     ):
         """
         Instantiate the class.
@@ -88,6 +89,9 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             This depends on the meaning of X and is up to the user to
             determine if scaling it (by the standard deviation) makes sense.
             Note that X and Y are always centered, Y is never scaled.
+        score_metric : str
+            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
+            (default=TEFF).
         """
         self.set_params(
             **{
@@ -97,6 +101,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 "not_assigned": not_assigned,
                 "style": style,
                 "scale_x": scale_x,
+                "score_metric": score_metric,
             }
         )
         self.is_fitted_ = False
@@ -116,6 +121,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             "not_assigned": self.not_assigned,
             "style": self.style,
             "scale_x": self.scale_x,
+            "score_metric": self.score_metric,
         }
 
     def check_category_type_(self, y):
@@ -523,6 +529,9 @@ n_features [{}])] = [{}, {}].".format(
 
         See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
+        This gives the same effective results as predict() except the output from
+        that function is sorted by class likelihood.
+
         Note
         ----
         This is a soft decision so an observation may belong to 1, >1, or 0
@@ -550,6 +559,10 @@ n_features [{}])] = [{}, {}].".format(
     def predict(self, X):
         """
         Predict the class(es) for a given set of features.
+
+        If multiple predictions are made, they are ordered according to likelihood,
+        from highest to lowest, i.e., by the (lowest) Mahalanobis distance to that
+        class' center.
 
         Parameters
         ----------
@@ -747,7 +760,7 @@ n_features [{}])] = [{}, {}].".format(
             TEFF,
         )
 
-    def score(self, X, y, use="TEFF"):
+    def score(self, X, y):
         """
         Score the prediction.
 
@@ -759,9 +772,6 @@ n_features [{}])] = [{}, {}].".format(
         y : array-like
             Ground truth classes - will be converted to numpy array
             automatically.
-        use : str
-            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
-            (default=TEFF).
 
         Returns
         -------
@@ -775,7 +785,7 @@ n_features [{}])] = [{}, {}].".format(
             self.predict(X), y
         )
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
-        return metrics[use.lower()]
+        return metrics[self.score_metric.lower()]
 
     def visualize(self, styles=None, ax=None):
         """

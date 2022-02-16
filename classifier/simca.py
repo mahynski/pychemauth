@@ -171,6 +171,11 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return self.__model_.predict(X)
 
+    def predict_proba(self, X, y=None):
+        """Predict the probability that observations are inliers."""
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.predict_proba(X, y)
+
     @property
     def CSPS(self):
         """Class specificities."""
@@ -1100,15 +1105,16 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                     + " ({})".format(np.sum(out_mask)),
                 ),
             ]:
-                axis.plot(
-                    np.log(1.0 + h_[mask] / self.__h0_),
-                    np.log(1.0 + q_[mask] / self.__q0_),
-                    label=label,
-                    marker=markers[i % len(markers)],
-                    lw=0,
-                    color=c,
-                    alpha=0.35,
-                )
+                if np.sum(mask) > 0:
+                    axis.plot(
+                        np.log(1.0 + h_[mask] / self.__h0_),
+                        np.log(1.0 + q_[mask] / self.__q0_),
+                        label=label,
+                        marker=markers[i % len(markers)],
+                        lw=0,
+                        color=c,
+                        alpha=0.35,
+                    )
             xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
             ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
         axis.legend(bbox_to_anchor=(1, 1))
