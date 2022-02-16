@@ -116,7 +116,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * [SHAP](https://shap.readthedocs.io/en/latest/) - "(SHapley Additive exPlanations) is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions."
 
 ## Diagnostics
-* Learning curves - these can be used to tell if you model will benefit from more data, or if you need a better model.
+* [Learning curves](https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve) - these can be used to tell if you model will benefit from more data, or if you need a better model.
 
 # Usage
 Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/chemometrics/blob/master/) to explore.
