@@ -6,6 +6,7 @@ numpy
 pandas
 pre-commit
 scipy
+seaborn
 shap
 sklearn
 umap-learn
