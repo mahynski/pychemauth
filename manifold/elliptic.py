@@ -136,7 +136,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             "kwargs": self.kwargs,
             "ndims": self.ndims,
             "robust": self.robust,
-            "cenmter": self.center,
+            "center": self.center,
         }
 
     def column_y_(self, y):
@@ -180,6 +180,10 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         # Sanity checks
         X, y = self.sanity_(X, y, init=True)
+
+        assert (
+            len(np.unique(y)) == 1
+        ), "EllipticManifold should be trained only on a single class, multiple values found in y"
 
         # Fit the model
         self.model_ = self.dr_model(**self.kwargs)

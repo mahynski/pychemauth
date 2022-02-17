@@ -12,6 +12,89 @@ from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
 from bokeh.palettes import Spectral10
 from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
+from sklearn.model_selection import learning_curve
+
+
+def plot_learning_curve(
+    model, X, y, cv=3, train_sizes=[0.2, 0.4, 0.6, 0.8, 1.0]
+):
+    """
+    Plot the learning curve for a model.
+
+    Parameters
+    ----------
+    X : matrix-like
+        Columns of features; observations are rows - will be converted to
+        numpy array automatically.
+    y : array-like
+        Response values.
+    cv : int or sklearn.model_selection object
+        Cross-validation strategy; uses k-fold CV if an integer is provided.
+    train_sizes : array-like
+        Fractions of provided data to use for training.
+
+    Returns
+    -------
+    matplotlib.pyplot.Axes
+        Axes the figure is plotted on.
+    """
+    train_sizes, train_scores, test_scores = learning_curve(
+        estimator=model,
+        X=X,
+        y=y,
+        train_sizes=train_sizes,
+        cv=cv,
+        n_jobs=1,
+    )
+
+    train_mean = np.mean(train_scores, axis=1)
+    train_std = np.std(train_scores, axis=1)
+    test_mean = np.mean(test_scores, axis=1)
+    test_std = np.std(test_scores, axis=1)
+
+    plt.figure()
+    plt.plot(
+        train_sizes,
+        train_mean,
+        color="blue",
+        marker="o",
+        markersize=5,
+        label="Training",
+    )
+
+    plt.fill_between(
+        train_sizes,
+        train_mean + train_std,
+        train_mean - train_std,
+        alpha=0.15,
+        color="blue",
+    )
+
+    plt.plot(
+        train_sizes,
+        test_mean,
+        color="green",
+        linestyle="--",
+        marker="s",
+        markersize=5,
+        label="Validation",
+    )
+
+    plt.fill_between(
+        train_sizes,
+        test_mean + test_std,
+        test_mean - test_std,
+        alpha=0.15,
+        color="green",
+    )
+
+    plt.grid()
+    plt.xlabel("Number of training samples")
+    plt.ylabel("TEFF")
+    plt.legend(loc="best")
+    plt.tight_layout()
+
+    return fig.gca()
 
 
 def color_spectrum(
