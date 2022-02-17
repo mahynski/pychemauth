@@ -55,9 +55,9 @@ repos:
     -   id: pydocstyle
         language: python
         types: [python]
--   repo: https://github.com/asottile/blacken-docs
-    rev: v1.9.1
-    hooks:
-    -   id: blacken-docs
-        language: python
-        types: [python]
+#-   repo: https://github.com/asottile/blacken-docs
+#    rev: v1.9.1
+#    hooks:
+#    -   id: blacken-docs
+#        language: python
+#        types: [python]

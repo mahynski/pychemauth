@@ -4,6 +4,7 @@ ipywidgets
 matplotlib
 numpy
 pandas
+pre-commit
 scipy
 shap
 sklearn

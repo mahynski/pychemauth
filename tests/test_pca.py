@@ -253,7 +253,7 @@ class TestPCA_Scaled(unittest.TestCase):
                 True,
                 True,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(res == ans))
 
@@ -332,7 +332,7 @@ class TestPCA_Scaled(unittest.TestCase):
                 False,
                 False,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(ext == ans))
         ans = np.array(
@@ -407,7 +407,7 @@ class TestPCA_Scaled(unittest.TestCase):
                 False,
                 False,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(out == ans))
 
@@ -656,7 +656,7 @@ class TestPCA_Unscaled(unittest.TestCase):
                 True,
                 True,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(res == ans))
 
@@ -735,7 +735,7 @@ class TestPCA_Unscaled(unittest.TestCase):
                 False,
                 False,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(ext == ans))
         ans = np.array(
@@ -810,7 +810,7 @@ class TestPCA_Unscaled(unittest.TestCase):
                 False,
                 False,
             ],
-            dtype=np.bool,
+            dtype=bool,
         )
         self.assertTrue(np.all(out == ans))
 

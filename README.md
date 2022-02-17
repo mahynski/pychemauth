@@ -22,6 +22,8 @@ Essentially, outlier detection methods characterize inliers as those points in h
 $ git clone https://github.com/mahynski/chemometrics.git
 $ cd chemometrics
 $ pip install -r requirements.txt
+# If you wish to contribute to the repo you will need to install pre-commit as well
+$ pip install pre-commit # (OPTIONAL)
 ~~~
 
 Simply add this directory to your PYTHONPATH, or locally in each instance (i.e., sys.path.append()) and import the model as usual.
@@ -159,7 +161,7 @@ df = pd.read_csv(list(uploaded.keys())[0])
 ~~~python
 # Clone chemometrics repo
 !git clone https://github.com/mahynski/chemometrics.git
-!cd chemometrics; pip install -r requirements.txt
+!cd chemometrics; pip3 install -r requirements.txt
 ~~~~
 
 ~~~python

@@ -42,6 +42,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="hard",
             scale_x=True,
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -149,8 +150,7 @@ class TestPLSDA(unittest.TestCase):
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.9565217391304348)
-            < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9565217391304348) < 1.0e-12
         )
 
         # Check test set
@@ -192,9 +192,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
-        self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.0) < 1.0e-12
-        )
+        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
 
     def test_plsda3_soft(self):
         """Test PLSDA on a 3-class example with soft decision boundaries."""
@@ -211,6 +209,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="soft",
             scale_x=True,
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -308,8 +307,7 @@ class TestPLSDA(unittest.TestCase):
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.9347724974175087)
-            < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9347724974175087) < 1.0e-12
         )
 
         # Check no outliers in this example
@@ -355,8 +353,7 @@ class TestPLSDA(unittest.TestCase):
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.9848484848484849)
-            < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9848484848484849) < 1.0e-12
         )
 
     def test_plsda2_hard(self):
@@ -374,6 +371,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="hard",
             scale_x=False,
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -455,9 +453,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(np.abs(TEFF - 1.0) < 1.0e-12)
 
         # Check score
-        self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 1.0) < 1.0e-12
-        )
+        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 1.0) < 1.0e-12)
 
         # Check test set
         df = pd.read_csv(
@@ -494,9 +490,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
-        self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.0) < 1.0e-12
-        )
+        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
 
     def test_plsda2_soft(self):
         """Test PLSDA on a 2-class example with soft decision boundaries."""
@@ -513,6 +507,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="soft",
             scale_x=False,
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -601,8 +596,7 @@ class TestPLSDA(unittest.TestCase):
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 0.9764672918705589)
-            < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9764672918705589) < 1.0e-12
         )
 
         # Check no outliers in this example
@@ -643,6 +637,4 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(np.abs(TEFF - 1.0) < 1.0e-12)
 
         # Check score
-        self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y, use="TEFF") - 1.0) < 1.0e-12
-        )
+        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 1.0) < 1.0e-12)
