@@ -8,11 +8,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
+import seaborn as sns
 from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
 from bokeh.palettes import Spectral10
 from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import learning_curve
+
+
+def plot_confusion_matrix(model, X, y_true, ax=None):
+    """
+    Plot a confusion matrix for a classifier.
+
+    Compare classification models based on true/false positive rates.
+    See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+    """
+    confmat = confusion_matrix(y_true=y_true, y_pred=model.predict(X))
+
+    if ax is None:
+        fig = plt.figure()
+        axes = plt.gca()
+    else:
+        axes = ax
+
+    _ = sns.heatmap(
+        confmat,
+        ax=ax,
+        annot=True,
+        xticklabels=model.classes_,
+        yticklabels=model.classes_,
+    )
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+
+    return ax
 
 
 def plot_learning_curve(
@@ -52,7 +82,7 @@ def plot_learning_curve(
     test_mean = np.mean(test_scores, axis=1)
     test_std = np.std(test_scores, axis=1)
 
-    plt.figure()
+    fig = plt.figure()
     plt.plot(
         train_sizes,
         train_mean,
@@ -90,7 +120,6 @@ def plot_learning_curve(
 
     plt.grid()
     plt.xlabel("Number of training samples")
-    plt.ylabel("TEFF")
     plt.legend(loc="best")
     plt.tight_layout()
 

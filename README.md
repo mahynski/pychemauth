@@ -58,6 +58,9 @@ $ python -m unittest discover tests/
 * Pareto Scaling (scales by square root of standard deviation)
 * Robust Scaling (scales by IQR instead of standard deviation)
 
+### Filtering
+* [Savitzky-Golay](https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter)
+
 ### Generating Synthetic Data
 Can be used to balance classes during training, or to supplement measurements that are very hard to make.  `imblearn` pipelines are designed to be drop-in replacements for sklearn pipelines so are often used instead.
 * [Imbalanced Learning](https://imbalanced-learn.org/stable/index.html) - SMOTE, ADASYN, etc.

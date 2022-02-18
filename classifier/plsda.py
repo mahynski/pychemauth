@@ -490,6 +490,9 @@ n_features [{}])] = [{}, {}].".format(
         sqrt(Chi squared distance) shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
+        This is ONLY returned for soft PLSDA; if the hard variant is used a
+        NotImplementedError will be raised instead.
+
         See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
@@ -505,18 +508,28 @@ n_features [{}])] = [{}, {}].".format(
         decision_function : ndarray
             Shifted, negative distance for each sample.
         """
-        distances = self.mahalanobis(X)
+        distances2 = self.mahalanobis(X)
 
-        return -np.sqrt(distances) - (-np.sqrt(self.__d_crit_))
+        if self.style.lower() == "soft":
+            f = -np.sqrt(distances2) - (-np.sqrt(self.__d_crit_))
+        else:
+            raise NotImplementedError
+
+        return f
 
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations are inliers for each class.
 
-        Computes the sigmoid(decision_function(X, y)) as the
+        Soft PLSDA: Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
-        outlier or extreme.
+        outlier or extreme for a soft model.
+
+        Hard PLSDA: For a hard model, the softmax function is computed for the
+        negative (normalized) Mahalanobis distances to each class center.
+        The column with the highest probability is the prediction, and these
+        WILL sum to 1.
 
         This probability can be used for inspection by SHAP to help explain
         how this makes its decisions, at least with respect to assignment of
@@ -529,8 +542,9 @@ n_features [{}])] = [{}, {}].".format(
 
         See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
-        This gives the same effective results as predict() except the output from
-        that function is sorted by class likelihood.
+        This gives the same effective results as predict() except that function
+        directly returns the class(es) a point is predicted to belong to and is sorted
+        by class likelihood.  No sorting is done here.
 
         Note
         ----
@@ -538,6 +552,9 @@ n_features [{}])] = [{}, {}].".format(
         known classes.  The rows will NOT sum to 1 as is convention in sklearn.
         Each entry is a simple binary yes/no prediction that the point is an
         inlier for each class.
+
+        The softmax function will result in probabilities which sum to 1 for the
+        hard decision boundaries.
 
         Parameters
         ----------
@@ -550,10 +567,21 @@ n_features [{}])] = [{}, {}].".format(
         Returns
         -------
         p_inlier : ndarray
-            2D array as sigmoid function of the decision_function(). Columns
-            are ordered according to class centers.
+            2D array as sigmoid function of the decision_function() for soft PLSDA
+            and the softmax(-mahalanobis) for hard PLSDA. Columns are ordered according
+            to class centers.
         """
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        if self.style.lower() == "soft":
+            # Simple sigmoid for soft classification because each class is considered
+            # separately and each membership is predicted as yes/no
+            p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        else:
+            # Hard classification predicts one class, so use softmax function on
+            # normalized distances.
+            distances = np.sqrt(self.mahalanobis(X))
+            normed = (distances.T / np.sum(distances.T, axis=0)).T
+            p_inlier = (np.exp(-normed.T) / np.sum(np.exp(-normed.T), axis=0)).T
+
         return p_inlier
 
     def predict(self, X):
