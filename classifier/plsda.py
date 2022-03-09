@@ -172,6 +172,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         -------
         self
         """
+        self.n_components = int(
+            self.n_components
+        )  # sklearn PLS does not understand floats
+
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
         self.__X_ = np.array(X).copy()
