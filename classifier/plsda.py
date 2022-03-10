@@ -578,14 +578,27 @@ n_features [{}])] = [{}, {}].".format(
         if self.style.lower() == "soft":
             # Simple sigmoid for soft classification because each class is considered
             # separately and each membership is predicted as yes/no
-            p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+            # p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+            p_inlier = 1.0 / (
+                1.0
+                + np.exp(
+                    -np.clip(
+                        self.decision_function(X, y), a_max=None, a_min=-500
+                    )
+                )
+            )
         else:
             # Hard classification predicts one class, so use softmax function on
             # normalized distances.
             distances = np.sqrt(self.mahalanobis(X))
             normed = (distances.T / np.sum(distances.T, axis=0)).T
-            p_inlier = (np.exp(-normed.T) / np.sum(np.exp(-normed.T), axis=0)).T
-
+            # p_inlier = (np.exp(-normed.T) / np.sum(np.exp(-normed.T), axis=0)).T
+            p_inlier = (
+                np.exp(-np.clip(normed.T, a_max=None, a_min=-500))
+                / np.sum(
+                    np.exp(-np.clip(normed.T, a_max=None, a_min=-500)), axis=0
+                )
+            ).T
         return p_inlier
 
     def predict(self, X):

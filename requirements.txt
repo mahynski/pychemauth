@@ -9,5 +9,6 @@ scipy
 seaborn
 shap
 sklearn
+tqdm
 umap-learn
 watermark
