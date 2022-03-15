@@ -80,7 +80,7 @@ class RobustScaler:
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
-        result = np.array(X, dtype=np.float64)
+        result = np.array(X, dtype=float)
         if self.with_median:
             result -= self.__median_
         if self.with_iqr:
@@ -94,7 +94,7 @@ class RobustScaler:
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
-        result = np.array(X, dtype=np.float64)
+        result = np.array(X, dtype=float)
         if self.with_iqr:
             result *= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
         if self.with_median:
@@ -180,10 +180,10 @@ class CorrectedScaler:
     def transform(self, X):
         """Transform (center and possibly scale) the data after fitting."""
         X = check_array(X, accept_sparse=False)
-        check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
+        check_is_fitted(self, "is_fitted_")
+        result = np.array(X, dtype=float)
 
-        result = np.array(X, dtype=np.float64)
         if self.with_mean:
             result -= self.__mean_
         if self.with_std:
@@ -197,7 +197,7 @@ class CorrectedScaler:
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
-        result = np.array(X, dtype=np.float64)
+        result = np.array(X, dtype=float)
         if self.with_std:
             result *= np.sqrt(self.__std_) if self.pareto else self.__std_
         if self.with_mean:

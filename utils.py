@@ -191,7 +191,9 @@ def color_spectrum(
     return axes
 
 
-def bokeh_color_spectrum(x, y, importance_values, palette=Spectral10):
+def bokeh_color_spectrum(
+    x, y, importance_values, palette=Spectral10, y_axis_type=None
+):
     """
     Color a spectrum based on feature importance values in Bokeh.
 
@@ -205,6 +207,8 @@ def bokeh_color_spectrum(x, y, importance_values, palette=Spectral10):
         Importance value assigned to each feature.
     palette : str
         Name of colormap to use (https://docs.bokeh.org/en/latest/docs/reference/palettes.html).
+    y_axis_type : str
+        Optional transformation of y axis, e.g., y_axis_type="log".
     """
     x = np.array(x).ravel()
     y = np.array(y).ravel()
@@ -229,6 +233,7 @@ def bokeh_color_spectrum(x, y, importance_values, palette=Spectral10):
         tools=("pan, wheel_zoom, reset"),
         x_axis_label="Channel",
         y_axis_label="Signal",
+        y_axis_type=y_axis_type,
     )
 
     plot_figure.add_tools(

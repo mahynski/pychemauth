@@ -528,7 +528,12 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        p_inlier = 1.0 / (
+            1.0
+            + np.exp(
+                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+            )
+        )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier
@@ -900,7 +905,12 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        p_inlier = 1.0 / (
+            1.0
+            + np.exp(
+                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+            )
+        )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier

@@ -415,17 +415,21 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
 
-        X = np.array(X)
+        # X = np.array(X)
         assert X.shape[1] == self.n_features_in_
-        X = self.__x_pls_scaler_.transform(X)
+        # X = self.__x_pls_scaler_.transform(X)
 
-        y_hat_test = self.__pls_.predict(X)
+        # y_hat_test = self.__pls_.predict(self.__x_pls_scaler_.transform(X))
 
-        T_test = self.__pca_.transform(
-            self.__y_pls_scaler_.transform(y_hat_test)
+        # T_test = self.__pca_.transform(
+        #    self.__y_pls_scaler_.transform(self.__pls_.predict(self.__x_pls_scaler_.transform(X)))
+        # )
+
+        return self.__pca_.transform(
+            self.__y_pls_scaler_.transform(
+                self.__pls_.predict(self.__x_pls_scaler_.transform(X))
+            )
         )
-
-        return T_test
 
     def fit_transform(self, X, y):
         """Fit and transform."""
