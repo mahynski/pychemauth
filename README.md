@@ -124,6 +124,7 @@ Can be used to balance classes during training, or to supplement measurements th
 
 > "Interpretable AI" refers to models which are inherently a "glassbox" and their inner-workings are transparent.  This is [not the same as "explained black boxes" (XAI)](https://projecteuclid.org/journals/statistics-surveys/volume-16/issue-none/Interpretable-machine-learning-Fundamental-principles-and-10-grand-challenges/10.1214/21-SS133.full) which are inscrutable, by definition, but methods like SHAP can be used to help the user develop a sense of (dis)trust about the model and potentially debug it.  Explainable boosting machines (EBM) are (at the time of writing) a discrimination method, but can be helpful to compare and contrast with explained black boxes or authentication models. EBMs are slow to train so they are best for small-medium data applications, which many chemometric applications fall under.
 * An [EBM](https://interpret.ml/docs/ebm.html) from [interpretML](https://interpret.ml) is a "tree-based, cyclic gradient boosting Generalized Additive Model with automatic interaction detection. EBMs are often as accurate as state-of-the-art blackbox models while remaining completely interpretable."
+* [pyGAM](https://pygam.readthedocs.io/en/latest/index.html) does not follow scikit-learn's API but are very useful glassbox models to consider.
 
 ## Diagnostics
 * [Learning curves](https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve) - these can be used to tell if you model will benefit from more data, or if you need a better model.
