@@ -95,7 +95,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * [Marini, Federico. "Classification methods in chemometrics." Current Analytical Chemistry 6.1 (2010): 72-79.](https://www.researchgate.net/profile/Federico-Marini-2/publication/232696878_Classification_methods_in_chemometrics/links/53fda10c0cf2364ccc08e208/Classification-methods-in-chemometrics.pdf)
 * [Forina, M., et al. "Class-modeling techniques, classic and new, for old and new problems." Chemometrics and Intelligent Laboratory Systems 93.2 (2008): 132-148.](https://www.sciencedirect.com/science/article/pii/S0169743908000920?casa_token=teZELafmfmMAAAAA:evqDipEdosbDp2d6dmSXl4_eRbafJtY-KkzQgpjZhVc-VooGnXRvqAla91RBmJBriFhM7d5j7BQ)
 
-## Manifold Learning [Moderate amount of data available]
+## Topological Methods [Moderate amount of data available]
 > "Manifold Learning can be thought of as an attempt to generalize linear frameworks like PCA to be sensitive to non-linear structure in data. Though supervised variants exist, the typical manifold learning problem is unsupervised: it learns the high-dimensional structure of the data from the data itself, without the use of predetermined classifications." - sklearn [documentation](https://scikit-learn.org/stable/modules/manifold.html)
 * [Kernel PCA](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.KernelPCA.html?highlight=kernel%20pca#sklearn.decomposition.KernelPCA)
 * [Isomap](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.Isomap.html#sklearn.manifold.Isomap)
@@ -105,6 +105,8 @@ Can be used to balance classes during training, or to supplement measurements th
 
 > These approaches may be considered intermediate between conventional methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
 * [EllipticManifold](manifold/elliptic.py) - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
+
+<!-- scikit-tda; also PINN or PIML basically uses physics to constrain AI/ML to a manifold that respects physical constraints -->
 
 ## General Machine Learning [Large amount of data available]
 > These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
@@ -116,9 +118,12 @@ Can be used to balance classes during training, or to supplement measurements th
 > In machine learning, an ensemble model usually refers to a combination of (usually weaker) models that perform the same prediction task. Here, we use the term to refer to the combination of models that perform different tasks, i.e., each model is trained to predict the inlier/outlier status of a point with respect to one class.  We may combine such models so that a final prediction for an observation may be that it belongs to one class, many classes, or no known classes.  Efficiency, specificity and other metrics can then be computed from this.
 -->
 
-## Explanations
+## Explanations and Interpretations
 > While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
 * [SHAP](https://shap.readthedocs.io/en/latest/) - "(SHapley Additive exPlanations) is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions."
+
+> "Interpretable AI" refers to models which are inherently a "glassbox" and their inner-workings are transparent.  This is [not the same as "explained black boxes" (XAI)](https://projecteuclid.org/journals/statistics-surveys/volume-16/issue-none/Interpretable-machine-learning-Fundamental-principles-and-10-grand-challenges/10.1214/21-SS133.full) which are incrutable, by definition, but methods like SHAP can be used to help the user develope a sense of (dis)trust about the model and potentially debug it.  Explainable boosting machines (EBM) are (at the time of writing) only a discrimination method, but can be helpful to compare and contrast with explained black boxes. EBMs are slow to train so are best for small-medium data applications, which many chemometric applications fall under.
+* [EBM](https://interpret.ml/docs/ebm.html) from [interpretML](https://interpret.ml) are "tree-based, cyclic gradient boosting Generalized Additive Model with automatic interaction detection. EBMs are often as accurate as state-of-the-art blackbox models while remaining completely interpretable."
 
 ## Diagnostics
 * [Learning curves](https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve) - these can be used to tell if you model will benefit from more data, or if you need a better model.
