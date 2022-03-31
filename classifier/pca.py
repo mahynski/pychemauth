@@ -13,8 +13,8 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted
 
 sys.path.append("../")
-from chemometrics.preprocessing.scaling import CorrectedScaler
-from chemometrics.utils import estimate_dof
+from pychemauth.preprocessing.scaling import CorrectedScaler
+from pychemauth.utils import estimate_dof
 
 
 class PCA(ClassifierMixin, BaseEstimator):
