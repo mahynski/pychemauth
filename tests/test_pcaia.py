@@ -10,7 +10,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from chemometrics.preprocessing.missing import PCA_IA
+from PyChemAuth.preprocessing.missing import PCA_IA
 
 
 class TestPCA_IA(unittest.TestCase):
