@@ -12,38 +12,11 @@ This is a centralized repository of tools implemented in python to perform chemo
 
 Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where a known class is found (even if it disperse). Both can be useful when attempting to detect chemometric anomalies.
 
-![](pychemauth.png)
-
 ## License Information
 * See LICENSE for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
 
-# Installation
-
-~~~ bash
-$ git clone https://github.com/mahynski/chemometrics.git
-$ cd chemometrics
-$ pip install -r requirements.txt
-# If you wish to contribute to the repo you will need to install pre-commit as well
-$ pip install pre-commit # (OPTIONAL)
-~~~
-
-Simply add this directory to your PYTHONPATH, or locally in each instance (i.e., sys.path.append()) and import the model as usual.
-
-~~~ bash
-$ echo 'export PYTHONPATH=$PYTHONPATH:/path/to/module/' >> ~/.bashrc
-$ source ~/.bashrc
-~~~
-
-~~~ python
-import chemometrics
-~~~
-
-You can run unittests to make sure your installation is working correctly.
-
-~~~ bash
-$ python -m unittest discover tests/
-~~~
+![](pychemauth.png)
 
 # Capabilities
 
@@ -130,6 +103,33 @@ Can be used to balance classes during training, or to supplement measurements th
 
 ## Diagnostics
 * [Learning curves](https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve) - these can be used to tell if you model will benefit from more data, or if you need a better model.
+
+# Installation
+
+~~~ bash
+$ git clone https://github.com/mahynski/chemometrics.git
+$ cd chemometrics
+$ pip install -r requirements.txt
+# If you wish to contribute to the repo you will need to install pre-commit as well
+$ pip install pre-commit # (OPTIONAL)
+~~~
+
+Simply add this directory to your PYTHONPATH, or locally in each instance (i.e., sys.path.append()) and import the model as usual.
+
+~~~ bash
+$ echo 'export PYTHONPATH=$PYTHONPATH:/path/to/module/' >> ~/.bashrc
+$ source ~/.bashrc
+~~~
+
+~~~ python
+import chemometrics
+~~~
+
+You can run unittests to make sure your installation is working correctly.
+
+~~~ bash
+$ python -m unittest discover tests/
+~~~
 
 # Usage
 Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/chemometrics/blob/master/) to explore.
