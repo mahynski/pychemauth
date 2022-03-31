@@ -170,13 +170,13 @@ df = pd.read_csv(list(uploaded.keys())[0])
 ~~~
 
 ~~~python
-# Clone chemometrics repo
-!git clone https://github.com/mahynski/chemometrics.git
-!cd chemometrics; pip3 install -r requirements.txt
+# Clone PyChemAuth repo
+!git clone https://github.com/mahynski/PyChemAuth.git
+!cd PyChemAuth; pip3 install -r requirements.txt
 ~~~~
 
 ~~~python
-import chemometrics
+import PyChemAuth
 
 # Perform analysis ...
 ~~~
