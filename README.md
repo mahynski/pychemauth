@@ -12,6 +12,8 @@ This is a centralized repository of tools implemented in python to perform chemo
 
 Essentially, outlier detection methods characterize inliers as those points in high density regions, whereas novelty detection routines try to characterize a boundary around the region where a known class is found (even if it disperse). Both can be useful when attempting to detect chemometric anomalies.
 
+![](pychemauth.png)
+
 ## License Information
 * See LICENSE for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
