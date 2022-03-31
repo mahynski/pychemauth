@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
-from chemometrics.preprocessing.scaling import CorrectedScaler
+from pychemauth.preprocessing.scaling import CorrectedScaler
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):
