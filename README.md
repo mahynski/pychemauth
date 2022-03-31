@@ -16,9 +16,9 @@ Essentially, outlier detection methods characterize inliers as those points in h
 * See LICENSE for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
 
-![](pychemauth.png)
-
 # Capabilities
+
+![](pychemauth.png)
 
 ## Preprocessors
 [scikit-learn](https://scikit-learn.org) provides a number of other simple [preprocessing](https://scikit-learn.org/stable/modules/preprocessing.html) steps, including data standardization and imputation approaches.  Here, these are extended to include:
