@@ -100,6 +100,7 @@ class LOD:
             ensure_2d=True,
             copy=True,
         )
+        X = X.T
         self.n_features_in_ = X.shape[1]
 
         self.lod = self.lod.ravel()
