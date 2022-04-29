@@ -10,7 +10,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from PyChemAuth.preprocessing.missing import LOD
+from pychemauth.preprocessing.missing import LOD
 
 
 class TestLOD(unittest.TestCase):
