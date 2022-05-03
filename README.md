@@ -86,7 +86,7 @@ Can be used to balance classes during training, or to supplement measurements th
 ## General Machine Learning [Large amount of data available]
 > These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
 * Outlier detection with [PyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
-* Semi-supervised [Positive and Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
+* Semi-supervised [Positive-Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
 <!--
 ## Ensemble Models
