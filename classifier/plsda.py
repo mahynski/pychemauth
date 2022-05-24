@@ -1025,16 +1025,16 @@ n_features [{}])] = [{}, {}].".format(
         if "soft" in styles:
             cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
             for i in range(len(cutoff)):
-                ax.axvline(cutoff[i][0], color="C{}".format(i))
-                ax.axvline(cutoff[i][1], color="C{}".format(i))
-                ax.axvline(outlier[i][0], linestyle="--", color="C{}".format(i))
-                ax.axvline(outlier[i][1], linestyle="--", color="C{}".format(i))
+                ax.plot([cutoff[i][0]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), color="C{}".format(i))
+                ax.plot([cutoff[i][1]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), color="C{}".format(i))
+                ax.plot([outlier[i][0]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), linestyle="--", color="C{}".format(i))
+                ax.plot([outlier[i][1]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), linestyle="--", color="C{}".format(i))
         if "hard" in styles:
             t0 = hard_boundaries_1d()
             ax.axvline(t0, color="k")
 
         ax.legend(loc="best")
-        ax.set_ylim(-0.25, 0.25 + len(self.__class_centers_) - 1)
+        ax.set_ylim(-0.5, 0.5 + len(self.__class_centers_) - 1)
         ax.set_yticks([])
 
         return ax

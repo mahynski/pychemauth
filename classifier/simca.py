@@ -51,6 +51,13 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         The final metric used to rate the overall model can be set to TEFF or TSPS,
         for example, if you wish to change how the model is evaluated.
 
+	When TEFF is used to choose a model, this is a "compliant" approach,
+	whereas when TSNS is used instead, this is a "rigorous" approach.
+
+	[1] "Rigorous and compliant approaches to one-class classification,"
+	Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
+	Lab. Sys. (2016) 89-96.
+
         Parameters
         ----------
         n_components : int
@@ -656,6 +663,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A> and
+    Riodonova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
     def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True):
@@ -778,6 +787,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             1.0 - self.alpha, self.__Nh_ + self.__Nq_
         )
 
+        # See [2]
         self.__c_out_ = scipy.stats.chi2.ppf(
             (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
             self.__Nh_ + self.__Nq_,
