@@ -30,6 +30,18 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     can be distinguished from each alternative.  This allows you to pass points
     that belong to other classes during training - they are just ignored.  This
     is important for integration with other scikit-learn, etc. workflows.
+
+    Note that when you are optimizing the model using TEFF, TSPS is 
+    computed by using the alternative classes.  In that case, the model choice
+    is influenced by these alternatives.  This is a "compliant" approach,
+    however, if you used TSNS instead of TEFF the model only uses information
+    about the target class itself.  This is a "rigorous" approach which can
+    be important to consider to avoid bias in the model.
+    
+    1. "Rigorous and compliant approaches to one-class classification,"
+    Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
+    Lab. Sys. (2016) 89-96.
+
     """
 
     def __init__(
@@ -54,7 +66,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 	When TEFF is used to choose a model, this is a "compliant" approach,
 	whereas when TSNS is used instead, this is a "rigorous" approach.
 
-	[1] "Rigorous and compliant approaches to one-class classification,"
+	1. "Rigorous and compliant approaches to one-class classification,"
 	Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
 	Lab. Sys. (2016) 89-96.
 
@@ -71,7 +83,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             Type of SIMCA to use ("simca" or "dd-simca")
         use : str
             Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
-            (default=TEFF).
+            (default=TEFF). See Ref. 1.
         scale_x : bool
             Whether or not to scale X by its sample standard deviation or not.
             This depends on the meaning of X and is up to the user to
@@ -663,7 +675,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
-    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A> and
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Riodonova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
