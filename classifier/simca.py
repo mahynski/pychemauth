@@ -783,10 +783,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         # 1. Standardize X
         self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
+        self.__ss_.fit(self.__X_)
 
         # 2. Perform PCA on standardized coordinates
         self.__pca_ = PCA(n_components=self.n_components, random_state=0)
-        self.__pca_.fit(self.__ss_.fit_transform(self.__X_))
+        self.__pca_.fit(self.__ss_.transform(self.__X_))
 
         # 3. Compute critical distance
         h_vals, q_vals = self.h_q_(self.__X_)

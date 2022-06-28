@@ -187,6 +187,9 @@ class CorrectedScaler:
         if self.with_mean:
             result -= self.__mean_
         if self.with_std:
+            tol = 1.0e-18
+            if np.any(self.__std_ < tol):
+                raise Exception('Cannot standardize. The X matrix has std ~ 0 for columns : {}'.format(np.where(self.__std_ < tol)))
             result /= np.sqrt(self.__std_) if self.pareto else self.__std_
 
         return result
