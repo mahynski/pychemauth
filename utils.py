@@ -273,7 +273,7 @@ def bokeh_color_spectrum(
     show(plot_figure)
 
 
-def estimate_dof(h_vals, q_vals, n_components, n_features_in):
+def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
     """
     Estimate the degrees of freedom for the chi-squared distribution.
 
@@ -286,6 +286,8 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A., 
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
+    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
     def err2(N, vals):
@@ -296,7 +298,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
         however, the citation they provide suggests the median might be
         a better choice; in practice, it seems that is favored since it
         is more robust against outliers, so this is used below in that
-        spirit.  This is also how it is implemented in CAFE.
+        spirit.  This is also how it is implemented in CAFE [see 3].
         """
         x0 = np.median(vals)  # np.mean(vals)
         a = (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)) / N
@@ -308,7 +310,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
     res = scipy.optimize.minimize(
         err2, n_components, args=(h_vals), method="Nelder-Mead"
     )
-    if res.success:
+    if res.success and (try_robust == True):
         # Robust method, if possible
         Nh = res.x[0]
     else:
@@ -324,7 +326,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
         args=(q_vals),
         method="Nelder-Mead",
     )
-    if res.success:
+    if res.success and (try_robust == True):
         # Robust method, if possible
         Nq = res.x[0]
     else:

@@ -38,7 +38,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     about the target class itself.  This is a "rigorous" approach which can
     be important to consider to avoid bias in the model.
     
-    1. "Rigorous and compliant approaches to one-class classification,"
+    [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
 
@@ -52,6 +52,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         style="dd-simca",
         use="TEFF",
         scale_x=True,
+        iterate=False
     ):
         """
         Instantiate the classifier.
@@ -66,7 +67,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 	When TEFF is used to choose a model, this is a "compliant" approach,
 	whereas when TSNS is used instead, this is a "rigorous" approach.
 
-	1. "Rigorous and compliant approaches to one-class classification,"
+	[1] "Rigorous and compliant approaches to one-class classification,"
 	Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
 	Lab. Sys. (2016) 89-96.
 
@@ -89,6 +90,9 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             This depends on the meaning of X and is up to the user to
             determine if scaling it (by the standard deviation) makes sense.
             Note that X is always centered.
+        iterate : bool
+            Whether or not to use the iterative outlier removal scheme described
+            in Ref. 3.  This is ignored when NOT using DD-SIMCA.
         """
         self.set_params(
             **{
@@ -98,6 +102,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 "style": style,
                 "use": use,
                 "scale_x": scale_x,
+                "iterate": iterate
             }
         )
         self.is_fitted_ = False
@@ -118,6 +123,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             "style": self.style,
             "use": self.use,
             "scale_x": self.scale_x,
+            "iterate": self.iterate
         }
 
     def fit(self, X, y):
@@ -155,6 +161,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 n_components=self.n_components,
                 alpha=self.alpha,
                 scale_x=self.scale_x,
+                iterate=self.iterate
             )
         else:
             raise ValueError("{} is not a recognized style.".format(self.style))
@@ -674,12 +681,14 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     wish to model.
 
     [1] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
     [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Riodonova, O., Journal of Chemometrics 28 (2014) 429-438.
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
+    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
-    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True):
+    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True, iterate=False):
         """
         Instantiate the class.
 
@@ -696,6 +705,14 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             This depends on the meaning of X and is up to the user to
             determine if scaling it (by the standard deviation) makes sense.
             Note that X is always centered.
+        iterate : bool
+            Whether or not to use the iterative outlier removal scheme described
+            in Ref. 3.  If not used (default) robust estimates of parameters are
+            attempted; if the iterative approach is used, these robust estimates
+            are only computed during the outlier removal loop(s) while the final
+            "clean" data uses classical estimates.  This option may throw away
+            data it is originally provided for training; it keeps only "regular"
+            samples (inliers and extremes) to train the model.
         """
         self.set_params(
             **{
@@ -703,6 +720,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
+                "iterate": iterate
             }
         )
         self.is_fitted_ = False
@@ -720,6 +738,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
+            "iterate": self.iterate
         }
 
     def column_y_(self, y):
@@ -781,30 +800,76 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ):
             raise Exception("Reduce the number of PCA components")
 
-        # 1. Standardize X
-        self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
-        self.__ss_.fit(self.__X_)
+        def train(X, try_robust=True):
+            # 1. Standardize X
+            self.__X_ = X.copy() # This is needed so self.h_q_() works correctly
+            self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
+            self.__ss_.fit(X)
 
-        # 2. Perform PCA on standardized coordinates
-        self.__pca_ = PCA(n_components=self.n_components, random_state=0)
-        self.__pca_.fit(self.__ss_.transform(self.__X_))
+            # 2. Perform PCA on standardized coordinates
+            self.__pca_ = PCA(n_components=self.n_components, random_state=0)
+            self.__pca_.fit(self.__ss_.transform(X))
 
-        # 3. Compute critical distance
-        h_vals, q_vals = self.h_q_(self.__X_)
-        self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = estimate_dof(
-            h_vals, q_vals, self.n_components, self.n_features_in_
-        )
+            # 3. Compute critical distance
+            h_vals, q_vals = self.h_q_(X)
+            self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
+            self.__Nh_, self.__Nq_ = estimate_dof(
+                h_vals, q_vals, self.n_components, self.n_features_in_,
+                try_robust=try_robust
+            )
 
-        self.__c_crit_ = scipy.stats.chi2.ppf(
-            1.0 - self.alpha, self.__Nh_ + self.__Nq_
-        )
+           self.__c_crit_ = scipy.stats.chi2.ppf(
+                1.0 - self.alpha, self.__Nh_ + self.__Nq_
+           )
 
-        # See [2]
-        self.__c_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nh_ + self.__Nq_,
-        )
+            # See [2]
+            self.__c_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / X.shape[0]),
+                self.__Nh_ + self.__Nq_,
+            )
+
+        # This is based on Ref. 3.
+        if not self.iterate:
+            # When not iteratively removing outliers, always true to find robust estimates of parameters
+            train(self.__X_, try_robust=True)
+        else:
+            X_tmp = self.__X_.copy()
+            outer_iters = 0
+            max_outer = 1000
+            max_inner = 1000
+            while(True): # Outer loop
+                if (outer_iters >= max_outer):
+                    raise Exception("Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping).")
+                train(X_tmp, try_robust=True)
+                _, outliers = self.check_outliers(X_tmp)
+                X_out = X_tmp[outliers, :]
+                inner_iters = 0
+                while (np.sum(outliers) > 0):
+                    if (inner_iters >= max_inner):
+                        raise Exception("Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking).")
+                    X_tmp = X_tmp[~outliers, :]
+                    if len(X_tmp) == 0:
+                        raise Exception("Unable to iteratively clean data; all observations are considered outliers.")
+                    train(X_tmp, try_robust=True)
+                    _, outliers = self.check_outliers(X_tmp)
+                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
+                    inner_iters += 1
+            
+                # All inside X_tmp are inliers or extremes now.
+                # Check that all outliers are predicted to be outliers in the latest version trained
+                # on only inlier and extremes.
+                _, outliers = self.check_outliers(X_out)
+                X_return = X_out[~outliers, :]
+                outer_iters += 1
+                if len(X_return) == 0:
+                    break
+                else:
+                    X_tmp = np.vstack((X_tmp, X_return))
+
+            # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
+            # which is considered "clean" so should try to use classical estimates of the parameters.
+            # train() assigns X_tmp to self.__X_ also. See Ref. 3.
+            train(X_tmp, try_robust=False)
 
         self.is_fitted_ = True
         return self
