@@ -234,7 +234,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 
     def score(self, X, y=None):
         """
-        Score the model (uses total efficiency as score).
+        Score the model.
 
         If scoring a set with only the target class present, returns
         TSNS.  If only alternatives present, returns TSPS.  Otherwise
@@ -607,7 +607,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         # Inlier = True (positive class), p[:,0]
         # Not inlier = False (negative class), p[:,1]
         prob = self.predict_proba(X, y)
-        print(prob)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
         p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
@@ -818,11 +817,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 try_robust=try_robust
             )
 
-           self.__c_crit_ = scipy.stats.chi2.ppf(
-                1.0 - self.alpha, self.__Nh_ + self.__Nq_
-           )
+            self.__c_crit_ = scipy.stats.chi2.ppf(
+                 1.0 - self.alpha, self.__Nh_ + self.__Nq_
+            )
 
-            # See [2]
+            # See Ref. 2.
             self.__c_out_ = scipy.stats.chi2.ppf(
                 (1.0 - self.gamma) ** (1.0 / X.shape[0]),
                 self.__Nh_ + self.__Nq_,
@@ -835,14 +834,14 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         else:
             X_tmp = self.__X_.copy()
             outer_iters = 0
-            max_outer = 1000
-            max_inner = 1000
+            max_outer = 100
+            max_inner = 100
             while(True): # Outer loop
                 if (outer_iters >= max_outer):
                     raise Exception("Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping).")
                 train(X_tmp, try_robust=True)
                 _, outliers = self.check_outliers(X_tmp)
-                X_out = X_tmp[outliers, :]
+                X_out = copy.copy(X_tmp[outliers, :])
                 inner_iters = 0
                 while (np.sum(outliers) > 0):
                     if (inner_iters >= max_inner):
@@ -854,22 +853,29 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                     _, outliers = self.check_outliers(X_tmp)
                     X_out = np.vstack((X_out, X_tmp[outliers, :]))
                     inner_iters += 1
-            
+
                 # All inside X_tmp are inliers or extremes now.
                 # Check that all outliers are predicted to be outliers in the latest version trained
                 # on only inlier and extremes.
-                _, outliers = self.check_outliers(X_out)
-                X_return = X_out[~outliers, :]
                 outer_iters += 1
-                if len(X_return) == 0:
-                    break
+                if (len(X_out) > 0):
+                    _, outliers = self.check_outliers(X_out)
+                    X_return = X_out[~outliers, :]
+                    if len(X_return) == 0:
+                        break
+                    else:
+                        X_tmp = np.vstack((X_tmp, X_return))
                 else:
-                    X_tmp = np.vstack((X_tmp, X_return))
+                    break
 
             # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See Ref. 3.
             train(X_tmp, try_robust=False)
+            self.__iterate_history = {'inner_loops': inner_iters, 
+                                      'outer_loops': outer_iters,
+                                      'removed': X_out
+                                     }
 
         self.is_fitted_ = True
         return self

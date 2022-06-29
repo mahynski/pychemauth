@@ -180,9 +180,9 @@ class CorrectedScaler:
     def transform(self, X):
         """Transform (center and possibly scale) the data after fitting."""
         X = check_array(X, accept_sparse=False)
-        assert X.shape[1] == self.n_features_in_
+        assert(X.shape[1] == self.n_features_in_)
         check_is_fitted(self, "is_fitted_")
-        result = np.array(X, dtype=float)
+        result = np.array(X, dtype=np.float64)
 
         if self.with_mean:
             result -= self.__mean_
