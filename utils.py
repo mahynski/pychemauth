@@ -277,10 +277,15 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
     """
     Estimate the degrees of freedom for the chi-squared distribution.
 
-    This follows from Ref. 1.
+    This follows from Ref. 1. Ref. 2 contains a more rigorous approximation
+    for the "robust" approach that is often implemented in practice.  Here,
+    we opt for a direct solution via numerical optimization, and fall back
+    on a simple (non-robust) solution otherwise.
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A., 
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
     def err2(N, vals):
@@ -291,7 +296,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
         however, the citation they provide suggests the median might be
         a better choice; in practice, it seems that is favored since it
         is more robust against outliers, so this is used below in that
-        spirit.
+        spirit.  This is also how it is implemented in CAFE.
         """
         x0 = np.median(vals)  # np.mean(vals)
         a = (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)) / N
@@ -326,4 +331,4 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in):
         # Use simple estimate if this fails (Eq. 23 in [1])
         Nq = 2.0 * np.mean(q_vals) ** 2 / np.std(q_vals, ddof=1) ** 2
 
-    return Nh, Nq
+    return round(Nh, 0), round(Nq, 0)
