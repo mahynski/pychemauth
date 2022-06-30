@@ -333,4 +333,5 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
         # Use simple estimate if this fails (Eq. 23 in [1])
         Nq = 2.0 * np.mean(q_vals) ** 2 / np.std(q_vals, ddof=1) ** 2
 
-    return round(Nh, 0), round(Nq, 0)
+    # Bound below by 1
+    return np.max([round(Nh, 0), 1]), np.max([round(Nq, 0), 1])
