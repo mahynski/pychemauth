@@ -113,8 +113,8 @@ Can be used to balance classes during training, or to supplement measurements th
 # Installation
 
 ~~~ bash
-$ git clone https://github.com/mahynski/chemometrics.git
-$ cd chemometrics
+$ git clone https://github.com/mahynski/pychemauth.git
+$ cd pychemauth
 $ pip install -r requirements.txt
 # If you wish to contribute to the repo you will need to install pre-commit as well
 $ pip install pre-commit # (OPTIONAL)
@@ -176,7 +176,7 @@ df = pd.read_csv(list(uploaded.keys())[0])
 ~~~
 
 ~~~python
-# Clone PyChemAuth repo
+# Clone pychemauth repo
 !git clone https://github.com/mahynski/pychemauth.git
 !cd pychemauth; pip3 install -r requirements.txt
 ~~~~

@@ -8,122 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
-import seaborn as sns
 from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
 from bokeh.palettes import Spectral10
 from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import learning_curve
-
-
-def plot_confusion_matrix(model, X, y_true, ax=None):
-    """
-    Plot a confusion matrix for a classifier.
-
-    Compare classification models based on true/false positive rates.
-    See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
-    """
-    confmat = confusion_matrix(y_true=y_true, y_pred=model.predict(X))
-
-    if ax is None:
-        fig = plt.figure()
-        axes = plt.gca()
-    else:
-        axes = ax
-
-    _ = sns.heatmap(
-        confmat,
-        ax=ax,
-        annot=True,
-        xticklabels=model.classes_,
-        yticklabels=model.classes_,
-    )
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-
-    return ax
-
-
-def plot_learning_curve(
-    model, X, y, cv=3, train_sizes=[0.2, 0.4, 0.6, 0.8, 1.0]
-):
-    """
-    Plot the learning curve for a model.
-
-    Parameters
-    ----------
-    X : matrix-like
-        Columns of features; observations are rows - will be converted to
-        numpy array automatically.
-    y : array-like
-        Response values.
-    cv : int or sklearn.model_selection object
-        Cross-validation strategy; uses k-fold CV if an integer is provided.
-    train_sizes : array-like
-        Fractions of provided data to use for training.
-
-    Returns
-    -------
-    matplotlib.pyplot.Axes
-        Axes the figure is plotted on.
-    """
-    train_sizes, train_scores, test_scores = learning_curve(
-        estimator=model,
-        X=X,
-        y=y,
-        train_sizes=train_sizes,
-        cv=cv,
-        n_jobs=1,
-    )
-
-    train_mean = np.mean(train_scores, axis=1)
-    train_std = np.std(train_scores, axis=1)
-    test_mean = np.mean(test_scores, axis=1)
-    test_std = np.std(test_scores, axis=1)
-
-    fig = plt.figure()
-    plt.plot(
-        train_sizes,
-        train_mean,
-        color="blue",
-        marker="o",
-        markersize=5,
-        label="Training",
-    )
-
-    plt.fill_between(
-        train_sizes,
-        train_mean + train_std,
-        train_mean - train_std,
-        alpha=0.15,
-        color="blue",
-    )
-
-    plt.plot(
-        train_sizes,
-        test_mean,
-        color="green",
-        linestyle="--",
-        marker="s",
-        markersize=5,
-        label="Validation",
-    )
-
-    plt.fill_between(
-        train_sizes,
-        test_mean + test_std,
-        test_mean - test_std,
-        alpha=0.15,
-        color="green",
-    )
-
-    plt.grid()
-    plt.xlabel("Number of training samples")
-    plt.legend(loc="best")
-    plt.tight_layout()
-
-    return fig.gca()
 
 
 def color_spectrum(
@@ -284,7 +172,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
-    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A., 
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A.,
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.

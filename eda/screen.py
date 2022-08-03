@@ -14,8 +14,6 @@ import pandas as pd
 import seaborn as sns
 import sklearn
 import tqdm
-
-# from ml_utils.sklearn_ext.feature_selection import JensenShannonDivergence
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_X_y
 

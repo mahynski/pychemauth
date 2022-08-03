@@ -1,9 +1,11 @@
+baycomp
 bokeh
 BorutaShap
 imbalanced-learn
 IPython
 ipywidgets
 matplotlib
+nodejs
 numpy
 pandas
 pre-commit
