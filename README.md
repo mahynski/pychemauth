@@ -160,7 +160,6 @@ Below is the code that accompanies the gif above.
 
 ~~~python
 # 1. Upload your data as a .csv file (enter this code and click "Choose Files")
-
 from google.colab import files
 uploaded = files.upload() # Currently there are some issues with this on Firefox
 
@@ -176,7 +175,7 @@ df = pd.read_csv(list(uploaded.keys())[0])
 ~~~
 
 ~~~python
-# Clone pychemauth repo
+# 3. Clone pychemauth repo
 !git clone https://github.com/mahynski/pychemauth.git
 !cd pychemauth; pip3 install -r requirements.txt
 ~~~~
