@@ -20,6 +20,9 @@ Essentially, outlier detection methods characterize inliers as those points in h
 
 ![](pychemauth.png)
 
+## Exploratory Data Analysis
+You should always perform [exploratory data analysis](https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm) to understand your data.  For example, understanding missing values, NaN, inf and basic [descriptive statistics](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html).  The included `eda` module contains some additional tools for this.
+
 ## Preprocessors
 [scikit-learn](https://scikit-learn.org) provides a number of other simple [preprocessing](https://scikit-learn.org/stable/modules/preprocessing.html) steps, including data standardization and imputation approaches.  Here, these are extended to include:
 
@@ -40,6 +43,9 @@ Essentially, outlier detection methods characterize inliers as those points in h
 Can be used to balance classes during training, or to supplement measurements that are very hard to make.  `imblearn` pipelines are designed to be drop-in replacements for sklearn pipelines so are often used instead.
 * [Imbalanced Learning](https://imbalanced-learn.org/stable/index.html) - SMOTE, ADASYN, etc.
 * Generative Networks (VAE, GAN)
+
+### Feature Selection
+[Feature extraction](https://scikit-learn.org/stable/modules/feature_extraction.html), such as PCA, involves manipulating inputs to produce new "dimensions" or composite features, such as the first principal component. [Feature selection](https://scikit-learn.org/stable/modules/feature_selection.html) simply involves selecting a subset of known features (such as columns) to use.  scikit-learn has many [built-in examples](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection) that you can use.  Additional tools such as [BorutaSHAP](https://github.com/Ekeany/Boruta-Shap) and some based on the [Jensen-Shannon Divergence](https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence) are also implemented here.
 
 ## Conventional Chemometrics [Small amount of data available]
 
@@ -78,7 +84,7 @@ Can be used to balance classes during training, or to supplement measurements th
 * [Kohonen Self-Organizing Maps (SOM)](https://pypi.org/project/sklearn-som/) <!-- https://www.analyticsvidhya.com/blog/2021/09/beginners-guide-to-anomaly-detection-using-self-organizing-maps/-->
 * [UMAP](https://umap-learn.readthedocs.io/en/latest/)
 
-> These approaches may be considered intermediate between conventional methods and modern AI/ML algorithms.  These are generally non-linear dimensionality reduction methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
+> These approaches may be considered intermediate between conventional methods and modern AI/ML algorithms.  These are generally [non-linear dimensionality reduction](https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction) methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
 * [EllipticManifold](manifold/elliptic.py) - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
 
 <!-- scikit-tda; also PINN or PIML basically uses physics to constrain AI/ML to a manifold that respects physical constraints -->
@@ -122,7 +128,7 @@ $ source ~/.bashrc
 ~~~
 
 ~~~ python
-import chemometrics
+import pychemauth
 ~~~
 
 You can run unittests to make sure your installation is working correctly.
@@ -136,7 +142,7 @@ Refer to `examples/` for example usage and more explicit details; you can [![Ope
 
 ## Example Pseudocode
 ~~~ python
->>> from chemometrics.classifier.plsda import PLSDA
+>>> from pychemauth.classifier.plsda import PLSDA
 >>> X_train, X_test, y_train, y_test = load_data(...)
 >>> sp = PLSDA(n_components=30, style='soft')
 >>> _ = sp.fit(X_train.values, y_train.values)
@@ -171,12 +177,12 @@ df = pd.read_csv(list(uploaded.keys())[0])
 
 ~~~python
 # Clone PyChemAuth repo
-!git clone https://github.com/mahynski/PyChemAuth.git
-!cd PyChemAuth; pip3 install -r requirements.txt
+!git clone https://github.com/mahynski/pychemauth.git
+!cd pychemauth; pip3 install -r requirements.txt
 ~~~~
 
 ~~~python
-import PyChemAuth
+import pychemauth
 
 # Perform analysis ...
 ~~~

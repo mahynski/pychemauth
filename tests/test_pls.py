@@ -56,7 +56,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        ans = np.array([9.79455476, 11.03831617, 2.99070825])
+        ans = np.array([9.15146807, 10.06191892, 2.75553153])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
@@ -68,7 +68,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_g(self):
         """Check some g values."""
         res = self.model.g_(self.X, self.y)[:3]
-        ans = np.array([9.82920946, 11.11767407, 5.48194862])
+        ans = np.array([9.18612277, 10.14127682, 5.2467719])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_predict(self):
@@ -80,13 +80,13 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_x_out(self):
         """Check critical distances for X."""
         res = np.array([self.model._PLS__x_crit_, self.model._PLS__x_out_])
-        ans = np.array([10.194989324189939, 24.590347184817812])
+        ans = np.array([9.48772904, 23.5870557])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_xy_out(self):
         """Check critical distances for XY."""
         res = np.array([self.model._PLS__xy_crit_, self.model._PLS__xy_out_])
-        ans = np.array([11.747986960607777, 26.766840428270168])
+        ans = np.array([11.07049769, 25.82159626])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_score(self):
@@ -139,7 +139,7 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        ans = np.array([12.65413667, 15.55970162, 3.79995125])
+        ans = np.array([11.61999155, 14.52809849, 3.50415465])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
@@ -151,7 +151,7 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_g(self):
         """Check some g values."""
         res = self.model.g_(self.X, self.y)[:3]
-        ans = np.array([12.66176144, 15.55970172, 6.13186163])
+        ans = np.array([11.62761631, 14.52809859, 5.83606502])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_predict(self):
@@ -163,13 +163,13 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_x_out(self):
         """Check critical distances for X."""
         res = np.array([self.model._PLS__x_crit_, self.model._PLS__x_out_])
-        ans = np.array([13.26013691466425, 28.855176362435692])
+        ans = np.array([12.59158724, 27.93536325])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_xy_out(self):
         """Check critical distances for XY."""
         res = np.array([self.model._PLS__xy_crit_, self.model._PLS__xy_out_])
-        ans = np.array([14.718758802267086, 30.844486653495288])
+        ans = np.array([14.06714045, 29.95863241])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_score(self):

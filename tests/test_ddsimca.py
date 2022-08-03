@@ -42,12 +42,8 @@ class TestDDSIMCA(unittest.TestCase):
         _ = dds.fit(raw_x, raw_y)
 
         # Check DoF
-        self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__Nq_ - 4.298057556152344) < 1.0e-12
-        )
-        self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__Nh_ - 3.0166992187499977) < 1.0e-12
-        )
+        self.assertEqual(dds._DDSIMCA_Model__Nq_, 4)
+        self.assertEqual(dds._DDSIMCA_Model__Nh_, 3)
 
         # Check distances
         h, q = dds.h_q_(raw_x)
@@ -87,24 +83,24 @@ class TestDDSIMCA(unittest.TestCase):
 
         # Check critical distances
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__c_crit_ - 14.523885537911713) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__c_crit_ - 14.067140449340169) < 1.0e-12
         )
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__c_out_ - 29.70006038414481) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__c_out_ - 29.08559157741169) < 1.0e-12
         )
 
         # Check predictions of target class
         self.assertTrue(
             np.all(
                 np.where(~dds.predict(raw_x))[0]
-                == np.array([14, 18, 20, 21, 22])
+                == np.array([14, 18, 20, 21, 22, 65])
             )
         )
 
         # Check predictions of extreme/outliers
         ext, out = dds.check_outliers(raw_x)
         self.assertTrue(
-            np.all(np.where(ext)[0] == np.array([14, 18, 20, 21, 22]))
+            np.all(np.where(ext)[0] == np.array([14, 18, 20, 21, 22, 65]))
         )
         self.assertTrue(np.all(np.all(~out)))
 
@@ -132,13 +128,12 @@ class TestDDSIMCA(unittest.TestCase):
         raw_y_a = np.array(df.values[:, 1], dtype=str)
         self.assertTrue(
             np.all(
-                np.where(dds.predict(raw_x_a))[0] == np.array([0, 6, 7, 9, 15])
+                np.where(dds.predict(raw_x_a))[0]
+                == np.array([0, 3, 6, 7, 9, 15])
             )
         )
         ext, out = dds.check_outliers(raw_x_a)
-        self.assertTrue(
-            np.all(np.where(ext)[0] == np.array([1, 3, 4, 8, 12, 16]))
-        )
+        self.assertTrue(np.all(np.where(ext)[0] == np.array([1, 4, 8, 12, 16])))
         self.assertTrue(
             np.all(np.where(out)[0] == np.array([2, 5, 10, 11, 13, 14, 17]))
         )

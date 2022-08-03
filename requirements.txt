@@ -1,14 +1,16 @@
 bokeh
+BorutaShap
 imbalanced-learn
+IPython
 ipywidgets
 matplotlib
 numpy
 pandas
 pre-commit
+scikit-learn
 scipy
 seaborn
 shap
-sklearn
 tqdm
 umap-learn
 watermark
