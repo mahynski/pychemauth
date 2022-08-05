@@ -10,17 +10,17 @@ from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 
 class NestedCV:
     """
-    Perform nested GridSearchCV and get all test fold scores.
+    Perform nested GridSearchCV and get all validation fold scores.
 
     This differs from sklearn's "built in" method of doing nested CV of
     cross_val_score(GridSeachCV()) in that cross_val_score() only returns
     the score from the test fold on the outer loop, after the best model is
     (usually) retrained on the entire training set using the best
     hyperparameters determined via the inner loop.  For doing statistical
-    tests we want to have the test scores from all the inner loops and are not
-    interested in re-training and scoring on the outer loop.  The outer loop
-    is just a way to "shift" or decorrelate the data chunks relative to simple
-    repeated CV.
+    tests we want to have the validation scores from all the inner loops 
+    and are not interested in re-training/scoring on the outer loop.  The 
+    outer loop is just a way to "shift" or decorrelate the data chunks 
+    relative to simple repeated CV.
 
     This is used to assess the generalization error of an entire pipeline,
     which includes the model fitting, and hyperparameter search, for example.
