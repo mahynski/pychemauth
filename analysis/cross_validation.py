@@ -34,6 +34,22 @@ class NestedCV:
     when comparing different pipelines.  After pipelines are evaluated, the
     chosen one may be further optimized with more care, but these estimates
     of performance and uncertainty are expected to hold.
+    
+    "Nested CV" typically uses the held-out test fold for an unbiased esimate
+    of the generalization error, as described above [1].  However, extensive 
+    real-world tests suggest that using the scores from the "flat CV" (the 
+    validation set) which is also used to identify optimal hyperparameters, 
+    does NOT make practical difference [2].  Therefore, we use the inner 
+    scores directly in concert with the statistical tests developed for cases 
+    where hyperparameter optimization was not assumed to be occuring 
+    simultaneously.
+    
+    [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and 
+    subsequent selection bias in performance evaluation. J. Mach. Learn. Res 
+    2010,11, 2079-2107.
+    [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when 
+    selecting classifiers is overzealous for most practical applications." 
+    Expert Systems with Applications 182 (2021): 115222.
     """
 
     def __init__(self, k_inner=2, k_outer=5):
