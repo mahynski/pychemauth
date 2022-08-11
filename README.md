@@ -6,7 +6,7 @@ Python-based Chemometric Authentication
 ![Workflow](https://github.com/mahynski/chemometrics/actions/workflows/python-app.yml/badge.svg?branch=main)
 <!--[![codecov](https://codecov.io/gh/mahynski/chemometrics/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/chemometrics)-->
 
-This is a centralized repository of tools implemented in python to perform chemometric authentication; the "other" PCA!  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  Authentication is typically a [one-class classification (OCC)](https://en.wikipedia.org/wiki/One-class_classification), or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discrimination) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on.
+This is a centralized repository of tools implemented in python to perform chemometric authentication.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so they can be deployed in pipelines used with GridSearchCV, etc.  Authentication is typically a [one-class classification (OCC)](https://en.wikipedia.org/wiki/One-class_classification), or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discrimination) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on.
 
 > "Outlier detection and novelty detection are both used for anomaly detection, where one is interested in detecting abnormal or unusual observations. Outlier detection is then also known as unsupervised anomaly detection and novelty detection as semi-supervised anomaly detection. In the context of outlier detection, the outliers/anomalies cannot form a dense cluster as available estimators assume that the outliers/anomalies are located in low density regions. On the contrary, in the context of novelty detection, novelties/anomalies can form a dense cluster as long as they are in a low density region of the training data, considered as normal in this context." - [scikit-learn's documentation](https://scikit-learn.org/stable/modules/outlier_detection.html)
 
@@ -42,7 +42,6 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 ### Generating Synthetic Data
 Can be used to balance classes during training, or to supplement measurements that are very hard to make.  `imblearn` pipelines are designed to be drop-in replacements for sklearn pipelines so are often used instead.
 * [Imbalanced Learning](https://imbalanced-learn.org/stable/index.html) - SMOTE, ADASYN, etc.
-* Generative Networks (VAE, GAN)
 
 ### Feature Selection
 [Feature extraction](https://scikit-learn.org/stable/modules/feature_extraction.html), such as PCA, involves manipulating inputs to produce new "dimensions" or composite features, such as the first principal component. [Feature selection](https://scikit-learn.org/stable/modules/feature_selection.html) simply involves selecting a subset of known features (such as columns) to use.  scikit-learn has many [built-in examples](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection) that you can use.  Additional tools such as [BorutaSHAP](https://github.com/Ekeany/Boruta-Shap) and some based on the [Jensen-Shannon Divergence](https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence) are also implemented here.
@@ -58,7 +57,6 @@ Can be used to balance classes during training, or to supplement measurements th
 * PLS-DA (soft and hard variants) - [discriminant analysis is not the same as OCC for authentication](https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/abs/10.1002/cem.3030).
 * SIMCA
 * DD-SIMCA
-<!-- UNEQ, PFM see P. Oliveri / Analytica Chimica Acta 982 (2017) 9-19 -->
 
 ### Regressors
 * PCR
@@ -87,17 +85,10 @@ Can be used to balance classes during training, or to supplement measurements th
 > These approaches may be considered intermediate between conventional methods and modern AI/ML algorithms.  These are generally [non-linear dimensionality reduction](https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction) methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although [many methods](https://scikit-learn.org/stable/modules/outlier_detection.html) can be used to detect anomalies in this embedding (score space), we favor the elliptical envelope here for its simplicity and statistical interpretability. This approach is semi-supervised, since only members of one known class are purposefully trained on (at a time).
 * [EllipticManifold](manifold/elliptic.py) - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary.
 
-<!-- scikit-tda; also PINN or PIML basically uses physics to constrain AI/ML to a manifold that respects physical constraints -->
-
 ## General Machine Learning [Large amount of data available]
 > These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
 * Outlier detection with [PyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive-Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
-
-<!--
-## Ensemble Models
-> In machine learning, an ensemble model usually refers to a combination of (usually weaker) models that perform the same prediction task. Here, we use the term to refer to the combination of models that perform different tasks, i.e., each model is trained to predict the inlier/outlier status of a point with respect to one class.  We may combine such models so that a final prediction for an observation may be that it belongs to one class, many classes, or no known classes.  Efficiency, specificity and other metrics can then be computed from this.
--->
 
 ## Explanations and Interpretations
 > While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
@@ -138,7 +129,7 @@ $ python -m unittest discover tests/
 ~~~
 
 # Usage
-Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/chemometrics/blob/master/) to explore.
+Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/pychemauth/blob/master/) to explore.
 
 ## Example Pseudocode
 ~~~ python
