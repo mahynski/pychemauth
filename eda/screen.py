@@ -17,6 +17,7 @@ import tqdm
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_X_y
 
+import sys
 sys.path.append("../")
 from pychemauth.preprocessing.feature_selection import JensenShannonDivergence
 
@@ -410,7 +411,7 @@ class JSScreen:
     -------
     >>> screen = JSScreen(n=2, feature_names=X.columns)
     >>> screen.fit(X, y)
-    >>> screen.visualize(plt.figure(figsize=(20,20)).gca())
+    >>> screen.visualize_grid(plt.figure(figsize=(20,20)).gca())
     """
 
     def __init__(self, n=None, feature_names=None, js_bins=25, robust=False):
