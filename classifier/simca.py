@@ -37,6 +37,10 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     however, if you used TSNS instead of TEFF the model only uses information
     about the target class itself.  This is a "rigorous" approach which can
     be important to consider to avoid bias in the model.
+
+    In rigorous models alpha should be fixed an other hyperparameters adjusted
+    to match this target; in compliant approaches this can be allowed to vary
+    and the model with the best efficiency is selected.
     
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
