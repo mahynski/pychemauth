@@ -26,7 +26,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     set when this class is instantiated and must be one of (but doesn't need
     to be the only) class found in the training set (this is checked
     automatically).  During testing (.score()), points are broken up by
-    alternative class and run through the model to see how well the target class
+    class and based on the method, may be used to see how well the target class
     can be distinguished from each alternative.  This allows you to pass points
     that belong to other classes during training - they are just ignored.  This
     is important for integration with other scikit-learn, etc. workflows.
@@ -50,7 +50,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         alpha=0.05,
         target_class=None,
         style="dd-simca",
-        use="TEFF",
+        use="rigorous",
         scale_x=True,
         iterate=False
     ):
@@ -83,8 +83,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         style : str
             Type of SIMCA to use ("simca" or "dd-simca")
         use : str
-            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
-            (default=TEFF). See Ref. 1.
+            Which methodology to use to evaluate the model ("rigorous", "compliant")
+            (default="rigorous"). See Ref. 1. for more details.
         scale_x : bool
             Whether or not to scale X by its sample standard deviation or not.
             This depends on the meaning of X and is up to the user to
@@ -203,30 +203,6 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         return self.__model_.predict_proba(X, y)
 
     @property
-    def CSPS(self):
-        """Class specificities."""
-        check_is_fitted(self, "is_fitted_")
-        return copy.deepcopy(self.__CSPS_)
-
-    @property
-    def TSNS(self):
-        """Total sensitivity of the model."""
-        check_is_fitted(self, "is_fitted_")
-        return copy.deepcopy(self.__TSNS_)
-
-    @property
-    def TSPS(self):
-        """Total specificity of the model."""
-        check_is_fitted(self, "is_fitted_")
-        return copy.deepcopy(self.__TSPS_)
-
-    @property
-    def TEFF(self):
-        """Total efficiency of the model."""
-        check_is_fitted(self, "is_fitted_")
-        return copy.deepcopy(self.__TEFF_)
-
-    @property
     def model(self):
         """Trained undelying SIMCA Model."""
         check_is_fitted(self, "is_fitted_")
@@ -236,16 +212,60 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         """
         Score the model.
 
-        If scoring a set with only the target class present, returns
-        TSNS.  If only alternatives present, returns TSPS.  Otherwise
-        returns TEFF as a geometric mean of the two.
+        The "rigorous" approach uses only the target class to score
+        the model and returns -(TSNS - (1-alpha))^2; the "compliant"
+        approach returns TEFF. In both cases, a larger output is a 
+        "better" model.
 
         Parameters
         ----------
         X : ndarray
             Inputs.
         y : ndarray
-            Class labels or indices
+            Class labels or indices.
+            
+        Returns
+        -------
+        score : float
+        """
+        if self.use == "rigorous":
+            # Make sure we have the target class to test on
+            assert self.target_class in set(np.unique(y))
+            
+            m = self.metrics(X, y)
+            return -(m['tsns'] - (1-self.alpha))**2
+        elif self.use == "compliant":
+            # Make sure we have alternatives to test on
+            assert len(set(np.unique(y)).discard(self.target_class)) > 0
+            
+            # Make sure we have the target class to test on
+            assert self.target_class in set(np.unique(y))
+            
+            m = self.metrics(X, y)
+            return m['teff']
+        else:
+            raise ValueError("Unrecognized setting use="+str(self.use))
+        
+    def metrics(self, X, y):
+        """
+        Compute figures of merit for the model.
+
+        If using a set with only the target class present, then
+        TSPS = np.nan and TEFF = TSNS.  If only alternatives present, 
+        sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF 
+        as a geometric mean of TSNS and TSPS.
+        
+        Parameters
+        ----------
+        X : ndarray
+            Inputs.
+        y : ndarray
+            Class labels or indices.
+            
+        Returns
+        -------
+        metrics : dict
+            Dictionary of {'TSNS', 'TSPS', 'TEFF'}.
         """
         check_is_fitted(self, "is_fitted_")
         X, y = check_X_y(X, y, accept_sparse=False)
@@ -254,44 +274,45 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             c for c in sorted(np.unique(y)) if c != self.target_class
         ]
 
-        self.__CSPS_ = {}
+        CSPS_ = {}
         for class_ in self.__alternatives_:
             mask = y == class_
-            self.__CSPS_[class_] = 1.0 - np.sum(
+            CSPS_[class_] = 1.0 - np.sum(
                 self.__model_.predict(X[mask])
             ) / np.sum(mask)
 
         mask = y != self.target_class
         if np.sum(mask) == 0:
             # Testing on nothing but the target class, can't evaluate TSPS
-            self.__TSPS_ = np.nan
+            TSPS_ = np.nan
         else:
-            self.__TSPS_ = 1.0 - np.sum(
+            TSPS_ = 1.0 - np.sum(
                 self.__model_.predict(X[mask])
             ) / np.sum(mask)
 
         mask = y == self.target_class
         if np.sum(mask) == 0:
             # Testing on nothing but alternative classes, can't evaluate TSNS
-            self.__TSNS_ = np.nan
+            TSNS_ = np.nan
         else:
-            self.__TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
+            TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
                 mask
             )  # TSNS = CSNS for SIMCA
 
-        if np.isnan(self.__TSNS_):
-            self.__TEFF_ = self.__TSPS_
-        elif np.isnan(self.__TSPS_):
-            self.__TEFF_ = self.__TSNS_
+        if np.isnan(TSNS_):
+            TEFF_ = TSPS_
+        elif np.isnan(TSPS_):
+            TEFF_ = TSNS_
         else:
-            self.__TEFF_ = np.sqrt(self.__TSNS_ * self.__TSPS_)
+            TEFF_ = np.sqrt(TSNS_ * TSPS_)
 
         metrics = {
-            "teff": self.__TEFF_,
-            "tsns": self.__TSNS_,
-            "tsps": self.__TSPS_,
+            "teff": TEFF_,
+            "tsns": TSNS_,
+            "tsps": TSPS_,
+            "csps": CSPS_,
         }
-        return metrics[self.use.lower()]
+        return metrics
 
     def _get_tags(self):
         """For compatibility with sklearn >=0.21."""
