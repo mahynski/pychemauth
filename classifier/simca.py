@@ -236,7 +236,9 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             return -(m['tsns'] - (1-self.alpha))**2
         elif self.use == "compliant":
             # Make sure we have alternatives to test on
-            assert len(set(np.unique(y)).discard(self.target_class)) > 0
+            a = set(np.unique(y))
+            a.discard(self.target_class)
+            assert len(a) > 0
             
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
@@ -818,7 +820,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             self.n_components
             > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
         ):
-            raise Exception("Reduce the number of PCA components")
+            raise Exception("Reduce the number of PCA components {} {} {}".format(self.n_components, self.n_features_in_, self.__X_.shape[0]))
 
         def train(X, try_robust=True):
             # 1. Standardize X
