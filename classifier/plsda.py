@@ -61,7 +61,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         not_assigned=-1,
         style="soft",
         scale_x=True,
-        score_metric="TEFF",
+        score_metric="TEFF2",
     ):
         """
         Instantiate the class.
@@ -90,8 +90,12 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             determine if scaling it (by the standard deviation) makes sense.
             Note that X and Y are always centered, Y is never scaled.
         score_metric : str
-            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
-            (default=TEFF).
+            Which metric to use as the score.  Can be {TEFF2, TSNS, TSPS}
+            (default=TEFF2). TEFF2 = TEFF^2 = TSNS*TSPS; very bad models 
+            can have TSPS < 0, so taking the square root would not be possible.
+            Folloing this approach, akin to R^2 the value of -inf < TEFF2 <= 1,
+            and a lower value consistent corresponds to a "worse" model,
+            while larger values are "better."
         """
         self.set_params(
             **{
@@ -682,8 +686,8 @@ n_features [{}])] = [{}, {}].".format(
             Total sensitivity.
         TSPS : float64
             Total specificity.
-        TEFF : float64
-            Total efficiency.
+        TEFF2 : float64
+            Total efficiency "squared" = TSNS*TSPS.
         """
         check_is_fitted(self, "is_fitted_")
 
@@ -781,6 +785,7 @@ n_features [{}])] = [{}, {}].".format(
             - np.sum([df[kk][kk] for kk in use_classes])
         ) / np.sum(Itot)
 
+        """
         # A very bad classifier could assign wrong classes often and with soft
         # method TSPS < 0 is possible (because of multiple assignments).
         TSPS = np.max([0, TSPS])
@@ -792,6 +797,8 @@ n_features [{}])] = [{}, {}].".format(
             TEFF = TSPS
         else:
             TEFF = np.sqrt(TSPS * TSNS)
+        """
+        TEFF2 = TSPS * TSNS
 
         return (
             df[
@@ -806,7 +813,7 @@ n_features [{}])] = [{}, {}].".format(
             CEFF,
             TSNS,
             TSPS,
-            TEFF,
+            TEFF2,
         )
 
     def score(self, X, y):
@@ -830,10 +837,10 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
 
         X, y = np.array(X), np.array(y)
-        df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = self.figures_of_merit(
+        df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = self.figures_of_merit(
             self.predict(X), y
         )
-        metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
+        metrics = {"teff2": TEFF2, "tsns": TSNS, "tsps": TSPS}
         return metrics[self.score_metric.lower()]
 
     def visualize(self, styles=None, ax=None):
