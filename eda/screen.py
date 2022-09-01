@@ -106,7 +106,7 @@ class RedFlags:
             ]
         ):
             self.y_type = "float"
-        elif all([isinstance(item, str) for item in np.array(y).flatten()]):
+        elif all([isinstance(item, str) for item in np.asarray(y).flatten()]):
             self.y_type = "str"
         else:
             raise Exception(
@@ -121,13 +121,13 @@ class RedFlags:
     def check_nan(self, X, y=None):
         """Check if any entries are np.nan."""
         found = False
-        if np.any(np.isnan(np.array(X).flatten())):
+        if np.any(np.isnan(np.asarray(X).flatten())):
             warnings.warn("X contains NaN values; this will require imputation")
             found = True
 
         if not (y is None):
             if self.y_type == "float":
-                if np.any(np.isnan(np.array(y).flatten())):
+                if np.any(np.isnan(np.asarray(y).flatten())):
                     warnings.warn("y contains NaN values")
                     found = True
         return found
@@ -135,13 +135,13 @@ class RedFlags:
     def check_inf(self, X, y=None):
         """Check if any entries are np.inf."""
         found = False
-        if np.any(np.isinf(np.array(X).flatten())):
+        if np.any(np.isinf(np.asarray(X).flatten())):
             warnings.warn("X contains Inf values; this will require imputation")
             found = True
 
         if not (y is None):
             if self.y_type == "float":
-                if np.any(np.isinf(np.array(y).flatten())):
+                if np.any(np.isinf(np.asarray(y).flatten())):
                     warnings.warn("y contains Inf values")
                     found = True
         return found
@@ -149,7 +149,7 @@ class RedFlags:
     def check_zero_variance(self, X, y=None):
         """Check if any columns in X are constant (unsupervised)."""
         tol = 1.0e-12
-        std_dev = np.std(np.array(X, dtype=np.float64), axis=0)
+        std_dev = np.std(np.asarray(X, dtype=np.float64), axis=0)
         if np.any(std_dev < tol):
             warnings.warn(
                 "X columns with no variance: {}".format(
@@ -163,8 +163,8 @@ class RedFlags:
         """Check each class has a minimum number of observations."""
         found = False
         if not (y is None):
-            y_ = np.array(y)
-            X_ = np.array(X, dtype=np.float64)
+            y_ = np.asarray(y)
+            X_ = np.asarray(X, dtype=np.float64)
             if y_.ndim == 1:
                 for c in np.unique(y_):
                     n_obs = np.sum(y_ == c)
@@ -188,8 +188,8 @@ class RedFlags:
         """
         found = False
         if not (y is None):
-            y_ = np.array(y)
-            X_ = np.array(X, dtype=np.float64)
+            y_ = np.asarray(y)
+            X_ = np.asarray(X, dtype=np.float64)
             if y_.ndim == 1:
                 for c in np.unique(y_):
                     # NaN and Inf values are considered unique from other things but multiple NaN are considered the same category
@@ -210,6 +210,17 @@ class RedFlags:
                             found = True
 
         return found
+        
+    def check_duplicates(self, X, y=None):
+    	"""
+    	Check if any rows in X are duplicates (numerically).
+    	"""
+        tol = 1.0e-12
+        if np.any(scipy.spatial.distance.pdist(X, metric='euclidean') < tol):
+	    warnings.warn("There are duplicate rows in X")
+	    return True
+	else:
+	    return False
 
     def check_zero_class_variance(self, X, y=None):
         """
