@@ -38,6 +38,8 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 
 ### Filtering
 * [Savitzky-Golay](https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter)
+* [SNV, RNV](https://www.sciencedirect.com/topics/mathematics/standard-normal-variate)
+* [MSC](https://guifh.github.io/RNIR/MSC.html)
 
 ### Generating Synthetic Data
 Can be used to balance classes during training, or to supplement measurements that are very hard to make.  `imblearn` pipelines are designed to be drop-in replacements for sklearn pipelines so are often used instead.
