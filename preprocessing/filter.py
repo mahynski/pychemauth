@@ -111,13 +111,13 @@ class MSC:
         return self.transform(X)
         
 class SNV:
-    """Perform a Standard Normal Variate transformation."""
+    """Perform a Standard Normal Variates transformation."""
     
     def __init__(
         self,
         robust=False,
         detrend=False,
-        q=None
+        q=50
     ):
         """
         Instantiate the class.

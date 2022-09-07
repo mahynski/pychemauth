@@ -212,15 +212,15 @@ class RedFlags:
         return found
         
     def check_duplicates(self, X, y=None):
-    	"""
-    	Check if any rows in X are duplicates (numerically).
-    	"""
+        """
+        Check if any rows in X are duplicates (numerically).
+        """
         tol = 1.0e-12
         if np.any(scipy.spatial.distance.pdist(X, metric='euclidean') < tol):
-	    warnings.warn("There are duplicate rows in X")
-	    return True
-	else:
-	    return False
+            warnings.warn("There are duplicate rows in X")
+            return True
+        else:
+            return False
 
     def check_zero_class_variance(self, X, y=None):
         """
