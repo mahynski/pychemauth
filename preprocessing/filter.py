@@ -34,6 +34,10 @@ class MSC:
         Generally the mean of X can be taken as the background reference, 
         however, this is not always ideal. 
         
+        It is reported that MSC preprocessing tends to yield similar
+        performances as SNV, but MSC requires a reference while SNV does not. [2]
+        Therefore, SNV is generally preferable.
+        
         References
         ----------
         [1] Brown, Steven D., Romà Tauler, and Beata Walczak, eds. Comprehensive 
@@ -70,12 +74,12 @@ class MSC:
     def fit(self, X, y=None):
         """Computes the reference background, if necessary."""
         X = check_array(X, accept_sparse=False)
-        self.n_features_in_ = X.shape[1]
-        
+
         if self.Xref is None: # Use the mean from the training set
             self.Xref = np.mean(X, axis=0)
+        self.n_features_in_ = len(self.Xref)
             
-        assert self.Xref.shape[1] == self.n_features_in_
+        assert X.shape[1] == self.n_features_in_
         
         self.is_fitted_ = True
 
@@ -107,7 +111,7 @@ class MSC:
         return self.transform(X)
         
 class SNV:
-    """Perform a Standard Normal Variates transformation."""
+    """Perform a Standard Normal Variate transformation."""
     
     def __init__(
         self,
@@ -239,7 +243,7 @@ class SNV:
                 ave_ = np.mean(X, axis=1)
                 X = ((X.T - ave_)/scale_).T
             else: # Uses algorithm from [1] pp 165.
-                for row, per in enumerate(np.percentile(X, q=self.q, axis=1, method='linear')):
+                for row, per in enumerate(np.percentile(X, q=self.q, axis=1, interpolation='linear')):
                     scale = iqr(X[row,:], rng=(25,75), nan_policy='raise', interpolation='linear') # Scale is independent of percentile
                     X[row,:] -= per
                     X[row,:] /= scale

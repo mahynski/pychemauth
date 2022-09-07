@@ -161,23 +161,22 @@ class TestDDSIMCA(unittest.TestCase):
             scale_x=False,
             style="dd-simca",
             target_class="Pure",
+            use="compliant"
         )
 
         # Fit on 2 classes - only uses Pure to train
         _ = sc.fit(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
         self.assertTrue(
-            np.abs(sc.score(raw_x_a, raw_y_a) - sc.TSPS) < 1.0e-12
-        )  # Test only alt class
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)['tsns'])
+        )  # Test only alt class 
         self.assertTrue(
-            np.abs(sc.score(raw_x, raw_y) - sc.TSNS) < 1.0e-12
+            np.isnan(sc.metrics(raw_x, raw_y)['tsps'])
         )  # Test only target class
+        metrics = sc.metrics(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
         self.assertTrue(
             np.abs(
-                sc.score(
-                    np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a))
-                )
-                - np.sqrt(sc.TSPS * sc.TSNS)
+                metrics['teff']
+                - np.sqrt(metrics['tsps']*metrics['tsns'])
             )
             < 1.0e-12
         )
-        self.assertTrue(np.abs(sc.TEFF - np.sqrt(sc.TSPS * sc.TSNS)) < 1.0e-12)
