@@ -743,18 +743,18 @@ n_features [{}])] = [{}, {}].".format(
         # are correctly predicted to be something besides the class. Thus,
         # specificity can only be computed for the columns that correspond to
         # known classes since we have only trained on them. These are "true
-        # negatives".
+        # negatives". This is always >= 0.
         CSPS = pd.Series(
             [
                 1.0
-                - np.sum(df[kk][df.index != kk])
+                - np.sum(df[kk][df.index != kk]) # Column sum
                 / np.sum(Itot[Itot.index != kk])
                 for kk in trained_classes
             ],
             index=trained_classes,
         )
 
-        # If CSNS can't be calculated, using CSPS as efficiency
+        # If CSNS can't be calculated, using CSPS as efficiency [1]
         # Oliveri & Downey introduced this "efficiency" used in [1]
         CEFF = pd.Series(
             [
