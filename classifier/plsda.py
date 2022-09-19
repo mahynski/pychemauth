@@ -327,15 +327,6 @@ n_features [{}])] = [{}, {}].".format(
                     # https://stats.stackexchange.com/questions/52976/is-a-
                     # sample-covariance-matrix-always-symmetric-and-positive-
                     # definite
-                    """if not np.allclose(self.__S_[i], self.__S_[i].T):
-                        raise ValueError("Matrix is not symmetric")
-                    ev_ = np.linalg.eigvals(self.__S_[i])
-                    normed_ev = ev_ / np.max(ev_)
-                    tol_ = 1.0e-6 # Largest allowable relative to max
-                    neg_ev_ = normed_ev[normed_ev < 0]
-                    if len(neg_ev_) > 0:
-                        if np.abs(np.max(neg_ev_)) > tol_:
-                            raise ValueError("Large, negative eigenvalue implies S is not positive semi-definite")"""
                     self.__S_[i] = pos_def_mat(self.__S_[i])
                 except Exception as e:
                     raise Exception(
@@ -429,15 +420,7 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
 
-        # X = np.array(X)
         assert X.shape[1] == self.n_features_in_
-        # X = self.__x_pls_scaler_.transform(X)
-
-        # y_hat_test = self.__pls_.predict(self.__x_pls_scaler_.transform(X))
-
-        # T_test = self.__pca_.transform(
-        #    self.__y_pls_scaler_.transform(self.__pls_.predict(self.__x_pls_scaler_.transform(X)))
-        # )
 
         return self.__pca_.transform(
             self.__y_pls_scaler_.transform(

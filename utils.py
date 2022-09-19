@@ -243,15 +243,16 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
     recon : ndarray
         Symmetric, positive definite matrix approximation of S.
     """
+    S = np.asarray(S, np.float64)
     assert S.shape[0] == S.shape[1] # Check square
     assert np.allclose(S, (S+S.T)/2.0) # Check symmetric
 
     for j in range(outer_max):
         min_ = np.min(np.abs(S))/1000. # Drop down by 3 orders of magnitude
-        max_ = np.min(np.abs(S))*10. # Within one order of magnitude
+        max_ = np.min(np.abs(S))*10. # Within one order of magnitude of min
         tol = min_ + j*(max_ - min_)/float(outer_max)
         
-        recon = copy.copy(np.asarray(S, np.float64))
+        recon = copy.copy(S)
 
         # Compute evecs, evals, set all evals to tol, reconstruct
         for i in range(inner_max):
@@ -269,7 +270,7 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
         except np.linalg.LinAlgError:
             safe = False
 
-        if np.max(np.abs(np.asarray(S, np.float64) - recon)) > tol:
+        if np.max(np.abs(S - recon)) > tol:
             # If the maximum difference is more than the eigenvalue 
             # tolerance, reject this.
             safe = False
