@@ -14,6 +14,7 @@ import pandas as pd
 import seaborn as sns
 import sklearn
 import tqdm
+import scipy
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_X_y
 
