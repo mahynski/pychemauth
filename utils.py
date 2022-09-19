@@ -3,6 +3,7 @@ General utility functions.
 
 author: nam
 """
+import copy
 import bokeh
 import matplotlib.pyplot as plt
 import numpy as np
@@ -223,3 +224,57 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
 
     # Bound below by 1
     return np.max([round(Nh, 0), 1]), np.max([round(Nq, 0), 1])
+
+def pos_def_mat(S, inner_max=10, outer_max=100):
+    """
+    Create a positive, semi-definite version of a matrix.
+
+    Parameters
+    ----------
+    S : ndarray
+        2D square, symmetric matrix to make positive definite.
+    inner_max : int
+        Number of iterations at a fixed tolerance to try
+    outer_max : int
+        Number of iterations at a fixed tolerance to try
+
+    Returns
+    -------
+    recon : ndarray
+        Symmetric, positive definite matrix approximation of S.
+    """
+    assert S.shape[0] == S.shape[1] # Check square
+    assert np.allclose(S, (S+S.T)/2.0) # Check symmetric
+
+    for j in range(outer_max):
+        min_ = np.min(np.abs(S))/1000. # Drop down by 3 orders of magnitude
+        max_ = np.min(np.abs(S))*10. # Within one order of magnitude
+        tol = min_ + j*(max_ - min_)/float(outer_max)
+        
+        recon = copy.copy(np.asarray(S, np.float64))
+
+        # Compute evecs, evals, set all evals to tol, reconstruct
+        for i in range(inner_max):
+            evals, evecs = np.linalg.eig(recon)
+            if (np.any(np.abs(evals) < tol)):
+                evals[np.abs(evals) < tol] = tol
+                recon = np.matmul(evecs, np.matmul(np.diag(evals), np.linalg.inv(evecs)))
+            else:
+                break
+
+        safe = True
+        try:
+            # Try even if inner loop reached its limit
+            np.linalg.cholesky(recon)
+        except np.linalg.LinAlgError:
+            safe = False
+
+        if np.max(np.abs(np.asarray(S, np.float64) - recon)) > tol:
+            # If the maximum difference is more than the eigenvalue 
+            # tolerance, reject this.
+            safe = False
+
+        if safe:
+            return recon
+        
+    raise Exception("Unable to create a symmetric, positive semi-definite matrix")

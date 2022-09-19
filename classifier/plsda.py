@@ -18,6 +18,7 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
+from pychemauth.utils import pos_def_mat
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):
@@ -326,7 +327,16 @@ n_features [{}])] = [{}, {}].".format(
                     # https://stats.stackexchange.com/questions/52976/is-a-
                     # sample-covariance-matrix-always-symmetric-and-positive-
                     # definite
-                    np.linalg.cholesky(self.__S_[i])
+                    """if not np.allclose(self.__S_[i], self.__S_[i].T):
+                        raise ValueError("Matrix is not symmetric")
+                    ev_ = np.linalg.eigvals(self.__S_[i])
+                    normed_ev = ev_ / np.max(ev_)
+                    tol_ = 1.0e-6 # Largest allowable relative to max
+                    neg_ev_ = normed_ev[normed_ev < 0]
+                    if len(neg_ev_) > 0:
+                        if np.abs(np.max(neg_ev_)) > tol_:
+                            raise ValueError("Large, negative eigenvalue implies S is not positive semi-definite")"""
+                    self.__S_[i] = pos_def_mat(self.__S_[i])
                 except Exception as e:
                     raise Exception(
                         "Unable to compute scatter matrix for class {} : \
