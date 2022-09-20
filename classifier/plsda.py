@@ -265,7 +265,7 @@ n_features [{}])] = [{}, {}].".format(
             scale=False,
         )  # Already scaled as needed, centering is automatic
         _ = self.__pls_.fit(self.__X_, self.__y_)
-        
+
         y_hat_train = self.__y_pls_scaler_.inverse_transform(self.__pls_.predict(self.__X_))
 
         # 3. Perform PCA on y_hat_train
