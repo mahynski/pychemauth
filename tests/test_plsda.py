@@ -302,12 +302,12 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         self.assertTrue(np.abs(TSNS - 0.9304347826086956) < 1.0e-12)
-        self.assertTrue(np.abs(TSPS - 0.9391304347826087) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.9304347826086956*0.9391304347826087) < 1.0e-12)
+        self.assertTrue(np.abs(TSPS - 0.9695652173913043) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF2 - 0.9304347826086956*0.9695652173913043) < 1.0e-12)
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y) - (0.9347724974175087)**2) < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9304347826086956*0.9695652173913043) < 1.0e-12
         )
 
         # Check no outliers in this example
@@ -348,7 +348,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         self.assertTrue(np.abs(TSNS - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(TSPS - 0.9848484848484849) < 1.0e-12)
+        self.assertTrue(np.abs(TSPS - 0.9924242424242424) < 1.0e-12)
         self.assertTrue(np.abs(TEFF2 - 0.0) < 1.0e-12)
 
         # Check score

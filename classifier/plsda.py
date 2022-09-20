@@ -92,11 +92,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             Note that X and Y are always centered, Y is never scaled.
         score_metric : str
             Which metric to use as the score.  Can be {TEFF2, TSNS, TSPS}
-            (default=TEFF2). TEFF2 = TEFF^2 = TSNS*TSPS; very bad models 
-            can have TSPS < 0, so taking the square root would not be possible.
-            Folloing this approach, akin to R^2 the value of -inf < TEFF2 <= 1,
-            and a lower value consistent corresponds to a "worse" model,
-            while larger values are "better."
+            (default=TEFF2). TEFF2 = TEFF^2 = TSNS*TSPS.
         """
         self.set_params(
             **{
@@ -205,7 +201,8 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         # 1. Preprocess data (one hot encoding, centering)
         self.__ohencoder_ = OneHotEncoder(
-            sparse=False
+            sparse=False,
+            handle_unknown='error'
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
@@ -268,25 +265,23 @@ n_features [{}])] = [{}, {}].".format(
             scale=False,
         )  # Already scaled as needed, centering is automatic
         _ = self.__pls_.fit(self.__X_, self.__y_)
-        y_hat_train = self.__pls_.predict(self.__X_)
+        
+        y_hat_train = self.__y_pls_scaler_.inverse_transform(self.__pls_.predict(self.__X_))
 
-        # 3. Perform PCA on y_hat_train using Y data
+        # 3. Perform PCA on y_hat_train
         self.__pca_ = PCA(
             n_components=len(self.__ohencoder_.categories_[0]) - 1,
             random_state=0,
         )
 
-        # According to [1], center on the basis of Y not Y_hat
-        # sklearn's pca internally re-centers - must do this manually
+        # sklearn's pca automatically centers 
         self.__T_train_ = self.__pca_.fit_transform(
-            self.__y_pls_scaler_.transform(y_hat_train)
+            y_hat_train
         )
-
-        self.__class_centers_ = np.matmul(
-            self.__y_pls_scaler_.transform(
-                np.eye(len(self.__ohencoder_.categories_[0]))
-            ),
-            self.__pca_.components_.T,
+        
+        # Does centering internally
+        self.__class_centers_ = self.__pca_.transform(
+            np.eye(len(self.__ohencoder_.categories_[0]))
         )
 
         # 4. Compute within-class scatter from training set for soft version
@@ -423,7 +418,7 @@ n_features [{}])] = [{}, {}].".format(
         assert X.shape[1] == self.n_features_in_
 
         return self.__pca_.transform(
-            self.__y_pls_scaler_.transform(
+            self.__y_pls_scaler_.inverse_transform(
                 self.__pls_.predict(self.__x_pls_scaler_.transform(X))
             )
         )
@@ -776,21 +771,14 @@ n_features [{}])] = [{}, {}].".format(
         TSPS = 1.0 - (
             df[use_classes].sum().sum()
             - np.sum([df[kk][kk] for kk in use_classes])
-        ) / np.sum(Itot)
+        ) / np.sum(Itot) / (1.0 if self.style.lower() == 'hard' else len(trained_classes)-1.0)
+        # Soft models can assign a point to all categories which would make this
+        # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
+        # number of classes, TSPS is always positive; TSPS = 0 means all points
+        # assigned to all classes (trivial result) vs. TSPS = 1 means no mistakes.
 
-        """
-        # A very bad classifier could assign wrong classes often and with soft
-        # method TSPS < 0 is possible (because of multiple assignments).
-        TSPS = np.max([0, TSPS])
-        if np.any([c_ not in trained_classes for c_ in use_classes]):
-            # When tesing ANY extraneous objects, default to reporting TEFF
-            # as TSPS - this is consistent with the choice of CEFF vs. CSPS
-            # above and also allows TEFF to be used more safely as an objective
-            # function value when using this as the "score" for CV optimization.
-            TEFF = TSPS
-        else:
-            TEFF = np.sqrt(TSPS * TSNS)
-        """
+        # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
+        # previously unseen samples).
         TEFF2 = TSPS * TSNS
 
         return (
@@ -835,6 +823,58 @@ n_features [{}])] = [{}, {}].".format(
         )
         metrics = {"teff2": TEFF2, "tsns": TSNS, "tsps": TSPS}
         return metrics[self.score_metric.lower()]
+
+    def explain(self, classes=None, ax=None, return_coef=False):
+        """
+        Plot the coefficients in the PLS2 model to explain variable importance.
+        
+        Parameters
+        ----------
+        classes : list or None
+            If None, plot coefficients for all categories; otherwise just classes
+            specified.
+        ax : matplotlib.pyplot.Axes
+            Axes to plot results on.  If None, a new figure is created.
+        return_coef : bool
+            Return PLS2 coefficients instead of the figure axis. N x D where D
+            is the number of features in X (X.shape[1]) and N is the number of
+            categories.
+
+        Returns
+        -------
+        matplotlib.pyplot.Axes or ndarray
+            Figure axes being plotted on or the PLS2 coefficients.
+        """
+
+        if ax is None:
+            fig, ax = plt.subplots(nrows=1, ncols=1)
+
+        if classes is None:
+            plot_classes = self.__ohencoder_.categories_[0]
+        else:
+            plot_classes = classes
+
+        coeffs = []
+        for class_ in plot_classes:
+            if class_ in self.__ohencoder_.categories_[0]:
+                # https://scikit-learn.org/stable/modules/generated/
+                # sklearn.cross_decomposition.PLSRegression.html
+                coeffs.append(self.__pls_.coef_[:, np.where(self.__ohencoder_.transform([[class_]])[0])[0][0]])
+                ax.plot(
+                    np.arange(self.__pls_.coef_.shape[0], dtype=int),
+                    coeffs[-1],
+                    label=class_
+                    )
+
+        ax.set_xticks(np.arange(self.__pls_.coef_.shape[0], dtype=int))
+        ax.set_xlabel('Feature Index')
+        ax.set_ylabel('PLS2 Coefficient')
+        ax.legend(loc='best')
+
+        if return_coef:
+            return np.array(coeffs)
+        else:
+            return ax
 
     def visualize(self, styles=None, ax=None):
         """
