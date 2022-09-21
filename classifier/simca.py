@@ -68,12 +68,12 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         The final metric used to rate the overall model can be set to TEFF or TSPS,
         for example, if you wish to change how the model is evaluated.
 
-	When TEFF is used to choose a model, this is a "compliant" approach,
-	whereas when TSNS is used instead, this is a "rigorous" approach.
+	    When TEFF is used to choose a model, this is a "compliant" approach,
+	    whereas when TSNS is used instead, this is a "rigorous" approach.
 
-	[1] "Rigorous and compliant approaches to one-class classification,"
-	Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
-	Lab. Sys. (2016) 89-96.
+        [1] "Rigorous and compliant approaches to one-class classification,"
+        Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
+        Lab. Sys. (2016) 89-96.
 
         Parameters
         ----------
@@ -695,7 +695,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
 class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     """
-    Train a Data-driven SIMCA Model.
+    A Data-driven SIMCA Model.
 
     DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared
     distribution, to determine the acceptance criteria to belong to a class.

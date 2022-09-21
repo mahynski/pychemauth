@@ -63,7 +63,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         not_assigned=-1,
         style="soft",
         scale_x=True,
-        score_metric="TEFF2",
+        score_metric="TEFF",
     ):
         """
         Instantiate the class.
@@ -92,8 +92,8 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             determine if scaling it (by the standard deviation) makes sense.
             Note that X and Y are always centered, Y is never scaled.
         score_metric : str
-            Which metric to use as the score.  Can be {TEFF2, TSNS, TSPS}
-            (default=TEFF2). TEFF2 = TEFF^2 = TSNS*TSPS.
+            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
+            (default=TEFF). TEFF^2 = TSNS*TSPS.
         """
         self.set_params(
             **{
@@ -681,8 +681,8 @@ n_features [{}])] = [{}, {}].".format(
             Total sensitivity.
         TSPS : float64
             Total specificity.
-        TEFF2 : float64
-            Total efficiency "squared" = TSNS*TSPS.
+        TEFF : float64
+            Total efficiency.
         """
         check_is_fitted(self, "is_fitted_")
 
@@ -786,7 +786,7 @@ n_features [{}])] = [{}, {}].".format(
 
         # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
         # previously unseen samples).
-        TEFF2 = TSPS * TSNS
+        TEFF = np.sqrt(TSPS * TSNS)
 
         return (
             df[
@@ -801,7 +801,7 @@ n_features [{}])] = [{}, {}].".format(
             CEFF,
             TSNS,
             TSPS,
-            TEFF2,
+            TEFF,
         )
 
     def score(self, X, y):
@@ -825,10 +825,10 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
 
         X, y = np.array(X), np.array(y)
-        df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = self.figures_of_merit(
+        df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = self.figures_of_merit(
             self.predict(X), y
         )
-        metrics = {"teff2": TEFF2, "tsns": TSNS, "tsps": TSPS}
+        metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
         return metrics[self.score_metric.lower()]
 
     def pls2_coeff(self, classes=None, ax=None, return_coef=False):

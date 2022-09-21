@@ -43,7 +43,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="hard",
             scale_x=True,
-            score_metric="TEFF2",
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -133,7 +133,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
         x = np.array([[87, 0, 10, 0], [2, 24, 3, 0], [0, 0, 219, 0]])
@@ -158,11 +158,11 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.9565217391304348) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 0.9565217391304348) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - (0.9565217391304348)**2) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.9565217391304348) < 1.0e-12)
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y) - (0.9565217391304348)**2) < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9565217391304348) < 1.0e-12
         )
 
         # Check test set
@@ -173,7 +173,7 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(["THA2"] * len(raw_x), dtype=str)
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
 
@@ -201,7 +201,7 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.0) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
@@ -221,7 +221,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="soft",
             scale_x=True,
-            score_metric="TEFF2",
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -301,7 +301,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
         x = np.array([[91, 17, 0, 2], [0, 27, 0, 2], [2, 2, 203, 13]])
@@ -326,11 +326,11 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.9304347826086956) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 0.9695652173913043) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.9304347826086956*0.9695652173913043) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - np.sqrt(0.9304347826086956*0.9695652173913043)) < 1.0e-12)
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y) - 0.9304347826086956*0.9695652173913043) < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - np.sqrt(0.9304347826086956*0.9695652173913043)) < 1.0e-12
         )
 
         # Check no outliers in this example
@@ -344,7 +344,7 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(["THA2"] * len(raw_x), dtype=str)
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
 
@@ -372,7 +372,7 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.0) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 0.9924242424242424) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(
@@ -394,7 +394,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="hard",
             scale_x=False,
-            score_metric="TEFF2",
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -459,7 +459,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
         x = np.array([[18, 0, 0], [0, 68, 0]])
@@ -484,7 +484,7 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 1.0) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 1.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 1.0) < 1.0e-12)
@@ -497,7 +497,7 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df.values[:, 2], dtype=str)
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
 
@@ -521,7 +521,7 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.0) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
@@ -541,7 +541,7 @@ class TestPLSDA(unittest.TestCase):
             not_assigned="UNKNOWN",
             style="soft",
             scale_x=False,
-            score_metric="TEFF2",
+            score_metric="TEFF",
         )
         _ = plsda.fit(raw_x, raw_y)
 
@@ -612,7 +612,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
         x = np.array([[17, 0, 1], [0, 65, 3]])
@@ -637,11 +637,11 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.9534883720930233) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - (0.9764672918705589)**2) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.9764672918705589) < 1.0e-12)
 
         # Check score
         self.assertTrue(
-            np.abs(plsda.score(raw_x, raw_y) - (0.9764672918705589)**2) < 1.0e-12
+            np.abs(plsda.score(raw_x, raw_y) - 0.9764672918705589) < 1.0e-12
         )
 
         # Check no outliers in this example
@@ -655,7 +655,7 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df.values[:, 2], dtype=str)
-        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF2 = plsda.figures_of_merit(
+        df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
 
@@ -679,7 +679,7 @@ class TestPLSDA(unittest.TestCase):
 
         self.assertTrue(np.abs(TSNS - 0.0) < 1.0e-12)
         self.assertTrue(np.abs(TSPS - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(TEFF2 - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(TEFF - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
