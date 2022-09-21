@@ -5,6 +5,7 @@ author: nam
 """
 import copy
 import sys
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -237,8 +238,12 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 self.__X_.shape[1],
             ]
         )
-        # lb = len(self.__ohencoder_.categories_[0])-1 sometimes rule of thumb
+        
         lower_bound = 1
+
+        # lb = len(self.__ohencoder_.categories_[0])-1 sometimes rule of thumb
+        if self.n_components < len(self.__ohencoder_.categories_[0])-1:
+            warnings.warn("Warning - n_components < number of classes - 1; this may result in instabilities")
 
         # Note that sklearn currently has a typo in its documentation. Only
         # PLSCanonical has an upper bound of min(n_samples, n_features,
@@ -344,7 +349,7 @@ n_features [{}])] = [{}, {}].".format(
         if self.__L_.ndim == 0:  # When we have a binary problem
             self.__L_ = np.array([[self.__L_]])
 
-        # 5. Compute Mahalanobis critical distance
+        # 5. Compute Mahalanobis critical distance (squared)
         self.__d_crit_ = scipy.stats.chi2.ppf(
             1.0 - self.alpha, len(self.__ohencoder_.categories_[0]) - 1
         )
@@ -430,7 +435,14 @@ n_features [{}])] = [{}, {}].".format(
 
     def mahalanobis(self, X):
         """
-        Compute the (squared) Mahalanobis distance to each class center.
+        Compute the squared Mahalanobis distance to each class center.
+
+        Notes
+        -----
+        Scipy has a built-in function that could replace this in the future.
+        Here we compute d^2 whereas scipy evalutes the square root to compute
+        d. See: https://docs.scipy.org/doc/scipy/reference/generated/
+        scipy.spatial.distance.mahalanobis.html
 
         Parameters
         ----------
@@ -441,7 +453,7 @@ n_features [{}])] = [{}, {}].".format(
         Returns
         -------
         distance : ndarray
-            (squared) Distance to each class for each observation.
+            Squared distance to each class for each observation.
         """
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
@@ -449,7 +461,7 @@ n_features [{}])] = [{}, {}].".format(
 
         T_test = self.transform(X)
 
-        distances = []
+        distances = [] # Actually squared
         for t in T_test:
             if self.style.lower() == "soft":  # This 'soft' rule is based on QDA
                 distances.append(
@@ -487,7 +499,7 @@ n_features [{}])] = [{}, {}].".format(
         Compute the decision function for each sample.
 
         Following sklearn's EllipticEnvelope, this returns the negative
-        sqrt(Chi squared distance) shifted by the cutoff distance,
+        Mahalanobis distance shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
         This is ONLY returned for soft PLSDA; if the hard variant is used a
@@ -519,15 +531,18 @@ n_features [{}])] = [{}, {}].".format(
 
     def predict_proba(self, X, y=None):
         """
-        Predict the probability that observations are inliers for each class.
+        Predict the probability that observations belong each class.
 
-        Soft PLSDA: Computes the sigmoid(decision_function(X, y)) as the
-        transformation of the decision function.  This function is > 0
-        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
-        outlier or extreme for a soft model.
+        Soft PLSDA: assumes each class is normally distributed and uses
+        the Mahalanobis distance to compute the (normal) probability
+        as a function of this distance from the class' center. The
+        cutoff distance was computed using Chi Squared statistics such
+        that the boundary encompasses 100(1-alpha)% of the true members 
+        in the final PCA space. These probabilities do NOT sum to 1
+        across all categories.
 
         Hard PLSDA: For a hard model, the softmax function is computed for the
-        negative (normalized) Mahalanobis distances to each class center.
+        negative Mahalanobis distances to each class center.
         The column with the highest probability is the prediction, and these
         WILL sum to 1.
 
@@ -548,13 +563,13 @@ n_features [{}])] = [{}, {}].".format(
 
         Note
         ----
-        This is a soft decision so an observation may belong to 1, >1, or 0
+        For a soft decision an observation may belong to 1, >1, or 0
         known classes.  The rows will NOT sum to 1 as is convention in sklearn.
         Each entry is a simple binary yes/no prediction that the point is an
         inlier for each class.
 
-        The softmax function will result in probabilities which sum to 1 for the
-        hard decision boundaries.
+        The softmax function (hard boundaries) will result in probabilities 
+        which sum to 1.
 
         Parameters
         ----------
@@ -566,44 +581,36 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        p_inlier : ndarray
-            2D array as sigmoid function of the decision_function() for soft PLSDA
-            and the softmax(-mahalanobis) for hard PLSDA. Columns are ordered according
+        prob : ndarray
+            Probability of class membership; columns are ordered according
             to class centers.
         """
+        
+        distances2 = self.mahalanobis(X)
+        p = np.exp(-np.clip(distances2/2.0, a_max=None, a_min=-500))
+
         if self.style.lower() == "soft":
-            # Simple sigmoid for soft classification because each class is considered
-            # separately and each membership is predicted as yes/no
-            # p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
-            p_inlier = 1.0 / (
-                1.0
-                + np.exp(
-                    -np.clip(
-                        self.decision_function(X, y), a_max=None, a_min=-500
-                    )
-                )
-            )
+            norm = np.zeros(len(self.__S_), dtype=np.float64)
+            for i in range(len(norm)):
+                norm[i] = np.sqrt(np.linalg.det(2.0*np.pi*self.__S_[i]))
+
+            prob = p / norm
         else:
             # Hard classification predicts one class, so use softmax function on
-            # normalized distances.
-            distances = np.sqrt(self.mahalanobis(X))
-            normed = (distances.T / np.sum(distances.T, axis=0)).T
-            # p_inlier = (np.exp(-normed.T) / np.sum(np.exp(-normed.T), axis=0)).T
-            p_inlier = (
-                np.exp(-np.clip(normed.T, a_max=None, a_min=-500))
-                / np.sum(
-                    np.exp(-np.clip(normed.T, a_max=None, a_min=-500)), axis=0
-                )
-            ).T
-        return p_inlier
+            # Mahalanobis distances. The Gaussian prefactor is the same for all
+            # classes in the "hard" (~det(L)) so it cancels out, if we were
+            # computing probabilities as in the soft case.
+            prob = (p.T / np.sum(p.T, axis=0)).T
+
+        return prob
 
     def predict(self, X):
         """
         Predict the class(es) for a given set of features.
 
         If multiple predictions are made, they are ordered according to likelihood,
-        from highest to lowest, i.e., by the (lowest) Mahalanobis distance to that
-        class' center.
+        from highest to lowest, i.e., by the (lowest) Mahalanobis distance (squared)
+        to that class' center.
 
         Parameters
         ----------
@@ -824,9 +831,9 @@ n_features [{}])] = [{}, {}].".format(
         metrics = {"teff2": TEFF2, "tsns": TSNS, "tsps": TSPS}
         return metrics[self.score_metric.lower()]
 
-    def explain(self, classes=None, ax=None, return_coef=False):
+    def pls2_coeff(self, classes=None, ax=None, return_coef=False):
         """
-        Plot the coefficients in the PLS2 model to explain variable importance.
+        Plot the coefficients in the PLS2 model to examine variable importance.
         
         Parameters
         ----------

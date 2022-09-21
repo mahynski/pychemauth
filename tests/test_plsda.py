@@ -9,6 +9,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
+from scipy.spatial.distance import mahalanobis
 from classifier.plsda import PLSDA
 
 
@@ -88,6 +89,17 @@ class TestPLSDA(unittest.TestCase):
             < 1.0e-6
         )
         self.assertTrue(err)
+
+        # Check Mahalanobis distance
+        d_plsda = plsda.mahalanobis([raw_x[0], raw_x[100], raw_x[150]]) # Actually d^2
+        d_scipy = []
+        for t in plsda.transform([raw_x[0], raw_x[100], raw_x[150]]):
+            d_ = []
+            for i in range(len(plsda._PLSDA__ohencoder_.categories_[0])):
+                d_.append(mahalanobis(t, plsda._PLSDA__class_centers_[i], np.linalg.inv(plsda._PLSDA__L_)))
+            d_scipy.append(d_)
+        d_scipy = np.array(d_scipy)
+        self.assertTrue(np.allclose(d_scipy, d_plsda**0.5))
 
         # Check a few predictions manually
         pred = plsda.predict([raw_x[1], raw_x[125], raw_x[150]])
@@ -256,6 +268,17 @@ class TestPLSDA(unittest.TestCase):
         )
         self.assertTrue(err)
 
+        # Check Mahalanobis distance
+        d_plsda = plsda.mahalanobis([raw_x[0], raw_x[100], raw_x[150]]) # Actually d^2
+        d_scipy = []
+        for t in plsda.transform([raw_x[0], raw_x[100], raw_x[150]]):
+            d_ = []
+            for i in range(len(plsda._PLSDA__ohencoder_.categories_[0])):
+                d_.append(mahalanobis(t, plsda._PLSDA__class_centers_[i], np.linalg.inv(plsda._PLSDA__S_[i])))
+            d_scipy.append(d_)
+        d_scipy = np.array(d_scipy)
+        self.assertTrue(np.allclose(d_scipy, d_plsda**0.5))
+
         # Check a few predictions manually
         pred = plsda.predict([raw_x[1], raw_x[125], raw_x[150]])
         self.assertTrue(
@@ -405,6 +428,17 @@ class TestPLSDA(unittest.TestCase):
         )
         self.assertTrue(err)
 
+        # Check Mahalanobis distance
+        d_plsda = plsda.mahalanobis([raw_x[0], raw_x[10], raw_x[50]]) # Actually d^2
+        d_scipy = []
+        for t in plsda.transform([raw_x[0], raw_x[10], raw_x[50]]):
+            d_ = []
+            for i in range(len(plsda._PLSDA__ohencoder_.categories_[0])):
+                d_.append(mahalanobis(t, plsda._PLSDA__class_centers_[i], np.linalg.inv(plsda._PLSDA__L_)))
+            d_scipy.append(d_)
+        d_scipy = np.array(d_scipy)
+        self.assertTrue(np.allclose(d_scipy, d_plsda**0.5))
+
         # Check a few predictions manually
         pred = plsda.predict([raw_x[0], raw_x[10], raw_x[50]])
         self.assertEqual(pred[0][0], "Fakes")
@@ -546,6 +580,17 @@ class TestPLSDA(unittest.TestCase):
             < 1.0e-6
         )
         self.assertTrue(err)
+
+        # Check Mahalanobis distance
+        d_plsda = plsda.mahalanobis([raw_x[0], raw_x[10], raw_x[50]]) # Actually d^2
+        d_scipy = []
+        for t in plsda.transform([raw_x[0], raw_x[10], raw_x[50]]):
+            d_ = []
+            for i in range(len(plsda._PLSDA__ohencoder_.categories_[0])):
+                d_.append(mahalanobis(t, plsda._PLSDA__class_centers_[i], np.linalg.inv(plsda._PLSDA__S_[i])))
+            d_scipy.append(d_)
+        d_scipy = np.array(d_scipy)
+        self.assertTrue(np.allclose(d_scipy, d_plsda**0.5))
 
         # Check a few predictions manually
         pred = plsda.predict([raw_x[0], raw_x[10], raw_x[50]])
