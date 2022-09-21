@@ -829,9 +829,12 @@ n_features [{}])] = [{}, {}].".format(
             self.predict(X), y
         )
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
-        return metrics[self.score_metric.lower()]
+        if self.score_metric.lower() not in metrics:
+            raise ValueError("Unrecognized metric : {}".format(self.score_metric.lower()))
+        else:
+            return metrics[self.score_metric.lower()]
 
-    def pls2_coeff(self, classes=None, ax=None, return_coef=False):
+    def pls2_coeff(self, classes=None, ax=None, return_coeff=False):
         """
         Plot the coefficients in the PLS2 model to examine variable importance.
         
@@ -842,7 +845,7 @@ n_features [{}])] = [{}, {}].".format(
             specified.
         ax : matplotlib.pyplot.Axes
             Axes to plot results on.  If None, a new figure is created.
-        return_coef : bool
+        return_coeff : bool
             Return PLS2 coefficients instead of the figure axis. N x D where D
             is the number of features in X (X.shape[1]) and N is the number of
             categories.
@@ -878,7 +881,7 @@ n_features [{}])] = [{}, {}].".format(
         ax.set_ylabel('PLS2 Coefficient')
         ax.legend(loc='best')
 
-        if return_coef:
+        if return_coeff:
             return np.array(coeffs)
         else:
             return ax
