@@ -5,7 +5,7 @@ author: nam
 """
 import unittest
 
-from classifier.simca import SIMCA_Model
+from pychemauth.classifier.simca import SIMCA_Model
 
 
 class TestSIMCA_Model(unittest.TestCase):

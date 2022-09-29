@@ -9,6 +9,5 @@ __all__ = [
     "eda",
     "manifold",
     "preprocessing",
-    "regressor",
+    "regressor"
 ]
-from . import analysis, classifier, eda, manifold, preprocessing, regressor

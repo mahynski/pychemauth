@@ -3,4 +3,4 @@ Load all modules.
 
 @author: nam
 """
-__all__ = ["pcr"]
+__all__ = ["pca", "plsda", "simca"]

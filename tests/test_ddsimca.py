@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from classifier.simca import DDSIMCA_Model, SIMCA_Classifier
+from pychemauth.classifier.simca import DDSIMCA_Model, SIMCA_Classifier
 
 
 class TestDDSIMCA(unittest.TestCase):

@@ -10,7 +10,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from regressor.pls import PLS
+from pychemauth.regressor.pls import PLS
 
 
 class TestPLS_Scaled(unittest.TestCase):

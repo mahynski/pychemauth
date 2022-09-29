@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from scipy.spatial.distance import mahalanobis
-from classifier.plsda import PLSDA
+from pychemauth.classifier.plsda import PLSDA
 
 
 class TestPLSDA(unittest.TestCase):

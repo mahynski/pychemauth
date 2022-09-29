@@ -12,7 +12,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
-from classifier.pca import PCA
+from pychemauth.classifier.pca import PCA
 
 
 class TestPCA_Scaled(unittest.TestCase):

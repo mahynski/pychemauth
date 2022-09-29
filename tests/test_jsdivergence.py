@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-from preprocessing.feature_selection import JensenShannonDivergence
+from pychemauth.preprocessing.feature_selection import JensenShannonDivergence
 
 
 class TestJensenShannonDivergence(unittest.TestCase):

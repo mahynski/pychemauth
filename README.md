@@ -109,30 +109,26 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 
 # Installation
 
+Vist the [github repo](https://github.com/mahynski/pychemauth) to check for the most recent version and replace "X.X.X" below.
+
 ~~~ bash
-$ git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1 # Replace X.X.X with the latest version
+$ git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1 
 $ cd pychemauth
-$ pip install -r requirements.txt
-# If you wish to contribute to the repo you will need to install pre-commit as well
-$ pip install pre-commit # (OPTIONAL)
-~~~
-
-Simply add this directory to your PYTHONPATH, or locally in each instance (i.e., sys.path.append()) and import the model as usual.
-
-~~~ bash
-$ echo 'export PYTHONPATH=$PYTHONPATH:/path/to/module/' >> ~/.bashrc
-$ source ~/.bashrc
-~~~
-
-~~~ python
-import pychemauth
+$ pip install .
 ~~~
 
 You can run unittests to make sure your installation is working correctly.
 
 ~~~ bash
-$ python -m unittest discover tests/
+$ python setup.py test
 ~~~
+
+Simply import the package to begin using it.
+
+~~~ python
+import pychemauth
+~~~
+
 
 # Usage
 Refer to `examples/` for example usage and more explicit details; you can [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/mahynski/pychemauth/blob/master/) to explore.
@@ -173,8 +169,8 @@ df = pd.read_csv(list(uploaded.keys())[0])
 
 ~~~python
 # 3. Clone pychemauth repo
-!git clone https://github.com/mahynski/pychemauth.git
-!cd pychemauth; pip3 install -r requirements.txt
+!git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1 
+!cd pychemauth; pip install .
 ~~~~
 
 ~~~python
@@ -194,7 +190,7 @@ Other tools used in this repository include:
 
 # Citation
 
-This repo relies on contributions from many other sources.  If you use these tools be sure to cite the original authors. 
+This package relies on contributions from many other sources.  If you use these tools be sure to cite the original authors. 
 
 If you use UMAP refer to the authors' [github repo](https://github.com/lmcinnes/umap) for information about citation.  At the very least, you should cite the manuscript associated with the software itself:
 

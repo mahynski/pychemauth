@@ -13,8 +13,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
-from preprocessing.scaling import CorrectedScaler
-from regressor.pcr import PCR
+from pychemauth.preprocessing.scaling import CorrectedScaler
+from pychemauth.regressor.pcr import PCR
 
 
 class TestPCR(unittest.TestCase):
