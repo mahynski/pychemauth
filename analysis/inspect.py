@@ -14,7 +14,7 @@ from sklearn.model_selection import StratifiedKFold, learning_curve
 
 # Resources:
 # https://christophm.github.io/interpretable-ml-book/
-
+# https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
 class InspectModel:
     """Inspect machine learning models."""
@@ -30,6 +30,7 @@ class InspectModel:
 
         Compare classification models based on true/false positive rates.
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
         """
         confmat = confusion_matrix(y_true=y_true, y_pred=model.predict(X))
 
@@ -57,6 +58,7 @@ class InspectModel:
         Select classification models based on true/false positive rates.
 
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
         """
         from scipy import interp
         from sklearn.metrics import auc, roc_curve
@@ -128,6 +130,9 @@ class InspectModel:
         If it doesn't converge, it probably needs more data to train on.
 
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
+        
+        Also see scikit-learn's documentation:
         https://scikit-learn.org/stable/modules/learning_curve.html
 
         Parameters

@@ -12,7 +12,7 @@ class NestedCV:
     """
     Perform nested GridSearchCV and get all validation fold scores.
 
-    This differs from sklearn's "built in" method of doing nested CV of
+    This differs from scikit-learn's "built in" method of doing nested CV of
     cross_val_score(GridSeachCV()) in that cross_val_score() only returns
     the score from the test fold on the outer loop, after the best model is
     (usually) retrained on the entire training set using the best
@@ -46,7 +46,7 @@ class NestedCV:
     
     [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and 
     subsequent selection bias in performance evaluation. J. Mach. Learn. Res 
-    2010,11, 2079-2107.
+    2010, 11, 2079-2107.
     [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when 
     selecting classifiers is overzealous for most practical applications." 
     Expert Systems with Applications 182 (2021): 115222.

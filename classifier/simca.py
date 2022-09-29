@@ -34,17 +34,19 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     Note that when you are optimizing the model using TEFF, TSPS is 
     computed by using the alternative classes.  In that case, the model choice
     is influenced by these alternatives.  This is a "compliant" approach,
-    however, if you used TSNS instead of TEFF the model only uses information
+    however, if you use TSNS instead of TEFF the model only uses information
     about the target class itself.  This is a "rigorous" approach which can
     be important to consider to avoid bias in the model.
 
-    In rigorous models alpha should be fixed an other hyperparameters adjusted
+    In rigorous models, alpha should be fixed as other hyperparameters are adjusted
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected.
     
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
+    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
+    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
 
     """
 
@@ -67,13 +69,9 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         differentiated from them.  This relies on the type I error (alpha) only.
         The final metric used to rate the overall model can be set to TEFF or TSPS,
         for example, if you wish to change how the model is evaluated.
-
-	    When TEFF is used to choose a model, this is a "compliant" approach,
-	    whereas when TSNS is used instead, this is a "rigorous" approach.
-
-        [1] "Rigorous and compliant approaches to one-class classification,"
-        Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
-        Lab. Sys. (2016) 89-96.
+        
+        When TEFF is used to choose a model, this is a "compliant" approach,
+        whereas when TSNS is used instead, this is a "rigorous" approach. [1]
 
         Parameters
         ----------
@@ -88,7 +86,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             Type of SIMCA to use ("simca" or "dd-simca")
         use : str
             Which methodology to use to evaluate the model ("rigorous", "compliant")
-            (default="rigorous"). See Ref. 1. for more details.
+            (default="rigorous"). See Ref. [1] for more details.
         scale_x : bool
             Whether or not to scale X by its sample standard deviation or not.
             This depends on the meaning of X and is up to the user to
@@ -96,7 +94,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             Note that X is always centered.
         iterate : bool
             Whether or not to use the iterative outlier removal scheme described
-            in Ref. 3.  This is ignored when NOT using DD-SIMCA.
+            in Ref. [2].  This is ignored when NOT using DD-SIMCA.
         """
         self.set_params(
             **{
@@ -112,14 +110,14 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
@@ -182,7 +180,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         """
         Transform into the SIMCA subspace.
 
-        This is not very relevant, but is necessary for scikit-learn compatibility.
+        This is necessary for scikit-learn compatibility.
         """
         check_is_fitted(self, "is_fitted_")
         return self.__model_.transform(X)
@@ -191,7 +189,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         """
         Fit and transform.
 
-        This is not very relevant, but is necessary for scikit-learn compatibility.
+        This is necessary for scikit-learn compatibility.
         """
         _ = self.fit(X, y)
         return self.transform(X)
@@ -321,7 +319,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         return metrics
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": False,
@@ -360,13 +358,14 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     instead of the OD (see discussion in [3]), however we implement a more
     "classic" version here.
 
-    1. "Robust classification in high dimensions based on the SIMCA Method,"
+    [1] "Robust classification in high dimensions based on the SIMCA Method,"
     Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems
     79 (2005) 10-21.
-    2. "Pattern recognition by means of disjoint principal components models,"
+    [2] "Pattern recognition by means of disjoint principal components models,"
     S. Wold, Pattern Recognition 8 (1976) 127–139.
-    3. De Maesschalk et al., Chemometrics and Intelligent Laboratory Systems
-    47 (1999) 65-77.
+    [3] "Decision criteria for soft independent modelling of class analogy 
+    applied to near infrared data" De Maesschalk et al., Chemometrics and 
+    Intelligent Laboratory Systems 47 (1999) 65-77.
     """
 
     def __init__(self, n_components, alpha=0.05, scale_x=True):
@@ -391,13 +390,13 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
@@ -457,7 +456,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         # 3. Compute critical F value
         II, JJ, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
-        if II > JJ:  # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
+        if II > JJ:  # See [3]
             self.__a_ = JJ
         else:
             self.__a_ = II - 1
@@ -511,13 +510,13 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         X = self.matrix_X_(X)
 
         X_pred = np.matmul(self.transform(X), self.__pca_.components_)
-        # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
+        # See [3]
         numer = np.sum((self.__ss_.transform(X) - X_pred) ** 2, axis=1) / (
             self.__a_ - KK
         )
 
         X_pred = np.matmul(self.transform(self.__X_), self.__pca_.components_)
-        # See De Maesschalk et al. Chem. Intell. Lab. Sys. 47 1999
+        # See [3]
         OD2 = np.sum((self.__ss_.transform(self.__X_) - X_pred) ** 2, axis=1)
         denom = np.sum(OD2) / ((self.__a_ - KK) * (II - KK - 1))
 
@@ -530,11 +529,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         Compute the decision function for each sample.
 
-        Following sklearn's EllipticEnvelope, this returns the negative
+        Following scikit-learn's EllipticEnvelope, this returns the negative
         sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
         ----------
@@ -565,7 +564,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         Parameters
         ----------
@@ -671,7 +670,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": True,
@@ -752,13 +751,13 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
@@ -848,13 +847,13 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                  1.0 - self.alpha, self.__Nh_ + self.__Nq_
             )
 
-            # See Ref. 2.
+            # See [2].
             self.__c_out_ = scipy.stats.chi2.ppf(
                 (1.0 - self.gamma) ** (1.0 / X.shape[0]),
                 self.__Nh_ + self.__Nq_,
             )
 
-        # This is based on Ref. 3.
+        # This is based on [3].
         if not self.iterate:
             # When not iteratively removing outliers, always true to find robust estimates of parameters
             train(self.__X_, try_robust=True)
@@ -897,7 +896,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
             # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
             # which is considered "clean" so should try to use classical estimates of the parameters.
-            # train() assigns X_tmp to self.__X_ also. See Ref. 3.
+            # train() assigns X_tmp to self.__X_ also. See [3].
             train(X_tmp, try_robust=False)
             self.__iterate_history = {'inner_loops': inner_iters, 
                                       'outer_loops': outer_iters,
@@ -975,11 +974,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         Compute the decision function for each sample.
 
-        Following sklearn's EllipticEnvelope, this returns the negative
-        sqrt(Chi squared distance) shifted by the cutoff distance,
+        Following scikit-learn's EllipticEnvelope, this returns the negative
+        sqrt(chi-squared distance) shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
         ----------
@@ -1010,7 +1009,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         Parameters
         ----------
@@ -1035,6 +1034,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier
+
         return prob
 
     def predict(self, X):
@@ -1137,6 +1137,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         dX_ = self.distance(self.matrix_X_(X))
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_
+
         return extremes, outliers
 
     def visualize(self, X, y, ax=None):
@@ -1257,7 +1258,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         return axis
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": True,

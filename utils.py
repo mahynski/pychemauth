@@ -227,7 +227,7 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
 
 def pos_def_mat(S, inner_max=10, outer_max=100):
     """
-    Create a positive, semi-definite version of a matrix.
+    Create a positive definite version of a matrix.
 
     Parameters
     ----------
@@ -278,4 +278,4 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
         if safe:
             return recon
         
-    raise Exception("Unable to create a symmetric, positive semi-definite matrix")
+    raise Exception("Unable to create a symmetric, positive definite matrix")

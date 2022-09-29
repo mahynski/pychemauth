@@ -63,13 +63,13 @@ class PCA(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
@@ -90,7 +90,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y=None):
         """
-        Fit the PCR model.
+        Fit the PCA model.
 
         Parameters
         ----------
@@ -197,7 +197,7 @@ n_features [{}])] = [{}, {}].".format(
         T = self.__pca_.transform(X_raw_std)
         X_pred = self.__pca_.inverse_transform(
             T
-        )  # np.matmul(T, self.__pca_.components_)
+        )
 
         # OD
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
@@ -236,11 +236,11 @@ n_features [{}])] = [{}, {}].".format(
         """
         Compute the decision function for each sample.
 
-        Following sklearn's EllipticEnvelope, this returns the negative
-        sqrt(Chi squared distance) shifted by the cutoff distance,
+        Following scikit-learn's EllipticEnvelope, this returns the negative
+        sqrt(chi-squared distance) shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
         ----------
@@ -271,7 +271,7 @@ n_features [{}])] = [{}, {}].".format(
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         Parameters
         ----------
@@ -287,7 +287,12 @@ n_features [{}])] = [{}, {}].".format(
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        p_inlier = p_inlier = 1.0 / (
+            1.0
+            + np.exp(
+                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+            )
+        )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier
@@ -333,6 +338,7 @@ n_features [{}])] = [{}, {}].".format(
         dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_
+
         return extremes, outliers
 
     def score(self, X, y, eps=1.0e-15):
@@ -454,7 +460,7 @@ n_features [{}])] = [{}, {}].".format(
         return axis
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": False,

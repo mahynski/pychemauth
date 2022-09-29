@@ -26,11 +26,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     """
     PLS-DA for classification.
 
-    Implements 'hard' classification as an
-    'LDA-like' criterion, and a 'soft' classification using a 'QDA-like'
-    criterion as described in [1].  Soft PLS-DA may assign a point to 0, 1,
-    or >1 classes, while the hard PLS-DA always assigns exactly one class
-    to a point.
+    Implements 'hard' classification as an 'LDA-like' criterion, and a 
+    'soft' classification using a 'QDA-like' criterion as described in [1].  
+    Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard 
+    PLS-DA always assigns exactly one class to a point.
 
     This relies on `sklearn.cross_decomposition.PLSRegression` which can
     perform either PLS1 or PLS2; however, here we default to PLS2 and
@@ -40,11 +39,6 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     Notes
     -----
     * Note that alpha and gamma are only relevant for the soft version.
-    * The soft version can become unstable if n_components is too small and
-    can return negative distances to class centers; this results in an error -
-    try increasing n_components if this happens. This is linked to instabilities
-    in computing matrix inverses, etc. and is generally remedied by
-    increasing n_components.
     * If y values are going to be passed as strings, 'not_assigned' should
     also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
@@ -109,13 +103,13 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "alpha": self.alpha,
             "gamma": self.gamma,
@@ -176,7 +170,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         """
         self.n_components = int(
             self.n_components
-        )  # sklearn PLS does not understand floats
+        )  # scikit-learn PLS does not understand floats
 
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
@@ -184,7 +178,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
         self.__y_ = self.column_y_(
             y
-        )  # sklearn expects 1D array, convert to columns
+        )  # scikit-learn expects 1D array, convert to columns
         # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
 
         self.__raw_y_ = copy.copy(self.__y_)
@@ -229,7 +223,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.__X_ = self.__x_pls_scaler_.fit_transform(self.__X_)
 
         # 2. PLS2 - bounds based on Rodionova & Pomerantsev but other
-        # suggestions exist. sklearn suggests an upper bound of
+        # suggestions exist. scikit-learn suggests an upper bound of
         # "number of classes" but other chemometrics toolkits do not
         # follow this.
         upper_bound = np.min(
@@ -245,7 +239,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         if self.n_components < len(self.__ohencoder_.categories_[0])-1:
             warnings.warn("Warning - n_components < number of classes - 1; this may result in instabilities")
 
-        # Note that sklearn currently has a typo in its documentation. Only
+        # Note that scikit-learn currently has a typo in its documentation. Only
         # PLSCanonical has an upper bound of min(n_samples, n_features,
         # n_targets) whereas PLSRegression only is bounded by min(n_samples,
         # n_features). We have further lowered the n_samples by 1 for
@@ -279,7 +273,7 @@ n_features [{}])] = [{}, {}].".format(
             random_state=0,
         )
 
-        # sklearn's pca automatically centers 
+        # scikit-learn's pca automatically centers 
         self.__T_train_ = self.__pca_.fit_transform(
             y_hat_train
         )
@@ -308,8 +302,6 @@ n_features [{}])] = [{}, {}].".format(
                     dtype=np.float64,
                 )
                 # Outer product
-                # https://medium.com/@raghavan99o/scatter-matrix-covariance-
-                # and-correlation-explained-14921741ca56
                 for j in range(t.shape[0]):
                     self.__S_[i] += np.dot(
                         t[j, :].reshape(t.shape[1], 1),
@@ -318,12 +310,10 @@ n_features [{}])] = [{}, {}].".format(
                 self.__S_[i] /= t.shape[0]
                 try:
                     # This is just a dummy check to make sure S is positive
-                    # semi-definite, since this is not always guaranteed
+                    # definite, since this is not always guaranteed
                     # numerically.  Proper covariance matrices are always
-                    # pos. semi-def. and even this scatter matrix should
-                    # have similar properties, but numerically we have
-                    # observed a number of issues.  You can also test if
-                    # S^-1 * S = I; if not, there are numerical problems.
+                    # positive definite and this scatter matrix should
+                    # have similar properties, but numerical issues can arise.  
                     # https://stats.stackexchange.com/questions/52976/is-a-
                     # sample-covariance-matrix-always-symmetric-and-positive-
                     # definite
@@ -336,7 +326,7 @@ n_features [{}])] = [{}, {}].".format(
                         )
                     )
 
-        # 4. continued - compute covariance matrix for hard version
+        # 4. Continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
         # from PCA transform. See [1].
         L = np.cov(self.__T_train_.T)
@@ -498,14 +488,14 @@ n_features [{}])] = [{}, {}].".format(
         """
         Compute the decision function for each sample.
 
-        Following sklearn's EllipticEnvelope, this returns the negative
+        Following scikit-learn's EllipticEnvelope, this returns the negative
         Mahalanobis distance shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
 
         This is ONLY returned for soft PLSDA; if the hard variant is used a
         NotImplementedError will be raised instead.
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
         ----------
@@ -555,7 +545,7 @@ n_features [{}])] = [{}, {}].".format(
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         This gives the same effective results as predict() except that function
         directly returns the class(es) a point is predicted to belong to and is sorted
@@ -564,7 +554,7 @@ n_features [{}])] = [{}, {}].".format(
         Note
         ----
         For a soft decision an observation may belong to 1, >1, or 0
-        known classes.  The rows will NOT sum to 1 as is convention in sklearn.
+        known classes.  The rows will NOT sum to 1 as is convention in scikit-learn.
         Each entry is a simple binary yes/no prediction that the point is an
         inlier for each class.
 
@@ -749,7 +739,7 @@ n_features [{}])] = [{}, {}].".format(
             index=trained_classes,
         )
 
-        # If CSNS can't be calculated, using CSPS as efficiency [1]
+        # If CSNS can't be calculated, using CSPS as efficiency;
         # Oliveri & Downey introduced this "efficiency" used in [1]
         CEFF = pd.Series(
             [
@@ -1343,7 +1333,7 @@ n_features [{}])] = [{}, {}].".format(
         return ax
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": False,
