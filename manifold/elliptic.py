@@ -21,7 +21,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     a projection ("scores" or "embedding").
 
     Step 2: Following [1], assume each class forms a normally distributed subset
-    with the known means (*see Note below) in the score space.  The covariance matrix is used to
+    with the known means (*see Note below) in the score/emedding space.  The covariance matrix is used to
     compute the [Mahalanobis distance](https://en.wikipedia.org/wiki/Mahalanobis_distance)
     to its class center.
 
@@ -37,8 +37,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     reduction step; EE essentially learns an ellipse around a known class, with
     some predefined amount of the observations set to be "included."  The basic
     difference is that a statistical confidence limit (alpha) can be directly
-    specified here. EE's "contamination" is approximately alpha (Type I error
-    rate); however, this seems to lack some rigor. Here the Chi Squared
+    specified here. EE's "contamination" is approximately alpha (type I error
+    rate); however, this seems to lack some rigor. Here the chi-squared
     distribution has some degrees of freedom associated with based on the
     dimensionality of the space, whereas EE just takes the fraction as a hyperparameter
     with no context. As a result, many of the class members and functions follow a
@@ -63,7 +63,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     a mean at a fixed location (i.e., in a projection of a one-hot-encoding).
     Alternatively, the empirical mean in the score space/embedding can be
     taken.  We perform the latter by default; this operates more closely to a
-    standard sklearn pipeline where a DR step occurs, then an EE boundary is
+    standard scikit-learn pipeline where a DR step occurs, then an EE boundary is
     fit to the embedding, but contrasts with some other published approaches.
 
     Data standardization/autoscaling is generally recommended since manifolds
@@ -123,13 +123,13 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "alpha": self.alpha,
             "dr_model": self.dr_model,
@@ -183,7 +183,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         assert (
             len(np.unique(y)) == 1
-        ), "EllipticManifold should be trained only on a single class, multiple values found in y"
+        ), "EllipticManifold should be trained only on a single class, multiple values found in y."
 
         # Fit the model
         self.model_ = self.dr_model(**self.kwargs)
@@ -245,6 +245,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
         X, y = self.sanity_(X, y)
+
         return self.model_.transform(X)
 
     def fit_transform(self, X, y=None):
@@ -265,6 +266,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Coordinates of X in lower dimensional space.
         """
         _ = self.fit(X, y)
+
         return self.transform(X, y)
 
     def mahalanobis(self, X, y=None):
@@ -322,7 +324,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         d = self.mahalanobis(X, y)
         mask = d > np.sqrt(self.__d_crit_)
 
-        # +1/-1 follows sklearn's EllipticEnvelope API - this is different
+        # +1/-1 follows scikit-learn's EllipticEnvelope API - this is different
         # to be more consistent with other APIs such as how SIMCA works.
         results = np.ones(len(X))  # Inliers
         results[mask] = 0  # Outliers
@@ -347,13 +349,14 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Array of +1 or 0 for inliers and outliers, respectively.
         """
         _ = self.fit(X, y)
+
         return self.predict(X, y)
 
     def score_samples(self, X, y=None):
         """
         Score some observations.
 
-        Following sklearn's EllipticEnvelope, this returns the negative Mahalanobis
+        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
         distance.
 
         Parameters
@@ -375,11 +378,11 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         Compute the decision function for each sample.
 
-        Following sklearn's EllipticEnvelope, this returns the negative Mahalanobis
+        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
         distance shifted by the cutoff distance, so f < 0 implies an outlier
         while f > 0 implies an inlier.
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
 
         Parameters
         ----------
@@ -410,7 +413,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See sklearn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
         Parameters
         ----------
@@ -430,6 +433,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier
+
         return prob
 
     def score(self, X, y, eps=1.0e-15):
