@@ -234,13 +234,13 @@ class JensenShannonDivergence:
         return
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "epsilon": self.epsilon,
             "threshold": self.threshold,
@@ -567,7 +567,7 @@ class PipeBorutaSHAP:
     BorutaSHAP feature selector for pipelines.
 
     Create a BorutaSHAP instance that is compatible with
-    scikit-learn's estimator API and can be used in sklearn and
+    scikit-learn's estimator API and can be used in scikit-learn and
     imblearn's pipelines.
 
     This is essentially a wrapper for
@@ -641,13 +641,13 @@ class PipeBorutaSHAP:
         return
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "column_names": self.column_names,
             "model": self.model,

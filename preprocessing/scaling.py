@@ -12,7 +12,7 @@ class RobustScaler:
     """
     Perform "robust" autoscaling on the data.
 
-    Akin to sklearn's RobustScaler: this centers the data using the median
+    Akin to scikit-learn's RobustScaler: this centers the data using the median
     instead of the mean, and scales by the interquantile range (IQR)
     instead of the standard deviation. The quantile can also be changed.
 
@@ -48,14 +48,14 @@ class RobustScaler:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "with_median": self.with_median,
             "with_iqr": self.with_iqr,
@@ -114,7 +114,7 @@ class CorrectedScaler:
     Perform variations of autoscaling on the data.
 
     This is a "StandardScaler" which by default reduces the degrees of freedom
-    by one in the standard deviation, unlike sklearn's default StandardScaler.
+    by one in the standard deviation, unlike scikit-learn's default StandardScaler.
 
     A "pareto" setting is also available which will use the square root of
     this corrected standard deviation instead.
@@ -151,14 +151,14 @@ class CorrectedScaler:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "with_mean": self.with_mean,
             "with_std": self.with_std,

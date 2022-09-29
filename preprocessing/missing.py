@@ -63,13 +63,13 @@ class LOD:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "lod": self.lod,
             "missing_values": self.missing_values,
@@ -108,8 +108,8 @@ class LOD:
             raise ValueError("LOD must be specified for each column in X")
 
         self.__rng_ = np.random.default_rng(self.seed)
-
         self.is_fitted_ = True
+
         return self
 
     def fit_transform(self, X, y=None):
@@ -243,8 +243,10 @@ class PCA_IA:
 
     This implementation follows:
 
-    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
-    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
+    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," 
+    Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
+    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," 
+    Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
     """
 
     def __init__(
@@ -285,13 +287,13 @@ class PCA_IA:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "scale_x": self.scale_x,
@@ -354,6 +356,7 @@ n_features [{}])] = [{}, {}].".format(
         ) = self.em_(self.__Xtrain_, train=True)
 
         self.is_fitted_ = True
+
         return self
 
     def em_(self, X, train=True):
@@ -570,8 +573,10 @@ class PLS_IA:
 
     This implementation follows:
 
-    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
-    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
+    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," 
+    Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
+    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," 
+    Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
     """
 
     def __init__(
@@ -612,13 +617,13 @@ class PLS_IA:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "scale_x": self.scale_x,
@@ -666,7 +671,7 @@ class PLS_IA:
         )
         self.__ytrain_ = self.column_y_(
             self.__ytrain_
-        )  # sklearn expects 1D array, convert to columns
+        )  # scikit-learn expects 1D array, convert to columns
         assert self.__ytrain_.shape[1] == 1
 
         if self.__Xtrain_.shape[0] != self.__ytrain_.shape[0]:
@@ -701,6 +706,7 @@ n_features [{}])] = [{}, {}].".format(
         )
 
         self.is_fitted_ = True
+
         return self
 
     def em_(self, X, y=None, train=True):
@@ -720,7 +726,7 @@ n_features [{}])] = [{}, {}].".format(
             )
             y = self.column_y_(
                 y
-            )  # sklearn expects 1D array, convert to columns
+            )  # scikit-learn expects 1D array, convert to columns
 
         # Identify and record location of missing values
         indicator = MissingIndicator(

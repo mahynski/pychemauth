@@ -107,13 +107,13 @@ class ScaledSMOTEENN:
         return
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "sampling_strategy_smoteenn": self.sampling_strategy_smoteenn,
             "sampling_strategy_smote": self.sampling_strategy_smote,
@@ -122,7 +122,7 @@ class ScaledSMOTEENN:
             "k_enn": self.k_enn,
             "kind_sel_enn": self.kind_sel_enn,
             "random_state": self.random_state,
-            "scaler": self.scaler,
+            "scaler": copy.copy(self.scaler),
         }
 
     def fit_resample(self, X, y):
@@ -144,8 +144,7 @@ class ScaledSMOTEENN:
         X_resample, y_resampled : ndarray, ndarray
             Resampled X and y in the original "units" of X.
         """
-        ss = StandardScaler()
-        X_std = ss.fit_transform(X)
+        X_std = self.scaler.fit_transform(X)
 
         sm = SMOTEENN(
             sampling_strategy=self.sampling_strategy_smoteenn,
@@ -164,4 +163,4 @@ class ScaledSMOTEENN:
 
         X_res, y_res = sm.fit_resample(X_std, y)
 
-        return ss.inverse_transform(X_res), y_res
+        return self.scaler.inverse_transform(X_res), y_res

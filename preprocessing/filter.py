@@ -59,14 +59,14 @@ class MSC:
         self.is_fitted_ = False
         
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "Xref": self.Xref,
         }
@@ -206,14 +206,14 @@ class SNV:
         self.is_fitted_ = False
         
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "robust": self.robust,
             "detrend": self.detrend,
@@ -302,14 +302,14 @@ class SavGol:
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "window_length": self.window_length,
             "polyorder": self.polyorder,
