@@ -66,7 +66,7 @@ class Compare:
                 p = Compare.corrected_t(
                     results[order[0]], results[order[i]], n_repeats
                 )
-                # Do we REJECT H0 (that pipelines perform the same) ?
+                # Do we REJECT H0 (that pipelines perform the same)?
                 performances[i][-1] = p < alpha
 
             return performances
@@ -106,8 +106,8 @@ class Compare:
         pipe2,
         X,
         y,
-        n_repeats=3,
-        k=5,
+        n_repeats=5,
+        k=2,
         random_state=0,
         stratify=True,
         pipe1_mask=None,

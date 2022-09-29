@@ -111,7 +111,7 @@ class NestedCV:
         """
         Perform nested grid search CV.
 
-        For a KxR nested loop, K*R total scores are returned.  For
+        For an RxK nested loop, R*K total scores are returned.  For
         classification tasks, KFolds are stratified.
 
         Parameters

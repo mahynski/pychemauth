@@ -30,6 +30,7 @@ class InspectData:
         the use of kmeans, this is best if the clusters are more spherical.
 
         See Ch. 11 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
         """
         from sklearn.cluster import KMeans
 
@@ -62,6 +63,7 @@ class InspectData:
         clusters.
 
         See Ch. 11 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
         Example
         -------

@@ -281,7 +281,7 @@ class InspectModel:
         Parameters
         ----------
         model : BaseEstimator
-            A fitted sklearn estimator.
+            A fitted scikit-learn estimator.
         X : array-like, shape (n_samples, n_features)
             Dense grid used to build the grid of values on which the dependence
             will be evaluated. **This is usually the training data.**
@@ -307,7 +307,7 @@ class InspectModel:
         indicative of **how much the model depends on the feature.**
 
         Can be computed on the training and/or test set (better).  There is
-        some disagreement about which is actually better.  Sklearn says that:
+        some disagreement about which is actually better.  Scikit-learn says that:
         "Permutation importances can be computed either on the training set or
         on a held-out testing or validation set. Using a held-out set makes it
         possible to highlight which features contribute the most to the
