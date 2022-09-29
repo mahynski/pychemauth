@@ -30,8 +30,8 @@ class PLS(RegressorMixin, BaseEstimator):
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
-    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev, Analytical
-    Chemistry 92 (2020) 2656−2664.
+    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev, 
+    Analytical Chemistry 92 (2020) 2656−2664.
     """
 
     def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False):
@@ -61,13 +61,13 @@ class PLS(RegressorMixin, BaseEstimator):
         self.is_fitted_ = False
 
     def set_params(self, **parameters):
-        """Set parameters; for consistency with sklearn's estimator API."""
+        """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
     def get_params(self, deep=True):
-        """Get parameters; for consistency with sklearn's estimator API."""
+        """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
@@ -118,7 +118,7 @@ class PLS(RegressorMixin, BaseEstimator):
         # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
         self.__y_ = self.column_y_(
             y
-        )  # sklearn expects 1D array, convert to columns
+        )  # scikit-learn expects 1D array, convert to columns
         assert self.__y_.shape[1] == 1
 
         if self.__X_.shape[0] != self.__y_.shape[0]:
@@ -546,7 +546,7 @@ n_features [{}])] = [{}, {}].".format(
         return axes
 
     def _get_tags(self):
-        """For compatibility with sklearn >=0.21."""
+        """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
             "binary_only": False,
