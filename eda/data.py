@@ -71,7 +71,7 @@ class InspectData:
                         init='k-means++',
                         n_init=10,
                         random_state=0)
-        >>> ml_inspector.data.InspectData.cluster_silhouette(X, clustering=km)
+        >>> cluster_silhouette(X, clustering=km)
         """
         from matplotlib import cm
         from sklearn import clone
