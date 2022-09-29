@@ -309,22 +309,19 @@ n_features [{}])] = [{}, {}].".format(
                     )
                 self.__S_[i] /= t.shape[0]
                 try:
-                    # This is just a dummy check to make sure S is positive
-                    # definite, since this is not always guaranteed
-                    # numerically.  Proper covariance matrices are always
-                    # positive definite and this scatter matrix should
-                    # have similar properties, but numerical issues can arise.  
-                    # https://stats.stackexchange.com/questions/52976/is-a-
-                    # sample-covariance-matrix-always-symmetric-and-positive-
-                    # definite
-                    self.__S_[i] = pos_def_mat(self.__S_[i])
-                except Exception as e:
-                    raise Exception(
-                        "Unable to compute scatter matrix for class {} : \
-{}".format(
-                            self.__ohencoder_.categories_[0][i], e
+                    # Check if positive definite.
+                    np.linalg.cholesky(self.__S_[i])
+                except np.linalg.LinAlgError:
+                    try:
+                        # If not, try to approximate this matrix.
+                        self.__S_[i] = pos_def_mat(self.__S_[i])
+                    except Exception as e:
+                        raise Exception(
+                            "Unable to compute scatter matrix for class {} : \
+    {}".format(
+                                self.__ohencoder_.categories_[0][i], e
+                            )
                         )
-                    )
 
         # 4. Continued - compute covariance matrix for hard version
         # Check that covariance of T is diagonal matrix made of eigenvalues
@@ -526,7 +523,7 @@ n_features [{}])] = [{}, {}].".format(
         Soft PLSDA: assumes each class is normally distributed and uses
         the Mahalanobis distance to compute the (normal) probability
         as a function of this distance from the class' center. The
-        cutoff distance was computed using Chi Squared statistics such
+        cutoff distance was computed using chi-squared statistics such
         that the boundary encompasses 100(1-alpha)% of the true members 
         in the final PCA space. These probabilities do NOT sum to 1
         across all categories.
@@ -584,7 +581,7 @@ n_features [{}])] = [{}, {}].".format(
             for i in range(len(norm)):
                 norm[i] = np.sqrt(np.linalg.det(2.0*np.pi*self.__S_[i]))
 
-            prob = p / norm
+            prob = [np.min([1.0, p_]) for p_ in p / norm]
         else:
             # Hard classification predicts one class, so use softmax function on
             # Mahalanobis distances. The Gaussian prefactor is the same for all
