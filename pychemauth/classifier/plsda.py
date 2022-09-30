@@ -581,7 +581,7 @@ n_features [{}])] = [{}, {}].".format(
             for i in range(len(norm)):
                 norm[i] = np.sqrt(np.linalg.det(2.0*np.pi*self.__S_[i]))
 
-            prob = [np.min([1.0, p_]) for p_ in p / norm]
+            prob = np.array([[np.min([1.0, p_]) for p_ in row] for row in (p / norm)], dtype=np.float64)
         else:
             # Hard classification predicts one class, so use softmax function on
             # Mahalanobis distances. The Gaussian prefactor is the same for all
