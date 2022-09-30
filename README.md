@@ -169,8 +169,8 @@ df = pd.read_csv(list(uploaded.keys())[0])
 
 ~~~python
 # 3. Clone pychemauth repo
-!git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1 
-!cd pychemauth; pip install .
+!git clone https://github.com/mahynski/pychemauth.git --depth 1 --branch vX.Y.Z
+!cd pychemauth; pip install .; cd ..
 ~~~~
 
 ~~~python
