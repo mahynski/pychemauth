@@ -1138,6 +1138,67 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return extremes, outliers
 
+    def extremes_plot(self, X, upper_frac=0.25, ax=None):
+        """
+        Plot an "extremes plot" [2] to evalute the quality of PCA-based models.
+
+        This modifies the alpha value (type I error rate), keeping all other parameters
+        fixed, and computes the number of expected extremes (n_exp) vs. the number 
+        observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
+
+        The 95% tolerance limit is given in black.  Points which fall outside these 
+        bounds are highlighted.
+        
+        Parameters
+        ----------
+        X : ndarray
+            Data to evaluate the number of outliers + extremes in.
+        upper_frac : float
+            Count the number of extremes and outliers for alpha values corresponding
+            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
+        ax : pyplot.axes
+            Axes to plot on.
+
+        Returns
+        -------
+        ax : pyplot.axes
+            Axes results are plotted.
+        """
+        X_ = check_array(X, accept_sparse=False)
+        N_tot = X_.shape[0]
+        n_values = np.arange(1, int(upper_frac*N_tot)+1)
+        alpha_values = n_values / N_tot
+
+        n_observed = []
+        for a in alpha_values:
+            params = self.get_params()
+            params['alpha'] = a
+            model_ = DDSIMCA_Model(**params)
+            model_.fit(X)
+            extremes, outliers = model_.check_outliers(X)
+            n_observed.append(np.sum(extremes) + np.sum(outliers))
+        n_observed = np.array(n_observed)
+        
+        if ax is None:
+            fig = plt.figure()
+            ax = plt.gca()
+
+        n_upper = n_values + 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
+        n_lower = n_values - 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
+        ax.plot(n_values, n_upper, '-', color='k', alpha=0.5)
+        ax.plot(n_values, n_values, '-', color='k', alpha=0.5)
+        ax.plot(n_values, n_lower, '-', color='k', alpha=0.5)
+        ax.fill_between(n_values, y1=n_upper, y2=n_lower, color='gray', alpha=0.25)
+
+        mask = (n_lower <= n_observed) & (n_observed <= n_upper)
+        ax.plot(n_values[mask], n_observed[mask], 'o', color='green')
+        ax.plot(n_values[~mask], n_observed[~mask], 'o', color='red')
+
+        ax.set_xlabel('Expected')
+        ax.set_ylabel('Observed')
+
+        return ax
+
     def visualize(self, X, y, ax=None):
         """
         Plot the chi-squared acceptance area with observations.
