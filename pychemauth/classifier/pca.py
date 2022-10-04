@@ -3,8 +3,6 @@ Principal Components Analysis (PCA).
 
 author: nam
 """
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -12,7 +10,6 @@ import sklearn.decomposition
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted
 
-sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 

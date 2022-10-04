@@ -3,8 +3,6 @@ Fill in missing data.
 
 author: nam
 """
-import sys
-
 import numpy as np
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
@@ -12,7 +10,6 @@ from sklearn.impute import MissingIndicator, SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
 
 

@@ -3,8 +3,6 @@ Projection to Latent Structures (PLS).
 
 author: nam
 """
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -12,7 +10,6 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 

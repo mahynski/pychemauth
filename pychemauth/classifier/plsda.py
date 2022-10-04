@@ -4,7 +4,6 @@ Partial-least squares (Projection to Latent Structures) discriminant analysis.
 author: nam
 """
 import copy
-import sys
 import warnings
 
 import matplotlib.pyplot as plt
@@ -17,7 +16,6 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import pos_def_mat
 

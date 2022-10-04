@@ -3,15 +3,12 @@ Principal Components Regression (PCR).
 
 author: nam
 """
-import sys
-
 import numpy as np
 import scipy
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-sys.path.append("../")
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
