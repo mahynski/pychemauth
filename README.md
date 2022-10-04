@@ -4,6 +4,7 @@ Python-based Chemometric Authentication
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 ![Workflow](https://github.com/mahynski/pychemauth/actions/workflows/python-app.yml/badge.svg?branch=main)
+<!--[![DOI](https://zenodo.org/badge/{github_id}.svg)](https://zenodo.org/badge/latestdoi/{github_id})-->
 <!--[![codecov](https://codecov.io/gh/mahynski/pychemauth/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/pychemauth)-->
 
 This is a toolkit, implemented in python, to perform chemometric authentication.  These methods are designed to be compatible with [scikit-learn's estimator API](https://scikit-learn.org/stable/developers/develop.html) so that they can be deployed in pipelines used with GridSearchCV, etc.  Authentication is typically a [one-class classification (OCC)](https://en.wikipedia.org/wiki/One-class_classification), or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discriminant) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on.
