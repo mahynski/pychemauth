@@ -37,18 +37,3 @@ jobs:
       run: |
         coverage run -m unittest discover tests/
         coverage report
-  
-  coverage:
-    
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-    - name: Check test coverage
-      run: |
-        #export CODECOV_TOKEN=b83163ee-4cd1-4810-927a-17249b3a6f97
-        #pip install codecov
-        #codecov
-        pip install coverage
-        coverage run -m unittest discover tests/
-        coverage report
