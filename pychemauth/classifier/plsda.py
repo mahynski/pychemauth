@@ -43,6 +43,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
     only relevant for the soft version.
+    * A rule of thumb for the number of components to use is between K/2(K-1)
+    and K/2(K+1) to provide sufficient complexity but avoid overfitting; K is 
+    the total number of classes. This is not rigorous and may not hold in many 
+    cases. Cross-validation should be used to evalute this parameter, in general.
 
     [1] "Multiclass partial least squares discriminant analysis: Taking the
     right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
@@ -235,7 +239,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         
         lower_bound = 1
 
-        # lb = len(self.__ohencoder_.categories_[0])-1 sometimes rule of thumb
+        # In general, usually K/2(K-1) < N < K/2(K+1), where K is the number of
+        # classes, is sometimes heuristically recommended as being optimal.
+        # lb = len(self.__ohencoder_.categories_[0])-1 is another rule of thumb
+        # which is always less than the first rule (K >=2, which is always true).
         if self.n_components < len(self.__ohencoder_.categories_[0])-1:
             warnings.warn("Warning - n_components < number of classes - 1; this may result in instabilities")
 
