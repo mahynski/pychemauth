@@ -37,8 +37,7 @@ class TestDDSIMCA(unittest.TestCase):
         raw_y = np.array(df["Class"].values, dtype=str)
 
         dds = DDSIMCA_Model(
-            n_components=7, alpha=0.05, gamma=0.01, scale_x=False,
-            robust='semi'
+            n_components=7, alpha=0.05, gamma=0.01, scale_x=False, robust="semi"
         )
         _ = dds.fit(raw_x, raw_y)
 
@@ -101,7 +100,10 @@ class TestDDSIMCA(unittest.TestCase):
         # Check predictions of extreme/outliers
         ext, out = dds.check_outliers(raw_x)
         self.assertTrue(
-            np.all(np.where(ext)[0] == np.array([6, 7, 14, 17, 18, 19, 20, 21, 22, 65, 69]))
+            np.all(
+                np.where(ext)[0]
+                == np.array([6, 7, 14, 17, 18, 19, 20, 21, 22, 65, 69])
+            )
         )
         self.assertTrue(np.all(np.all(~out)))
 
@@ -128,13 +130,10 @@ class TestDDSIMCA(unittest.TestCase):
         raw_x_a = np.array(df.values[:, 3:], dtype=float)
         raw_y_a = np.array(df.values[:, 1], dtype=str)
         self.assertTrue(
-            np.all(
-                np.where(dds.predict(raw_x_a))[0]
-                == np.array([9])
-            )
+            np.all(np.where(dds.predict(raw_x_a))[0] == np.array([9]))
         )
         ext, out = dds.check_outliers(raw_x_a)
-        self.assertTrue(np.where(~(ext|out))[0] == np.array([9]))
+        self.assertTrue(np.where(~(ext | out))[0] == np.array([9]))
 
     def test_ddsimca_classifier_semi(self):
         """Test SIMCA_Classifier using the DDSIMCA_Model."""
@@ -160,27 +159,26 @@ class TestDDSIMCA(unittest.TestCase):
             style="dd-simca",
             target_class="Pure",
             use="compliant",
-            robust='semi'
+            robust="semi",
         )
 
         # Fit on 2 classes - only uses Pure to train
         _ = sc.fit(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x_a, raw_y_a)['tsns'])
-        )  # Test only alt class 
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)["tsns"])
+        )  # Test only alt class
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x, raw_y)['tsps'])
+            np.isnan(sc.metrics(raw_x, raw_y)["tsps"])
         )  # Test only target class
-        metrics = sc.metrics(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
+        metrics = sc.metrics(
+            np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a))
+        )
         self.assertTrue(
-            np.abs(
-                metrics['teff']
-                - np.sqrt(metrics['tsps']*metrics['tsns'])
-            )
+            np.abs(metrics["teff"] - np.sqrt(metrics["tsps"] * metrics["tsns"]))
             < 1.0e-12
         )
-        self.assertTrue(np.abs(metrics['tsns'] - 0.8472222222222222) < 1.0e-12)
-        self.assertTrue(np.abs(metrics['tsps'] - 0.9444444444444444) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["tsns"] - 0.8472222222222222) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["tsps"] - 0.9444444444444444) < 1.0e-12)
 
     def test_ddsimca_classifier_classical(self):
         """Test SIMCA_Classifier using the DDSIMCA_Model."""
@@ -206,7 +204,7 @@ class TestDDSIMCA(unittest.TestCase):
             style="dd-simca",
             target_class="Pure",
             use="compliant",
-            robust=False
+            robust=False,
         )
 
         # Fit on 2 classes - only uses Pure to train
@@ -219,22 +217,22 @@ class TestDDSIMCA(unittest.TestCase):
             np.abs(sc.model._DDSIMCA_Model__h0_ - 0.09722222222222225) < 1.0e-12
         )
         self.assertTrue(
-            np.abs(sc.model._DDSIMCA_Model__q0_ - 0.017851234844890485) < 1.0e-12
+            np.abs(sc.model._DDSIMCA_Model__q0_ - 0.017851234844890485)
+            < 1.0e-12
         )
 
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x_a, raw_y_a)['tsns'])
-        )  # Test only alt class 
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)["tsns"])
+        )  # Test only alt class
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x, raw_y)['tsps'])
+            np.isnan(sc.metrics(raw_x, raw_y)["tsps"])
         )  # Test only target class
-        metrics = sc.metrics(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
+        metrics = sc.metrics(
+            np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a))
+        )
         self.assertTrue(
-            np.abs(
-                metrics['teff']
-                - np.sqrt(metrics['tsps']*metrics['tsns'])
-            )
+            np.abs(metrics["teff"] - np.sqrt(metrics["tsps"] * metrics["tsns"]))
             < 1.0e-12
         )
-        self.assertTrue(np.abs(metrics['tsns'] - 0.9305555555555556) < 1.0e-12)
-        self.assertTrue(np.abs(metrics['tsps'] - 0.9444444444444444) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["tsns"] - 0.9305555555555556) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["tsps"] - 0.9444444444444444) < 1.0e-12)

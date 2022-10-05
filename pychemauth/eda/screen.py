@@ -11,10 +11,10 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scipy
 import seaborn as sns
 import sklearn
 import tqdm
-import scipy
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_X_y
 
@@ -209,13 +209,11 @@ class RedFlags:
                             found = True
 
         return found
-        
+
     def check_duplicates(self, X, y=None):
-        """
-        Check if any rows in X are duplicates (numerically).
-        """
+        """Check if any rows in X are duplicates (numerically)."""
         tol = 1.0e-12
-        if np.any(scipy.spatial.distance.pdist(X, metric='euclidean') < tol):
+        if np.any(scipy.spatial.distance.pdist(X, metric="euclidean") < tol):
             warnings.warn("There are duplicate rows in X")
             return True
         else:

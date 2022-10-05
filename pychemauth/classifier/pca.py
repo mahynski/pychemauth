@@ -36,7 +36,14 @@ class PCA(ClassifierMixin, BaseEstimator):
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
-    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust='semi'):
+    def __init__(
+        self,
+        n_components=1,
+        alpha=0.05,
+        gamma=0.01,
+        scale_x=False,
+        robust="semi",
+    ):
         """
         Instantiate the class.
 
@@ -52,15 +59,15 @@ class PCA(ClassifierMixin, BaseEstimator):
         scale_x : bool
             Whether or not to scale X columns by the standard deviation.
         robust : str
-            Whether or not to apply robust methods to estimate degrees of freedom.  
+            Whether or not to apply robust methods to estimate degrees of freedom.
             'full' is not implemented yet, but involves robust PCA and robust
-            degrees of freedom estimation; 'semi' (default) is described in [4] and 
+            degrees of freedom estimation; 'semi' (default) is described in [4] and
             uses classical PCA but robust DoF estimation; all other values
             revert to classical PCA and classical DoF estimation.
-            If the dataset is clean (no outliers) it is best practice to use a classical 
+            If the dataset is clean (no outliers) it is best practice to use a classical
             method [2], however, to initially test for and potentially remove these
-            points, a robust variant is recommended. This is why 'semi' is the 
-            default value. 
+            points, a robust variant is recommended. This is why 'semi' is the
+            default value.
         """
         self.set_params(
             **{
@@ -68,7 +75,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
-                "robust": robust
+                "robust": robust,
             }
         )
         self.is_fitted_ = False
@@ -86,7 +93,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
-            "robust": self.robust
+            "robust": self.robust,
         }
 
     def matrix_X_(self, X):
@@ -123,7 +130,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         self.__X_ = check_array(self.__X_, accept_sparse=False)
         self.n_features_in_ = self.__X_.shape[1]
 
-        if self.robust == 'full':
+        if self.robust == "full":
             raise NotImplementedError
         else:
             # 1. Preprocess X data
@@ -139,7 +146,10 @@ class PCA(ClassifierMixin, BaseEstimator):
                 ]
             )
             lower_bound = 1
-            if self.n_components > upper_bound or self.n_components < lower_bound:
+            if (
+                self.n_components > upper_bound
+                or self.n_components < lower_bound
+            ):
                 raise Exception(
                     "n_components must [{}, min(n_samples-1 [{}], \
     n_features [{}])] = [{}, {}].".format(
@@ -164,8 +174,12 @@ class PCA(ClassifierMixin, BaseEstimator):
         # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
         self.__Nh_, self.__h0_ = estimate_dof(
             h_vals,
-            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
-            initial_guess=self.n_components
+            robust=(
+                True
+                if (self.robust == "semi" or self.robust == "full")
+                else False
+            ),
+            initial_guess=self.n_components,
         )
 
         # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
@@ -173,8 +187,13 @@ class PCA(ClassifierMixin, BaseEstimator):
         # (n_components<=J)
         self.__Nq_, self.__q0_ = estimate_dof(
             q_vals,
-            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
-            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+            robust=(
+                True
+                if (self.robust == "semi" or self.robust == "full")
+                else False
+            ),
+            initial_guess=np.min([len(q_vals), self.n_features_in_])
+            - self.n_components,
         )
 
         self.__c_crit_ = scipy.stats.chi2.ppf(
@@ -222,15 +241,13 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         X_raw_std = self.__x_scaler_.transform(X)
         T = self.__pca_.transform(X_raw_std)
-        X_pred = self.__pca_.inverse_transform(
-            T
-        )
+        X_pred = self.__pca_.inverse_transform(T)
 
         # OD
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
 
         # SD
-        h_vals = np.sum(T ** 2 / self.__pca_.explained_variance_, axis=1) / (
+        h_vals = np.sum(T**2 / self.__pca_.explained_variance_, axis=1) / (
             self.__X_.shape[0] - 1
         )
 
@@ -373,17 +390,17 @@ class PCA(ClassifierMixin, BaseEstimator):
         Plot an "extremes plot" [2] to evalute the quality of PCA-based models.
 
         This modifies the alpha value (type I error rate), keeping all other parameters
-        fixed, and computes the number of expected extremes (n_exp) vs. the number 
+        fixed, and computes the number of expected extremes (n_exp) vs. the number
         observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
 
-        The 95% tolerance limit is given in black.  Points which fall outside these 
+        The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
 
         Notes
         -----
         Both extreme points and outliers are considered "extremes" here.  In practice,
         outliers should be removed before performing this analysis anyway.
-        
+
         Parameters
         ----------
         X : ndarray
@@ -401,36 +418,38 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
-        n_values = np.arange(1, int(upper_frac*N_tot)+1)
+        n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
         n_observed = []
         for a in alpha_values:
             params = self.get_params()
-            params['alpha'] = a
+            params["alpha"] = a
             model_ = PCA(**params)
             model_.fit(X)
             extremes, outliers = model_.check_outliers(X)
             n_observed.append(np.sum(extremes) + np.sum(outliers))
         n_observed = np.array(n_observed)
-        
+
         if ax is None:
             fig = plt.figure()
             ax = plt.gca()
 
-        n_upper = n_values + 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
-        n_lower = n_values - 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
-        ax.plot(n_values, n_upper, '-', color='k', alpha=0.5)
-        ax.plot(n_values, n_values, '-', color='k', alpha=0.5)
-        ax.plot(n_values, n_lower, '-', color='k', alpha=0.5)
-        ax.fill_between(n_values, y1=n_upper, y2=n_lower, color='gray', alpha=0.25)
+        n_upper = n_values + 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        n_lower = n_values - 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        ax.plot(n_values, n_upper, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_values, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_lower, "-", color="k", alpha=0.5)
+        ax.fill_between(
+            n_values, y1=n_upper, y2=n_lower, color="gray", alpha=0.25
+        )
 
         mask = (n_lower <= n_observed) & (n_observed <= n_upper)
-        ax.plot(n_values[mask], n_observed[mask], 'o', color='green')
-        ax.plot(n_values[~mask], n_observed[~mask], 'o', color='red')
+        ax.plot(n_values[mask], n_observed[mask], "o", color="green")
+        ax.plot(n_values[~mask], n_observed[~mask], "o", color="red")
 
-        ax.set_xlabel('Expected')
-        ax.set_ylabel('Observed')
+        ax.set_xlabel("Expected")
+        ax.set_ylabel("Observed")
 
         return ax
 

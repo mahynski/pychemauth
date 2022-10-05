@@ -9,5 +9,5 @@ __all__ = [
     "eda",
     "manifold",
     "preprocessing",
-    "regressor"
+    "regressor",
 ]

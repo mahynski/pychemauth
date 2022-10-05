@@ -240,9 +240,9 @@ class PCA_IA:
 
     This implementation follows:
 
-    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," 
+    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
-    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," 
+    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
     """
 
@@ -570,9 +570,9 @@ class PLS_IA:
 
     This implementation follows:
 
-    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I," 
+    [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
-    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II," 
+    [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
     """
 

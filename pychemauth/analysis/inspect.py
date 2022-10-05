@@ -16,6 +16,7 @@ from sklearn.model_selection import StratifiedKFold, learning_curve
 # https://christophm.github.io/interpretable-ml-book/
 # https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
+
 class InspectModel:
     """Inspect machine learning models."""
 
@@ -131,7 +132,7 @@ class InspectModel:
 
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
         https://github.com/rasbt/python-machine-learning-book-2nd-edition
-        
+
         Also see scikit-learn's documentation:
         https://scikit-learn.org/stable/modules/learning_curve.html
 

@@ -17,9 +17,9 @@ class NestedCV:
     the score from the test fold on the outer loop, after the best model is
     (usually) retrained on the entire training set using the best
     hyperparameters determined via the inner loop.  For doing statistical
-    tests we want to have the validation scores from all the inner loops 
-    and are not interested in re-training/scoring on the outer loop.  The 
-    outer loop is just a way to "shift" or decorrelate the data chunks 
+    tests we want to have the validation scores from all the inner loops
+    and are not interested in re-training/scoring on the outer loop.  The
+    outer loop is just a way to "shift" or decorrelate the data chunks
     relative to simple repeated CV.
 
     This is used to assess the generalization error of an entire pipeline,
@@ -34,21 +34,21 @@ class NestedCV:
     when comparing different pipelines.  After pipelines are evaluated, the
     chosen one may be further optimized with more care, but these estimates
     of performance and uncertainty are expected to hold.
-    
+
     "Nested CV" typically uses the held-out test fold for an unbiased esimate
-    of the generalization error, as described above [1].  However, extensive 
-    real-world tests suggest that using the scores from the "flat CV" (the 
-    validation set) which is also used to identify optimal hyperparameters, 
-    does NOT make practical difference [2].  Therefore, we use the inner 
-    scores directly in concert with the statistical tests developed for cases 
-    where hyperparameter optimization was not assumed to be occuring 
+    of the generalization error, as described above [1].  However, extensive
+    real-world tests suggest that using the scores from the "flat CV" (the
+    validation set) which is also used to identify optimal hyperparameters,
+    does NOT make practical difference [2].  Therefore, we use the inner
+    scores directly in concert with the statistical tests developed for cases
+    where hyperparameter optimization was not assumed to be occuring
     simultaneously.
-    
-    [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and 
-    subsequent selection bias in performance evaluation. J. Mach. Learn. Res 
+
+    [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and
+    subsequent selection bias in performance evaluation. J. Mach. Learn. Res
     2010, 11, 2079-2107.
-    [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when 
-    selecting classifiers is overzealous for most practical applications." 
+    [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when
+    selecting classifiers is overzealous for most practical applications."
     Expert Systems with Applications 182 (2021): 115222.
     """
 

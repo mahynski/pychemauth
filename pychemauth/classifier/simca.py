@@ -29,7 +29,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     that belong to other classes during training - they are just ignored.  This
     is important for integration with other scikit-learn, etc. workflows.
 
-    Note that when you are optimizing the model using TEFF, TSPS is 
+    Note that when you are optimizing the model using TEFF, TSPS is
     computed by using the alternative classes.  In that case, the model choice
     is influenced by these alternatives.  This is a "compliant" approach,
     however, if you use TSNS instead of TEFF the model only uses information
@@ -39,7 +39,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     In rigorous models, alpha should be fixed as other hyperparameters are adjusted
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected.
-    
+
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
@@ -59,7 +59,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         use="rigorous",
         scale_x=True,
         iterate=False,
-        robust='semi',
+        robust="semi",
     ):
         """
         Instantiate the classifier.
@@ -70,7 +70,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         differentiated from them.  This relies on the type I error (alpha) only.
         The final metric used to rate the overall model can be set to TEFF or TSPS,
         for example, if you wish to change how the model is evaluated.
-        
+
         When TEFF is used to choose a model, this is a "compliant" approach,
         whereas when TSNS is used instead, this is a "rigorous" approach. [1]
 
@@ -97,17 +97,17 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             Whether or not to use the iterative outlier removal scheme described
             in Ref. [2].  This is ignored when NOT using DD-SIMCA.
         robust : str
-            Whether or not to apply robust methods to estimate degrees of freedom.  
+            Whether or not to apply robust methods to estimate degrees of freedom.
             This is ignored when NOT using DD-SIMCA.
             'full' is not implemented yet, but involves robust PCA and robust
-            degrees of freedom estimation; 'semi' (default) is described in [3] and 
+            degrees of freedom estimation; 'semi' (default) is described in [3] and
             uses classical PCA but robust DoF estimation; all other values
             revert to classical PCA and classical DoF estimation.
-            If the dataset is clean (no outliers) it is best practice to use a classical 
+            If the dataset is clean (no outliers) it is best practice to use a classical
             method [3], however, to initially test for and potentially remove these
-            points, a robust variant is recommended. This is why 'semi' is the 
+            points, a robust variant is recommended. This is why 'semi' is the
             default value. If `iterate`=True then this value is ignored and a robust
-            method is applied to iteratively clean the dataset, while the final 
+            method is applied to iteratively clean the dataset, while the final
             fitting uses the classical approach.
         """
         self.set_params(
@@ -119,7 +119,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 "use": use,
                 "scale_x": scale_x,
                 "iterate": iterate,
-                "robust": robust
+                "robust": robust,
             }
         )
         self.is_fitted_ = False
@@ -141,7 +141,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             "use": self.use,
             "scale_x": self.scale_x,
             "iterate": self.iterate,
-            "robust": self.robust
+            "robust": self.robust,
         }
 
     def fit(self, X, y):
@@ -180,7 +180,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 alpha=self.alpha,
                 scale_x=self.scale_x,
                 iterate=self.iterate,
-                robust=self.robust
+                robust=self.robust,
             )
         else:
             raise ValueError("{} is not a recognized style.".format(self.style))
@@ -233,7 +233,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 
         The "rigorous" approach uses only the target class to score
         the model and returns -(TSNS - (1-alpha))^2; the "compliant"
-        approach returns TEFF. In both cases, a larger output is a 
+        approach returns TEFF. In both cases, a larger output is a
         "better" model.
 
         Parameters
@@ -242,7 +242,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             Inputs.
         y : ndarray
             Class labels or indices.
-            
+
         Returns
         -------
         score : float
@@ -250,39 +250,39 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         if self.use == "rigorous":
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
-            
+
             m = self.metrics(X, y)
-            return -(m['tsns'] - (1-self.alpha))**2
+            return -((m["tsns"] - (1 - self.alpha)) ** 2)
         elif self.use == "compliant":
             # Make sure we have alternatives to test on
             a = set(np.unique(y))
             a.discard(self.target_class)
             assert len(a) > 0
-            
+
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
-            
+
             m = self.metrics(X, y)
-            return m['teff']
+            return m["teff"]
         else:
-            raise ValueError("Unrecognized setting use="+str(self.use))
-        
+            raise ValueError("Unrecognized setting use=" + str(self.use))
+
     def metrics(self, X, y):
         """
         Compute figures of merit for the model.
 
         If using a set with only the target class present, then
-        TSPS = np.nan and TEFF = TSNS.  If only alternatives present, 
-        sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF 
+        TSPS = np.nan and TEFF = TSNS.  If only alternatives present,
+        sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF
         as a geometric mean of TSNS and TSPS.
-        
+
         Parameters
         ----------
         X : ndarray
             Inputs.
         y : ndarray
             Class labels or indices.
-            
+
         Returns
         -------
         metrics : dict
@@ -307,9 +307,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             # Testing on nothing but the target class, can't evaluate TSPS
             TSPS_ = np.nan
         else:
-            TSPS_ = 1.0 - np.sum(
-                self.__model_.predict(X[mask])
-            ) / np.sum(mask)
+            TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(mask)
 
         mask = y == self.target_class
         if np.sum(mask) == 0:
@@ -380,8 +378,8 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     79 (2005) 10-21.
     [2] "Pattern recognition by means of disjoint principal components models,"
     S. Wold, Pattern Recognition 8 (1976) 127–139.
-    [3] "Decision criteria for soft independent modelling of class analogy 
-    applied to near infrared data" De Maesschalk et al., Chemometrics and 
+    [3] "Decision criteria for soft independent modelling of class analogy
+    applied to near infrared data" De Maesschalk et al., Chemometrics and
     Intelligent Laboratory Systems 47 (1999) 65-77.
     """
 
@@ -730,7 +728,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
-    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True, iterate=False, robust='semi'):
+    def __init__(
+        self,
+        n_components,
+        alpha=0.05,
+        gamma=0.01,
+        scale_x=True,
+        iterate=False,
+        robust="semi",
+    ):
         """
         Instantiate the class.
 
@@ -756,16 +762,16 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             data it is originally provided for training; it keeps only "regular"
             samples (inliers and extremes) to train the model.
         robust : str
-            Whether or not to apply robust methods to estimate degrees of freedom.  
+            Whether or not to apply robust methods to estimate degrees of freedom.
             'full' is not implemented yet, but involves robust PCA and robust
-            degrees of freedom estimation; 'semi' (default) is described in [2] and 
+            degrees of freedom estimation; 'semi' (default) is described in [2] and
             uses classical PCA but robust DoF estimation; all other values
             revert to classical PCA and classical DoF estimation.
-            If the dataset is clean (no outliers) it is best practice to use a classical 
+            If the dataset is clean (no outliers) it is best practice to use a classical
             method [2], however, to initially test for and potentially remove these
-            points, a robust variant is recommended. This is why 'semi' is the 
+            points, a robust variant is recommended. This is why 'semi' is the
             default value. If `iterate`=True then this value is ignored and a robust
-            method is applied to iteratively clean the dataset, while the final 
+            method is applied to iteratively clean the dataset, while the final
             fitting uses the classical approach.
         """
         self.set_params(
@@ -775,7 +781,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 "gamma": gamma,
                 "scale_x": scale_x,
                 "iterate": iterate,
-                "robust": robust
+                "robust": robust,
             }
         )
         self.is_fitted_ = False
@@ -794,7 +800,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "gamma": self.gamma,
             "scale_x": self.scale_x,
             "iterate": self.iterate,
-            "robust": self.robust
+            "robust": self.robust,
         }
 
     def column_y_(self, y):
@@ -854,28 +860,42 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             self.n_components
             > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
         ):
-            raise Exception("Reduce the number of PCA components {} {} {}".format(self.n_components, self.n_features_in_, self.__X_.shape[0]))
+            raise Exception(
+                "Reduce the number of PCA components {} {} {}".format(
+                    self.n_components, self.n_features_in_, self.__X_.shape[0]
+                )
+            )
 
         def train(X, robust):
             """
+            Train the model.
+
             Parameters
             ----------
+            X : ndarray
+                Data to train on.
             robust : str
                 'full' = robust PCA + robust DD-SIMCA estimation in [2] (not yet implemented);
                 'semi' = classical PCA + robust DD-SIMCA estimation in [2] ("RDD-SIMCA");
                 otherwise = classical PCA + classical DD-SIMCA estimation in [2] ("CDD-SIMCA");
             """
-            self.__X_ = X.copy() # This is needed so self.h_q_() works correctly
+            self.__X_ = (
+                X.copy()
+            )  # This is needed so self.h_q_() works correctly
 
-            if robust == 'full':
+            if robust == "full":
                 raise NotImplementedError
             else:
                 # 1. Standardize X
-                self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
+                self.__ss_ = CorrectedScaler(
+                    with_mean=True, with_std=self.scale_x
+                )
                 self.__ss_.fit(X)
 
                 # 2. Perform PCA on standardized coordinates
-                self.__pca_ = PCA(n_components=self.n_components, random_state=0)
+                self.__pca_ = PCA(
+                    n_components=self.n_components, random_state=0
+                )
                 self.__pca_.fit(self.__ss_.transform(X))
 
             # 3. Compute critical distances
@@ -884,8 +904,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
             self.__Nh_, self.__h0_ = estimate_dof(
                 h_vals,
-                robust=(True if (robust == 'semi' or robust == 'full') else False),
-                initial_guess=self.n_components
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=self.n_components,
             )
 
             # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
@@ -893,13 +915,16 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             # (n_components<=J)
             self.__Nq_, self.__q0_ = estimate_dof(
                 q_vals,
-                robust=(True if (robust == 'semi' or robust == 'full') else False),
-                initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=np.min([len(q_vals), self.n_features_in_])
+                - self.n_components,
             )
 
             # Eq. 19 in [2]
             self.__c_crit_ = scipy.stats.chi2.ppf(
-                 1.0 - self.alpha, self.__Nh_ + self.__Nq_
+                1.0 - self.alpha, self.__Nh_ + self.__Nq_
             )
 
             # Eq. 20 in [2]
@@ -916,20 +941,26 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             outer_iters = 0
             max_outer = 100
             max_inner = 100
-            while(True): # Outer loop
-                if (outer_iters >= max_outer):
-                    raise Exception("Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping).")
-                train(X_tmp, robust='semi')
+            while True:  # Outer loop
+                if outer_iters >= max_outer:
+                    raise Exception(
+                        "Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping)."
+                    )
+                train(X_tmp, robust="semi")
                 _, outliers = self.check_outliers(X_tmp)
                 X_out = copy.copy(X_tmp[outliers, :])
                 inner_iters = 0
-                while (np.sum(outliers) > 0):
-                    if (inner_iters >= max_inner):
-                        raise Exception("Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking).")
+                while np.sum(outliers) > 0:
+                    if inner_iters >= max_inner:
+                        raise Exception(
+                            "Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking)."
+                        )
                     X_tmp = X_tmp[~outliers, :]
                     if len(X_tmp) == 0:
-                        raise Exception("Unable to iteratively clean data; all observations are considered outliers.")
-                    train(X_tmp, robust='semi')
+                        raise Exception(
+                            "Unable to iteratively clean data; all observations are considered outliers."
+                        )
+                    train(X_tmp, robust="semi")
                     _, outliers = self.check_outliers(X_tmp)
                     X_out = np.vstack((X_out, X_tmp[outliers, :]))
                     inner_iters += 1
@@ -938,7 +969,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 # Check that all outliers are predicted to be outliers in the latest version trained
                 # on only inlier and extremes.
                 outer_iters += 1
-                if (len(X_out) > 0):
+                if len(X_out) > 0:
                     _, outliers = self.check_outliers(X_out)
                     X_return = X_out[~outliers, :]
                     if len(X_return) == 0:
@@ -952,10 +983,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [3].
             train(X_tmp, robust=False)
-            self.__iterate_history = {'inner_loops': inner_iters, 
-                                      'outer_loops': outer_iters,
-                                      'removed': X_out
-                                     }
+            self.__iterate_history = {
+                "inner_loops": inner_iters,
+                "outer_loops": outer_iters,
+                "removed": X_out,
+            }
 
         self.is_fitted_ = True
         return self
@@ -994,7 +1026,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
 
         # SD
-        h_vals = np.sum(T ** 2 / self.__pca_.explained_variance_, axis=1) / (
+        h_vals = np.sum(T**2 / self.__pca_.explained_variance_, axis=1) / (
             self.__X_.shape[0] - 1
         )
 
@@ -1199,17 +1231,17 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Plot an "extremes plot" [2] to evalute the quality of PCA-based models.
 
         This modifies the alpha value (type I error rate), keeping all other parameters
-        fixed, and computes the number of expected extremes (n_exp) vs. the number 
+        fixed, and computes the number of expected extremes (n_exp) vs. the number
         observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
 
-        The 95% tolerance limit is given in black.  Points which fall outside these 
+        The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
 
         Notes
         -----
         Both extreme points and outliers are considered "extremes" here.  In practice,
         outliers should be removed before performing this analysis anyway.
-        
+
         Parameters
         ----------
         X : ndarray
@@ -1227,36 +1259,38 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
-        n_values = np.arange(1, int(upper_frac*N_tot)+1)
+        n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
         n_observed = []
         for a in alpha_values:
             params = self.get_params()
-            params['alpha'] = a
+            params["alpha"] = a
             model_ = DDSIMCA_Model(**params)
             model_.fit(X)
             extremes, outliers = model_.check_outliers(X)
             n_observed.append(np.sum(extremes) + np.sum(outliers))
         n_observed = np.array(n_observed)
-        
+
         if ax is None:
             fig = plt.figure()
             ax = plt.gca()
 
-        n_upper = n_values + 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
-        n_lower = n_values - 2.0*np.sqrt(n_values*(1.0 - n_values / N_tot))
-        ax.plot(n_values, n_upper, '-', color='k', alpha=0.5)
-        ax.plot(n_values, n_values, '-', color='k', alpha=0.5)
-        ax.plot(n_values, n_lower, '-', color='k', alpha=0.5)
-        ax.fill_between(n_values, y1=n_upper, y2=n_lower, color='gray', alpha=0.25)
+        n_upper = n_values + 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        n_lower = n_values - 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        ax.plot(n_values, n_upper, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_values, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_lower, "-", color="k", alpha=0.5)
+        ax.fill_between(
+            n_values, y1=n_upper, y2=n_lower, color="gray", alpha=0.25
+        )
 
         mask = (n_lower <= n_observed) & (n_observed <= n_upper)
-        ax.plot(n_values[mask], n_observed[mask], 'o', color='green')
-        ax.plot(n_values[~mask], n_observed[~mask], 'o', color='red')
+        ax.plot(n_values[mask], n_observed[mask], "o", color="green")
+        ax.plot(n_values[~mask], n_observed[~mask], "o", color="red")
 
-        ax.set_xlabel('Expected')
-        ax.set_ylabel('Observed')
+        ax.set_xlabel("Expected")
+        ax.set_ylabel("Observed")
 
         return ax
 

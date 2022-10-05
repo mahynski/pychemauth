@@ -4,7 +4,7 @@ default_language_version:
     python: python3.7
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.3.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -18,39 +18,32 @@ repos:
     -   id: requirements-txt-fixer
 
 -   repo: https://github.com/pycqa/isort
-    rev: 5.7.0
+    rev: 5.10.1
     hooks:
     -   id: isort
         args: ["--profile", "black", "--filter-files"]
         language: python
         types: [python]
 -   repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 22.8.0
     hooks:
     -   id: black
         args: ["--line-length", "80"]
         language: python
         types: [python]
--   repo: https://github.com/pycqa/bandit
-    rev: 1.7.0
-    hooks:
-    -   id: bandit
-        args: ["-ll", "--ini", "setup.cfg", "--recursive"]
-        language: python
-        types: [python]
 -   repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.7.0
+    rev: v1.9.0
     hooks:
     -   id: python-use-type-annotations
 -   repo: https://github.com/adrienverge/yamllint
-    rev: v1.25.0
+    rev: v1.28.0
     hooks:
     -   id: yamllint
         args: ["-d", "{ignore: .pre-commit-config.yaml}"]
         language: python
         types: [yaml]
 -   repo: https://github.com/pycqa/pydocstyle
-    rev: 5.1.1
+    rev: 6.1.1
     hooks:
     -   id: pydocstyle
         language: python

@@ -4,6 +4,7 @@ General utility functions.
 author: nam
 """
 import copy
+
 import bokeh
 import matplotlib.pyplot as plt
 import numpy as np
@@ -173,22 +174,28 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
     [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
-
     if not robust:
         # Eq. 12 in [2]
         u0 = np.mean(u_vals)
-        Nu = int(np.max([round(2.0 * u0 ** 2 / np.std(u_vals, ddof=1) ** 2, 0), 1]))
+        Nu = int(
+            np.max([round(2.0 * u0**2 / np.std(u_vals, ddof=1) ** 2, 0), 1])
+        )
     else:
+
         def err2(N, vals):
             # Use a "robust" method for estimating DoF - solve Eq. 14 in [2].
             if N < 1:
                 N = 1
-            a = (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)) * np.median(vals) / scipy.stats.chi2.ppf(0.5, N)
-            b = scipy.stats.iqr(vals, rng=(25, 75)) 
+            a = (
+                (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N))
+                * np.median(vals)
+                / scipy.stats.chi2.ppf(0.5, N)
+            )
+            b = scipy.stats.iqr(vals, rng=(25, 75))
 
             return (a - b) ** 2
 
-        def approximate(vals): 
+        def approximate(vals):
             # Eq. 16 in [2]
             a = 0.72414
             b = 2.68631
@@ -196,20 +203,33 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
             M = np.median(vals)
             S = scipy.stats.iqr(vals, rng=(25, 75))
 
-            return int(round(np.exp(((1.0/a) * np.log(b*M/S))**(1.0/c)), 0))
+            return int(
+                round(np.exp(((1.0 / a) * np.log(b * M / S)) ** (1.0 / c)), 0)
+            )
 
-        def averaged_estimator(N, vals): 
+        def averaged_estimator(N, vals):
             # Eq. 17 in [2]
             M = np.median(vals)
             S = scipy.stats.iqr(vals, rng=(25, 75))
 
-            return 0.5*N*(M/scipy.stats.chi2.ppf(0.5, N) + S/(scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)))
+            return (
+                0.5
+                * N
+                * (
+                    M / scipy.stats.chi2.ppf(0.5, N)
+                    + S
+                    / (
+                        scipy.stats.chi2.ppf(0.75, N)
+                        - scipy.stats.chi2.ppf(0.25, N)
+                    )
+                )
+            )
 
         res = scipy.optimize.minimize(
-            err2, 
-            (1 if initial_guess is None else initial_guess), 
-            args=(u_vals), 
-            method="Nelder-Mead"
+            err2,
+            (1 if initial_guess is None else initial_guess),
+            args=(u_vals),
+            method="Nelder-Mead",
         )
         if res.success:
             # Direct method, if possible
@@ -217,7 +237,7 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
         else:
             # Else, use analytical approximation
             Nu = approximate(u_vals)
-        u0 = averaged_estimator(Nu, u_vals) 
+        u0 = averaged_estimator(Nu, u_vals)
 
     return Nu, u0
 
@@ -241,22 +261,24 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
         Symmetric, positive definite matrix approximation of S.
     """
     S = np.asarray(S, np.float64)
-    assert S.shape[0] == S.shape[1] # Check square
-    assert np.allclose(S, (S+S.T)/2.0) # Check symmetric
+    assert S.shape[0] == S.shape[1]  # Check square
+    assert np.allclose(S, (S + S.T) / 2.0)  # Check symmetric
 
     for j in range(outer_max):
-        min_ = np.min(np.abs(S))/1000. # Drop down by 3 orders of magnitude
-        max_ = np.min(np.abs(S))*10. # Within one order of magnitude of min
-        tol = min_ + j*(max_ - min_)/float(outer_max)
-        
+        min_ = np.min(np.abs(S)) / 1000.0  # Drop down by 3 orders of magnitude
+        max_ = np.min(np.abs(S)) * 10.0  # Within one order of magnitude of min
+        tol = min_ + j * (max_ - min_) / float(outer_max)
+
         recon = copy.copy(S)
 
         # Compute evecs, evals, set all evals to tol, reconstruct
         for i in range(inner_max):
             evals, evecs = np.linalg.eig(recon)
-            if (np.any(np.abs(evals) < tol)):
+            if np.any(np.abs(evals) < tol):
                 evals[np.abs(evals) < tol] = tol
-                recon = np.matmul(evecs, np.matmul(np.diag(evals), np.linalg.inv(evecs)))
+                recon = np.matmul(
+                    evecs, np.matmul(np.diag(evals), np.linalg.inv(evecs))
+                )
             else:
                 break
 
@@ -268,11 +290,11 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
             safe = False
 
         if np.max(np.abs(S - recon)) > tol:
-            # If the maximum difference is more than the eigenvalue 
+            # If the maximum difference is more than the eigenvalue
             # tolerance, reject this.
             safe = False
 
         if safe:
             return recon
-        
+
     raise Exception("Unable to create a symmetric, positive definite matrix")

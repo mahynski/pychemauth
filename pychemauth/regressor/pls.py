@@ -27,11 +27,13 @@ class PLS(RegressorMixin, BaseEstimator):
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
-    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev, 
+    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev,
     Analytical Chemistry 92 (2020) 2656−2664.
     """
 
-    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust=True):
+    def __init__(
+        self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust=True
+    ):
         """
         Instantiate the class.
 
@@ -47,11 +49,11 @@ class PLS(RegressorMixin, BaseEstimator):
         scale_x : bool
             Whether or not to scale X columns by the standard deviation.
         robust : bool
-            Whether or not to apply robust methods to estimate degrees of freedom.  
+            Whether or not to apply robust methods to estimate degrees of freedom.
             True (default) is described in [3,4] and uses robust DoF estimation, otherwise
-            classical estimators are used. If the dataset is clean (no outliers) 
-            it is best practice to use a classical method [3], however, to initially 
-            test for and potentially remove these points, a robust variant is recommended. 
+            classical estimators are used. If the dataset is clean (no outliers)
+            it is best practice to use a classical method [3], however, to initially
+            test for and potentially remove these points, a robust variant is recommended.
             This is why `True` is the default value.
         """
         self.set_params(
@@ -60,7 +62,7 @@ class PLS(RegressorMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
-                "robust": robust
+                "robust": robust,
             }
         )
         self.is_fitted_ = False
@@ -78,7 +80,7 @@ class PLS(RegressorMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
-            "robust": self.robust
+            "robust": self.robust,
         }
 
     def column_y_(self, y):
@@ -186,9 +188,7 @@ n_features [{}])] = [{}, {}].".format(
 
         # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
         self.__Nh_, self.__h0_ = estimate_dof(
-            h_vals,
-            robust=self.robust,
-            initial_guess=self.n_components
+            h_vals, robust=self.robust, initial_guess=self.n_components
         )
 
         # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
@@ -197,17 +197,20 @@ n_features [{}])] = [{}, {}].".format(
         self.__Nq_, self.__q0_ = estimate_dof(
             q_vals,
             robust=self.robust,
-            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+            initial_guess=np.min([len(q_vals), self.n_features_in_])
+            - self.n_components,
         )
 
         self.__Nf_ = self.__Nh_ + self.__Nq_
-        self.__f0_ = self.__Nf_ # This term is a matter of convention to match the literature
+        self.__f0_ = (
+            self.__Nf_
+        )  # This term is a matter of convention to match the literature
 
-        z_vals = self.z_(self.__X_, self.__y_) # Must come after fitting is otherwise complete
+        z_vals = self.z_(
+            self.__X_, self.__y_
+        )  # Must come after fitting is otherwise complete
         self.__Nz_, self.__z0_ = estimate_dof(
-            z_vals,
-            robust=self.robust,
-            initial_guess=self.__y_.shape[1]
+            z_vals, robust=self.robust, initial_guess=self.__y_.shape[1]
         )
 
         self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
@@ -269,7 +272,9 @@ n_features [{}])] = [{}, {}].".format(
         h, q = self.h_q_(X)
         f = self.f_(h, q)
         z = self.z_(X, y)
-        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_ # = f + Nz*z/z0
+        g = (
+            self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_
+        )  # = f + Nz*z/z0
         return g
 
     def transform(self, X):

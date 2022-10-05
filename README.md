@@ -91,7 +91,7 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 * [EllipticManifold](manifold/elliptic.py) - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary to detect outliers.
 
 ## General Machine Learning [Large amount of data available]
-> These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses. 
+> These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
 * Outlier detection with [PyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive-Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
@@ -113,7 +113,7 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 Vist the [github repo](https://github.com/mahynski/pychemauth) to check for the most recent version and replace "X.X.X" below.
 
 ~~~ bash
-$ git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1 
+$ git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1
 $ cd pychemauth
 $ pip install .
 ~~~
@@ -191,7 +191,7 @@ Other tools used in this repository include:
 
 # Citation
 
-This package relies on contributions from many other sources.  If you use these tools be sure to cite the original authors. 
+This package relies on contributions from many other sources.  If you use these tools be sure to cite the original authors.
 
 If you use UMAP refer to the authors' [github repo](https://github.com/lmcinnes/umap) for information about citation.  At the very least, you should cite the manuscript associated with the software itself:
 

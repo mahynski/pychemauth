@@ -24,9 +24,9 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     """
     PLS-DA for classification.
 
-    Implements 'hard' classification as an 'LDA-like' criterion, and a 
-    'soft' classification using a 'QDA-like' criterion as described in [1].  
-    Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard 
+    Implements 'hard' classification as an 'LDA-like' criterion, and a
+    'soft' classification using a 'QDA-like' criterion as described in [1].
+    Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard
     PLS-DA always assigns exactly one class to a point.
 
     This relies on `sklearn.cross_decomposition.PLSRegression` which can
@@ -42,8 +42,8 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     integers passing -1 (default) will signify an unassigned point. This is
     only relevant for the soft version.
     * A rule of thumb for the number of components to use is between K/2(K-1)
-    and K/2(K+1) to provide sufficient complexity but avoid overfitting; K is 
-    the total number of classes. This is not rigorous and may not hold in many 
+    and K/2(K+1) to provide sufficient complexity but avoid overfitting; K is
+    the total number of classes. This is not rigorous and may not hold in many
     cases. Cross-validation should be used to evalute this parameter, in general.
 
     [1] "Multiclass partial least squares discriminant analysis: Taking the
@@ -198,8 +198,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         # 1. Preprocess data (one hot encoding, centering)
         self.__ohencoder_ = OneHotEncoder(
-            sparse=False,
-            handle_unknown='error'
+            sparse=False, handle_unknown="error"
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x
@@ -234,15 +233,17 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 self.__X_.shape[1],
             ]
         )
-        
+
         lower_bound = 1
 
         # In general, usually K/2(K-1) < N < K/2(K+1), where K is the number of
         # classes, is sometimes heuristically recommended as being optimal.
         # lb = len(self.__ohencoder_.categories_[0])-1 is another rule of thumb
         # which is always less than the first rule (K >=2, which is always true).
-        if self.n_components < len(self.__ohencoder_.categories_[0])-1:
-            warnings.warn("Warning - n_components < number of classes - 1; this may result in instabilities")
+        if self.n_components < len(self.__ohencoder_.categories_[0]) - 1:
+            warnings.warn(
+                "Warning - n_components < number of classes - 1; this may result in instabilities"
+            )
 
         # Note that scikit-learn currently has a typo in its documentation. Only
         # PLSCanonical has an upper bound of min(n_samples, n_features,
@@ -270,7 +271,9 @@ n_features [{}])] = [{}, {}].".format(
         )  # Already scaled as needed, centering is automatic
         _ = self.__pls_.fit(self.__X_, self.__y_)
 
-        y_hat_train = self.__y_pls_scaler_.inverse_transform(self.__pls_.predict(self.__X_))
+        y_hat_train = self.__y_pls_scaler_.inverse_transform(
+            self.__pls_.predict(self.__X_)
+        )
 
         # 3. Perform PCA on y_hat_train
         self.__pca_ = PCA(
@@ -278,11 +281,9 @@ n_features [{}])] = [{}, {}].".format(
             random_state=0,
         )
 
-        # scikit-learn's pca automatically centers 
-        self.__T_train_ = self.__pca_.fit_transform(
-            y_hat_train
-        )
-        
+        # scikit-learn's pca automatically centers
+        self.__T_train_ = self.__pca_.fit_transform(y_hat_train)
+
         # Does centering internally
         self.__class_centers_ = self.__pca_.transform(
             np.eye(len(self.__ohencoder_.categories_[0]))
@@ -453,7 +454,7 @@ n_features [{}])] = [{}, {}].".format(
 
         T_test = self.transform(X)
 
-        distances = [] # Actually squared
+        distances = []  # Actually squared
         for t in T_test:
             if self.style.lower() == "soft":  # This 'soft' rule is based on QDA
                 distances.append(
@@ -529,7 +530,7 @@ n_features [{}])] = [{}, {}].".format(
         the Mahalanobis distance to compute the (normal) probability
         as a function of this distance from the class' center. The
         cutoff distance was computed using chi-squared statistics such
-        that the boundary encompasses 100(1-alpha)% of the true members 
+        that the boundary encompasses 100(1-alpha)% of the true members
         in the final PCA space. These probabilities do NOT sum to 1
         across all categories.
 
@@ -560,7 +561,7 @@ n_features [{}])] = [{}, {}].".format(
         Each entry is a simple binary yes/no prediction that the point is an
         inlier for each class.
 
-        The softmax function (hard boundaries) will result in probabilities 
+        The softmax function (hard boundaries) will result in probabilities
         which sum to 1.
 
         Parameters
@@ -577,16 +578,18 @@ n_features [{}])] = [{}, {}].".format(
             Probability of class membership; columns are ordered according
             to class centers.
         """
-        
         distances2 = self.mahalanobis(X)
-        p = np.exp(-np.clip(distances2/2.0, a_max=None, a_min=-500))
+        p = np.exp(-np.clip(distances2 / 2.0, a_max=None, a_min=-500))
 
         if self.style.lower() == "soft":
             norm = np.zeros(len(self.__S_), dtype=np.float64)
             for i in range(len(norm)):
-                norm[i] = np.sqrt(np.linalg.det(2.0*np.pi*self.__S_[i]))
+                norm[i] = np.sqrt(np.linalg.det(2.0 * np.pi * self.__S_[i]))
 
-            prob = np.array([[np.min([1.0, p_]) for p_ in row] for row in (p / norm)], dtype=np.float64)
+            prob = np.array(
+                [[np.min([1.0, p_]) for p_ in row] for row in (p / norm)],
+                dtype=np.float64,
+            )
         else:
             # Hard classification predicts one class, so use softmax function on
             # Mahalanobis distances. The Gaussian prefactor is the same for all
@@ -734,7 +737,7 @@ n_features [{}])] = [{}, {}].".format(
         CSPS = pd.Series(
             [
                 1.0
-                - np.sum(df[kk][df.index != kk]) # Column sum
+                - np.sum(df[kk][df.index != kk])  # Column sum
                 / np.sum(Itot[Itot.index != kk])
                 for kk in trained_classes
             ],
@@ -770,7 +773,9 @@ n_features [{}])] = [{}, {}].".format(
         TSPS = 1.0 - (
             df[use_classes].sum().sum()
             - np.sum([df[kk][kk] for kk in use_classes])
-        ) / np.sum(Itot) / (1.0 if self.style.lower() == 'hard' else len(trained_classes)-1.0)
+        ) / np.sum(Itot) / (
+            1.0 if self.style.lower() == "hard" else len(trained_classes) - 1.0
+        )
         # Soft models can assign a point to all categories which would make this
         # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
         # number of classes, TSPS is always positive; TSPS = 0 means all points
@@ -822,14 +827,16 @@ n_features [{}])] = [{}, {}].".format(
         )
         metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
         if self.score_metric.lower() not in metrics:
-            raise ValueError("Unrecognized metric : {}".format(self.score_metric.lower()))
+            raise ValueError(
+                "Unrecognized metric : {}".format(self.score_metric.lower())
+            )
         else:
             return metrics[self.score_metric.lower()]
 
     def pls2_coeff(self, classes=None, ax=None, return_coeff=False):
         """
         Plot the coefficients in the PLS2 model to examine variable importance.
-        
+
         Parameters
         ----------
         classes : list or None
@@ -847,7 +854,6 @@ n_features [{}])] = [{}, {}].".format(
         matplotlib.pyplot.Axes or ndarray
             Figure axes being plotted on or the PLS2 coefficients.
         """
-
         if ax is None:
             fig, ax = plt.subplots(nrows=1, ncols=1)
 
@@ -861,17 +867,24 @@ n_features [{}])] = [{}, {}].".format(
             if class_ in self.__ohencoder_.categories_[0]:
                 # https://scikit-learn.org/stable/modules/generated/
                 # sklearn.cross_decomposition.PLSRegression.html
-                coeffs.append(self.__pls_.coef_[:, np.where(self.__ohencoder_.transform([[class_]])[0])[0][0]])
+                coeffs.append(
+                    self.__pls_.coef_[
+                        :,
+                        np.where(self.__ohencoder_.transform([[class_]])[0])[0][
+                            0
+                        ],
+                    ]
+                )
                 ax.plot(
                     np.arange(self.__pls_.coef_.shape[0], dtype=int),
                     coeffs[-1],
-                    label=class_
-                    )
+                    label=class_,
+                )
 
         ax.set_xticks(np.arange(self.__pls_.coef_.shape[0], dtype=int))
-        ax.set_xlabel('Feature Index')
-        ax.set_ylabel('PLS2 Coefficient')
-        ax.legend(loc='best')
+        ax.set_xlabel("Feature Index")
+        ax.set_ylabel("PLS2 Coefficient")
+        ax.legend(loc="best")
 
         if return_coeff:
             return np.array(coeffs)
@@ -1067,10 +1080,28 @@ n_features [{}])] = [{}, {}].".format(
         if "soft" in styles:
             cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
             for i in range(len(cutoff)):
-                ax.plot([cutoff[i][0]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), color="C{}".format(i))
-                ax.plot([cutoff[i][1]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), color="C{}".format(i))
-                ax.plot([outlier[i][0]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), linestyle="--", color="C{}".format(i))
-                ax.plot([outlier[i][1]]*100, np.linspace(-1/3.+i, 1/3.+i, 100), linestyle="--", color="C{}".format(i))
+                ax.plot(
+                    [cutoff[i][0]] * 100,
+                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+                    color="C{}".format(i),
+                )
+                ax.plot(
+                    [cutoff[i][1]] * 100,
+                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+                    color="C{}".format(i),
+                )
+                ax.plot(
+                    [outlier[i][0]] * 100,
+                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+                    linestyle="--",
+                    color="C{}".format(i),
+                )
+                ax.plot(
+                    [outlier[i][1]] * 100,
+                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+                    linestyle="--",
+                    color="C{}".format(i),
+                )
         if "hard" in styles:
             t0 = hard_boundaries_1d()
             ax.axvline(t0, color="k")

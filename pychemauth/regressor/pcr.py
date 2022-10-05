@@ -32,7 +32,7 @@ class PCR(RegressorMixin, BaseEstimator):
     of outliers. See references such as:
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
-    [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling", 
+    [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling",
     Anal. Chem. 2020, 92, 2656−2664.
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
@@ -48,7 +48,7 @@ class PCR(RegressorMixin, BaseEstimator):
         scale_x=False,
         center_y=False,
         scale_y=False,
-        robust='semi'
+        robust="semi",
     ):
         """
         Instantiate the class.
@@ -69,14 +69,14 @@ class PCR(RegressorMixin, BaseEstimator):
         scale_y : bool
             Whether or not to scale Y by its standard deviation.
         robust : bool
-            Whether or not to apply robust methods to estimate degrees of freedom.  
+            Whether or not to apply robust methods to estimate degrees of freedom.
             'full' is not implemented yet, but involves robust PCA and robust
-            degrees of freedom estimation; 'semi' (default) is described in [3] and 
+            degrees of freedom estimation; 'semi' (default) is described in [3] and
             uses classical PCA but robust DoF estimation; all other values
             revert to classical PCA and classical DoF estimation.
-            If the dataset is clean (no outliers) it is best practice to use a classical 
+            If the dataset is clean (no outliers) it is best practice to use a classical
             method [3], however, to initially test for and potentially remove these
-            points, a robust variant is recommended. This is why 'semi' is the 
+            points, a robust variant is recommended. This is why 'semi' is the
             default value.
         """
         self.set_params(
@@ -87,7 +87,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 "scale_x": scale_x,
                 "center_y": center_y,
                 "scale_y": scale_y,
-                "robust": robust
+                "robust": robust,
             }
         )
         self.is_fitted_ = False
@@ -107,7 +107,7 @@ class PCR(RegressorMixin, BaseEstimator):
             "scale_x": self.scale_x,
             "center_y": self.center_y,
             "scale_y": self.scale_y,
-            "robust": self.robust
+            "robust": self.robust,
         }
 
     def column_y_(self, y):
@@ -164,7 +164,7 @@ class PCR(RegressorMixin, BaseEstimator):
             )
         self.n_features_in_ = self.__X_.shape[1]
 
-        if self.robust == 'full':
+        if self.robust == "full":
             raise NotImplementedError
         else:
             # 1. Preprocess X data
@@ -186,7 +186,10 @@ class PCR(RegressorMixin, BaseEstimator):
                 ]
             )
             lower_bound = 1
-            if self.n_components > upper_bound or self.n_components < lower_bound:
+            if (
+                self.n_components > upper_bound
+                or self.n_components < lower_bound
+            ):
                 raise Exception(
                     "n_components must [{}, min(n_samples-1 [{}], \
     n_features [{}])] = [{}, {}].".format(
@@ -227,8 +230,12 @@ class PCR(RegressorMixin, BaseEstimator):
         # As in the conclusions of [4], Nh ~ n_components is expected so good initial guess
         self.__Nh_, self.__h0_ = estimate_dof(
             h_vals,
-            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
-            initial_guess=self.n_components
+            robust=(
+                True
+                if (self.robust == "semi" or self.robust == "full")
+                else False
+            ),
+            initial_guess=self.n_components,
         )
 
         # As in the conclusions of [4], Nq ~ rank(X)-n_components is expected;
@@ -236,18 +243,31 @@ class PCR(RegressorMixin, BaseEstimator):
         # (n_components<=J)
         self.__Nq_, self.__q0_ = estimate_dof(
             q_vals,
-            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
-            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+            robust=(
+                True
+                if (self.robust == "semi" or self.robust == "full")
+                else False
+            ),
+            initial_guess=np.min([len(q_vals), self.n_features_in_])
+            - self.n_components,
         )
 
         self.__Nf_ = self.__Nh_ + self.__Nq_
-        self.__f0_ = self.__Nf_ # This term is a matter of convention to match the literature
+        self.__f0_ = (
+            self.__Nf_
+        )  # This term is a matter of convention to match the literature
 
-        z_vals = self.z_(self.__X_, self.__y_) # Must come after fitting is otherwise complete
+        z_vals = self.z_(
+            self.__X_, self.__y_
+        )  # Must come after fitting is otherwise complete
         self.__Nz_, self.__z0_ = estimate_dof(
             z_vals,
-            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
-            initial_guess=self.__y_.shape[1]
+            robust=(
+                True
+                if (self.robust == "semi" or self.robust == "full")
+                else False
+            ),
+            initial_guess=self.__y_.shape[1],
         )
 
         self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
@@ -313,7 +333,9 @@ class PCR(RegressorMixin, BaseEstimator):
         h, q = self.h_q_(X)
         f = self.f_(h, q)
         z = self.z_(X, y)
-        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_ # = f + Nz*z/z0
+        g = (
+            self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_
+        )  # = f + Nz*z/z0
         return g
 
     def transform(self, X):

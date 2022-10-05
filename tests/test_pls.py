@@ -24,7 +24,9 @@ class TestPLS_Scaled(unittest.TestCase):
         )
         self.X = np.array(df.values[:, 3:], dtype=float)
         self.y = np.array(df["Water"].values, dtype=float)
-        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=True, robust=True)
+        self.model = PLS(
+            n_components=6, alpha=0.05, gamma=0.01, scale_x=True, robust=True
+        )
         self.model.fit(self.X, self.y)
 
     """def test_sklearn_compatibility(self):
@@ -47,9 +49,15 @@ class TestPLS_Scaled(unittest.TestCase):
         self.assertEqual(self.model._PLS__Nh_, 5)
         self.assertEqual(self.model._PLS__Nq_, 1)
         self.assertEqual(self.model._PLS__Nz_, 1)
-        np.testing.assert_almost_equal(self.model._PLS__h0_, 0.050062304729048504)
-        np.testing.assert_almost_equal(self.model._PLS__q0_, 0.09231118088499507)
-        np.testing.assert_almost_equal(self.model._PLS__z0_, 0.040841606976563964)
+        np.testing.assert_almost_equal(
+            self.model._PLS__h0_, 0.050062304729048504
+        )
+        np.testing.assert_almost_equal(
+            self.model._PLS__q0_, 0.09231118088499507
+        )
+        np.testing.assert_almost_equal(
+            self.model._PLS__z0_, 0.040841606976563964
+        )
 
     def test_h_q(self):
         """Check some h and q values."""
@@ -62,7 +70,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        ans = np.array([13.12721385, 16.16208378,  4.21930139])
+        ans = np.array([13.12721385, 16.16208378, 4.21930139])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
@@ -74,7 +82,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_g(self):
         """Check some g values."""
         res = self.model.g_(self.X, self.y)[:3]
-        ans = np.array([13.16353211, 16.24525118,  6.83013148])
+        ans = np.array([13.16353211, 16.24525118, 6.83013148])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_predict(self):
@@ -113,7 +121,9 @@ class TestPLS_Unscaled(unittest.TestCase):
         )
         self.X = np.array(df.values[:, 3:], dtype=float)
         self.y = np.array(df["Water"].values, dtype=float)
-        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=False, robust=True)
+        self.model = PLS(
+            n_components=6, alpha=0.05, gamma=0.01, scale_x=False, robust=True
+        )
         self.model.fit(self.X, self.y)
 
     """def test_sklearn_compatibility(self):

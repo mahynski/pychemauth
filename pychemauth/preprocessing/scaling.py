@@ -180,7 +180,7 @@ class CorrectedScaler:
     def transform(self, X):
         """Transform (center and possibly scale) the data after fitting."""
         X = check_array(X, accept_sparse=False)
-        assert(X.shape[1] == self.n_features_in_)
+        assert X.shape[1] == self.n_features_in_
         check_is_fitted(self, "is_fitted_")
         result = np.array(X, dtype=np.float64)
 
@@ -189,7 +189,11 @@ class CorrectedScaler:
         if self.with_std:
             tol = 1.0e-18
             if np.any(self.__std_ < tol):
-                raise Exception('Cannot standardize. The X matrix has std ~ 0 for columns : {}'.format(np.where(self.__std_ < tol)))
+                raise Exception(
+                    "Cannot standardize. The X matrix has std ~ 0 for columns : {}".format(
+                        np.where(self.__std_ < tol)
+                    )
+                )
             result /= np.sqrt(self.__std_) if self.pareto else self.__std_
 
         return result
