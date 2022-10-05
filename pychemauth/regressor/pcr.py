@@ -28,11 +28,16 @@ class PCR(RegressorMixin, BaseEstimator):
     >>> pcr = make_pipeline(StandardScaler(), PCA(n_components=1), LinearRegression(fit_intercept=True))
     >>> pcr.fit(X_train, y_train)
 
-    This implementation is more explicit. See references such as:
+    This implementation is more explicit and enables a more detailed handling
+    of outliers. See references such as:
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
     [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling", 
     Anal. Chem. 2020, 92, 2656−2664.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [4] "Acceptance areas for multivariate classification derived by projection
+    methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
     """
 
     def __init__(
@@ -43,6 +48,7 @@ class PCR(RegressorMixin, BaseEstimator):
         scale_x=False,
         center_y=False,
         scale_y=False,
+        robust='semi'
     ):
         """
         Instantiate the class.
@@ -62,6 +68,16 @@ class PCR(RegressorMixin, BaseEstimator):
             Whether ot not to center the Y responses.
         scale_y : bool
             Whether or not to scale Y by its standard deviation.
+        robust : bool
+            Whether or not to apply robust methods to estimate degrees of freedom.  
+            'full' is not implemented yet, but involves robust PCA and robust
+            degrees of freedom estimation; 'semi' (default) is described in [3] and 
+            uses classical PCA but robust DoF estimation; all other values
+            revert to classical PCA and classical DoF estimation.
+            If the dataset is clean (no outliers) it is best practice to use a classical 
+            method [3], however, to initially test for and potentially remove these
+            points, a robust variant is recommended. This is why 'semi' is the 
+            default value.
         """
         self.set_params(
             **{
@@ -71,6 +87,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 "scale_x": scale_x,
                 "center_y": center_y,
                 "scale_y": scale_y,
+                "robust": robust
             }
         )
         self.is_fitted_ = False
@@ -90,6 +107,7 @@ class PCR(RegressorMixin, BaseEstimator):
             "scale_x": self.scale_x,
             "center_y": self.center_y,
             "scale_y": self.scale_y,
+            "robust": self.robust
         }
 
     def column_y_(self, y):
@@ -146,41 +164,45 @@ class PCR(RegressorMixin, BaseEstimator):
             )
         self.n_features_in_ = self.__X_.shape[1]
 
-        # 1. Preprocess X data
-        self.__x_scaler_ = CorrectedScaler(
-            with_mean=True, with_std=self.scale_x
-        )  # Always center and maybe scale X
+        if self.robust == 'full':
+            raise NotImplementedError
+        else:
+            # 1. Preprocess X data
+            self.__x_scaler_ = CorrectedScaler(
+                with_mean=True, with_std=self.scale_x
+            )  # Always center and maybe scale X
 
-        # 2. Preprocess Y data
-        self.__y_scaler_ = CorrectedScaler(
-            with_mean=self.center_y, with_std=self.scale_y
-        )  # Maybe center and maybe scale Y
-        self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)
+            # 2. Preprocess Y data
+            self.__y_scaler_ = CorrectedScaler(
+                with_mean=self.center_y, with_std=self.scale_y
+            )  # Maybe center and maybe scale Y
+            self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)
 
-        # 3. Perform PCA on X data
-        upper_bound = np.min(
-            [
-                self.__X_.shape[0] - 1,
-                self.__X_.shape[1],
-            ]
-        )
-        lower_bound = 1
-        if self.n_components > upper_bound or self.n_components < lower_bound:
-            raise Exception(
-                "n_components must [{}, min(n_samples-1 [{}], \
-n_features [{}])] = [{}, {}].".format(
-                    lower_bound,
+            # 3. Perform PCA on X data
+            upper_bound = np.min(
+                [
                     self.__X_.shape[0] - 1,
                     self.__X_.shape[1],
-                    lower_bound,
-                    upper_bound,
+                ]
+            )
+            lower_bound = 1
+            if self.n_components > upper_bound or self.n_components < lower_bound:
+                raise Exception(
+                    "n_components must [{}, min(n_samples-1 [{}], \
+    n_features [{}])] = [{}, {}].".format(
+                        lower_bound,
+                        self.__X_.shape[0] - 1,
+                        self.__X_.shape[1],
+                        lower_bound,
+                        upper_bound,
+                    )
                 )
+
+            self.__pca_ = PCA(
+                n_components=self.n_components,
+                random_state=0,
             )
 
-        self.__pca_ = PCA(
-            n_components=self.n_components,
-            random_state=0,
-        )
         self.__T_train_ = self.__pca_.fit_transform(
             self.__x_scaler_.fit_transform(self.__X_)
         )
@@ -201,18 +223,32 @@ n_features [{}])] = [{}, {}].".format(
 
         # 5. Characterize outliers
         h_vals, q_vals = self.h_q_(self.__X_)
-        self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = estimate_dof(
-            h_vals, q_vals, self.n_components, self.n_features_in_
+
+        # As in the conclusions of [4], Nh ~ n_components is expected so good initial guess
+        self.__Nh_, self.__h0_ = estimate_dof(
+            h_vals,
+            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
+            initial_guess=self.n_components
         )
 
-        f_vals = self.f_(h_vals, q_vals)
-        self.__f0_ = np.mean(f_vals)
-        self.__Nf_ = self.__Nh_ + self.__Nq_
+        # As in the conclusions of [4], Nq ~ rank(X)-n_components is expected;
+        # assuming near full rank then this is min(I,J)-n_components
+        # (n_components<=J)
+        self.__Nq_, self.__q0_ = estimate_dof(
+            q_vals,
+            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
+            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+        )
 
-        z_vals = self.z_(self.__X_, self.__y_)
-        self.__z0_ = np.mean(z_vals)
-        self.__Nz_ = self.__y_.shape[1]
+        self.__Nf_ = self.__Nh_ + self.__Nq_
+        self.__f0_ = self.__Nf_ # This term is a matter of convention to match the literature
+
+        z_vals = self.z_(self.__X_, self.__y_) # Must come after fitting is otherwise complete
+        self.__Nz_, self.__z0_ = estimate_dof(
+            z_vals,
+            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
+            initial_guess=self.__y_.shape[1]
+        )
 
         self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
         self.__x_out_ = scipy.stats.chi2.ppf(
@@ -277,7 +313,7 @@ n_features [{}])] = [{}, {}].".format(
         h, q = self.h_q_(X)
         f = self.f_(h, q)
         z = self.z_(X, y)
-        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_
+        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_ # = f + Nz*z/z0
         return g
 
     def transform(self, X):

@@ -31,7 +31,7 @@ class PLS(RegressorMixin, BaseEstimator):
     Analytical Chemistry 92 (2020) 2656−2664.
     """
 
-    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False):
+    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust=True):
         """
         Instantiate the class.
 
@@ -46,6 +46,13 @@ class PLS(RegressorMixin, BaseEstimator):
             Significance level for determining outliers.
         scale_x : bool
             Whether or not to scale X columns by the standard deviation.
+        robust : bool
+            Whether or not to apply robust methods to estimate degrees of freedom.  
+            True (default) is described in [3,4] and uses robust DoF estimation, otherwise
+            classical estimators are used. If the dataset is clean (no outliers) 
+            it is best practice to use a classical method [3], however, to initially 
+            test for and potentially remove these points, a robust variant is recommended. 
+            This is why `True` is the default value.
         """
         self.set_params(
             **{
@@ -53,6 +60,7 @@ class PLS(RegressorMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
+                "robust": robust
             }
         )
         self.is_fitted_ = False
@@ -70,6 +78,7 @@ class PLS(RegressorMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
+            "robust": self.robust
         }
 
     def column_y_(self, y):
@@ -174,18 +183,32 @@ n_features [{}])] = [{}, {}].".format(
         self.is_fitted_ = True
 
         h_vals, q_vals = self.h_q_(self.__X_)
-        self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = estimate_dof(
-            h_vals, q_vals, self.n_components, self.n_features_in_
+
+        # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
+        self.__Nh_, self.__h0_ = estimate_dof(
+            h_vals,
+            robust=self.robust,
+            initial_guess=self.n_components
         )
 
-        f_vals = self.f_(h_vals, q_vals)
-        self.__f0_ = np.mean(f_vals)
-        self.__Nf_ = self.__Nh_ + self.__Nq_
+        # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
+        # assuming near full rank then this is min(I,J)-n_components
+        # (n_components<=J)
+        self.__Nq_, self.__q0_ = estimate_dof(
+            q_vals,
+            robust=self.robust,
+            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+        )
 
-        z_vals = self.z_(self.__X_, self.__y_)
-        self.__z0_ = np.mean(z_vals)
-        self.__Nz_ = self.__y_.shape[1]
+        self.__Nf_ = self.__Nh_ + self.__Nq_
+        self.__f0_ = self.__Nf_ # This term is a matter of convention to match the literature
+
+        z_vals = self.z_(self.__X_, self.__y_) # Must come after fitting is otherwise complete
+        self.__Nz_, self.__z0_ = estimate_dof(
+            z_vals,
+            robust=self.robust,
+            initial_guess=self.__y_.shape[1]
+        )
 
         self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
         self.__x_out_ = scipy.stats.chi2.ppf(
@@ -246,7 +269,7 @@ n_features [{}])] = [{}, {}].".format(
         h, q = self.h_q_(X)
         f = self.f_(h, q)
         z = self.z_(X, y)
-        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_
+        g = self.__Nf_ * f / self.__f0_ + self.__Nz_ * z / self.__z0_ # = f + Nz*z/z0
         return g
 
     def transform(self, X):

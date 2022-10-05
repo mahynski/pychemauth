@@ -45,6 +45,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     Lab. Sys. (2016) 89-96.
     [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
     """
 
@@ -56,7 +58,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         style="dd-simca",
         use="rigorous",
         scale_x=True,
-        iterate=False
+        iterate=False,
+        robust='semi',
     ):
         """
         Instantiate the classifier.
@@ -93,6 +96,19 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         iterate : bool
             Whether or not to use the iterative outlier removal scheme described
             in Ref. [2].  This is ignored when NOT using DD-SIMCA.
+        robust : str
+            Whether or not to apply robust methods to estimate degrees of freedom.  
+            This is ignored when NOT using DD-SIMCA.
+            'full' is not implemented yet, but involves robust PCA and robust
+            degrees of freedom estimation; 'semi' (default) is described in [3] and 
+            uses classical PCA but robust DoF estimation; all other values
+            revert to classical PCA and classical DoF estimation.
+            If the dataset is clean (no outliers) it is best practice to use a classical 
+            method [3], however, to initially test for and potentially remove these
+            points, a robust variant is recommended. This is why 'semi' is the 
+            default value. If `iterate`=True then this value is ignored and a robust
+            method is applied to iteratively clean the dataset, while the final 
+            fitting uses the classical approach.
         """
         self.set_params(
             **{
@@ -102,7 +118,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 "style": style,
                 "use": use,
                 "scale_x": scale_x,
-                "iterate": iterate
+                "iterate": iterate,
+                "robust": robust
             }
         )
         self.is_fitted_ = False
@@ -123,7 +140,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             "style": self.style,
             "use": self.use,
             "scale_x": self.scale_x,
-            "iterate": self.iterate
+            "iterate": self.iterate,
+            "robust": self.robust
         }
 
     def fit(self, X, y):
@@ -161,7 +179,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
                 n_components=self.n_components,
                 alpha=self.alpha,
                 scale_x=self.scale_x,
-                iterate=self.iterate
+                iterate=self.iterate,
+                robust=self.robust
             )
         else:
             raise ValueError("{} is not a recognized style.".format(self.style))
@@ -711,7 +730,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
-    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True, iterate=False):
+    def __init__(self, n_components, alpha=0.05, gamma=0.01, scale_x=True, iterate=False, robust='semi'):
         """
         Instantiate the class.
 
@@ -730,12 +749,24 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Note that X is always centered.
         iterate : bool
             Whether or not to use the iterative outlier removal scheme described
-            in Ref. 3.  If not used (default) robust estimates of parameters are
+            in [3].  If not used (default) robust estimates of parameters may be
             attempted; if the iterative approach is used, these robust estimates
             are only computed during the outlier removal loop(s) while the final
             "clean" data uses classical estimates.  This option may throw away
             data it is originally provided for training; it keeps only "regular"
             samples (inliers and extremes) to train the model.
+        robust : str
+            Whether or not to apply robust methods to estimate degrees of freedom.  
+            'full' is not implemented yet, but involves robust PCA and robust
+            degrees of freedom estimation; 'semi' (default) is described in [2] and 
+            uses classical PCA but robust DoF estimation; all other values
+            revert to classical PCA and classical DoF estimation.
+            If the dataset is clean (no outliers) it is best practice to use a classical 
+            method [2], however, to initially test for and potentially remove these
+            points, a robust variant is recommended. This is why 'semi' is the 
+            default value. If `iterate`=True then this value is ignored and a robust
+            method is applied to iteratively clean the dataset, while the final 
+            fitting uses the classical approach.
         """
         self.set_params(
             **{
@@ -743,7 +774,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
-                "iterate": iterate
+                "iterate": iterate,
+                "robust": robust
             }
         )
         self.is_fitted_ = False
@@ -761,7 +793,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
-            "iterate": self.iterate
+            "iterate": self.iterate,
+            "robust": self.robust
         }
 
     def column_y_(self, y):
@@ -823,38 +856,61 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ):
             raise Exception("Reduce the number of PCA components {} {} {}".format(self.n_components, self.n_features_in_, self.__X_.shape[0]))
 
-        def train(X, try_robust=True):
-            # 1. Standardize X
+        def train(X, robust):
+            """
+            Parameters
+            ----------
+            robust : str
+                'full' = robust PCA + robust DD-SIMCA estimation in [2] (not yet implemented);
+                'semi' = classical PCA + robust DD-SIMCA estimation in [2] ("RDD-SIMCA");
+                otherwise = classical PCA + classical DD-SIMCA estimation in [2] ("CDD-SIMCA");
+            """
             self.__X_ = X.copy() # This is needed so self.h_q_() works correctly
-            self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
-            self.__ss_.fit(X)
 
-            # 2. Perform PCA on standardized coordinates
-            self.__pca_ = PCA(n_components=self.n_components, random_state=0)
-            self.__pca_.fit(self.__ss_.transform(X))
+            if robust == 'full':
+                raise NotImplementedError
+            else:
+                # 1. Standardize X
+                self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
+                self.__ss_.fit(X)
 
-            # 3. Compute critical distance
+                # 2. Perform PCA on standardized coordinates
+                self.__pca_ = PCA(n_components=self.n_components, random_state=0)
+                self.__pca_.fit(self.__ss_.transform(X))
+
+            # 3. Compute critical distances
             h_vals, q_vals = self.h_q_(X)
-            self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-            self.__Nh_, self.__Nq_ = estimate_dof(
-                h_vals, q_vals, self.n_components, self.n_features_in_,
-                try_robust=try_robust
+
+            # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
+            self.__Nh_, self.__h0_ = estimate_dof(
+                h_vals,
+                robust=(True if (robust == 'semi' or robust == 'full') else False),
+                initial_guess=self.n_components
             )
 
+            # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
+            # assuming near full rank then this is min(I,J)-n_components
+            # (n_components<=J)
+            self.__Nq_, self.__q0_ = estimate_dof(
+                q_vals,
+                robust=(True if (robust == 'semi' or robust == 'full') else False),
+                initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
+            )
+
+            # Eq. 19 in [2]
             self.__c_crit_ = scipy.stats.chi2.ppf(
                  1.0 - self.alpha, self.__Nh_ + self.__Nq_
             )
 
-            # See [2].
+            # Eq. 20 in [2]
             self.__c_out_ = scipy.stats.chi2.ppf(
                 (1.0 - self.gamma) ** (1.0 / X.shape[0]),
                 self.__Nh_ + self.__Nq_,
             )
 
-        # This is based on [3].
+        # This is based on [3]
         if not self.iterate:
-            # When not iteratively removing outliers, always true to find robust estimates of parameters
-            train(self.__X_, try_robust=True)
+            train(self.__X_, robust=self.robust)
         else:
             X_tmp = self.__X_.copy()
             outer_iters = 0
@@ -863,7 +919,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             while(True): # Outer loop
                 if (outer_iters >= max_outer):
                     raise Exception("Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping).")
-                train(X_tmp, try_robust=True)
+                train(X_tmp, robust='semi')
                 _, outliers = self.check_outliers(X_tmp)
                 X_out = copy.copy(X_tmp[outliers, :])
                 inner_iters = 0
@@ -873,7 +929,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                     X_tmp = X_tmp[~outliers, :]
                     if len(X_tmp) == 0:
                         raise Exception("Unable to iteratively clean data; all observations are considered outliers.")
-                    train(X_tmp, try_robust=True)
+                    train(X_tmp, robust='semi')
                     _, outliers = self.check_outliers(X_tmp)
                     X_out = np.vstack((X_out, X_tmp[outliers, :]))
                     inner_iters += 1
@@ -895,7 +951,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [3].
-            train(X_tmp, try_robust=False)
+            train(X_tmp, robust=False)
             self.__iterate_history = {'inner_loops': inner_iters, 
                                       'outer_loops': outer_iters,
                                       'removed': X_out
@@ -1148,6 +1204,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         The 95% tolerance limit is given in black.  Points which fall outside these 
         bounds are highlighted.
+
+        Notes
+        -----
+        Both extreme points and outliers are considered "extremes" here.  In practice,
+        outliers should be removed before performing this analysis anyway.
         
         Parameters
         ----------

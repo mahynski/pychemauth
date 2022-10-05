@@ -162,14 +162,9 @@ def bokeh_color_spectrum(
     show(plot_figure)
 
 
-def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
+def estimate_dof(u_vals, robust=True, initial_guess=None):
     """
-    Estimate the degrees of freedom for the chi-squared distribution.
-
-    This follows from Ref. 1. Ref. 2 contains a more rigorous approximation
-    for the "robust" approach that is often implemented in practice.  Here,
-    we opt for a direct solution via numerical optimization, and fall back
-    on a simple (non-robust) solution otherwise.
+    Estimate the degrees of freedom for projection-based modeling.
 
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
@@ -179,55 +174,57 @@ def estimate_dof(h_vals, q_vals, n_components, n_features_in, try_robust=True):
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
-    def err2(N, vals):
-        """
-        Use a "robust" method for estimating DoF.
-
-        In [1] Eq. 14 suggests the IQR should be divided by the mean (h0),
-        however, the citation they provide suggests the median might be
-        a better choice; in practice, it seems that is favored since it
-        is more robust against outliers, so this is used below in that
-        spirit.  This is also how it is implemented in CAFE [see 3].
-        """
-        x0 = np.median(vals)  # np.mean(vals)
-        a = (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)) / N
-        b = scipy.stats.iqr(vals, rng=(25, 75)) / x0
-
-        return (a - b) ** 2
-
-    # As in conclusions of [1], Nh ~ n_components is expected
-    res = scipy.optimize.minimize(
-        err2, n_components, args=(h_vals), method="Nelder-Mead"
-    )
-    if res.success and (try_robust == True):
-        # Robust method, if possible
-        Nh = res.x[0]
+    if not robust:
+        # Eq. 12 in [2]
+        u0 = np.mean(u_vals)
+        Nu = int(np.max([round(2.0 * u0 ** 2 / np.std(u_vals, ddof=1) ** 2, 0), 1]))
     else:
-        # Use simple estimate if this fails (Eq. 13 in [1])
-        Nh = 2.0 * np.mean(h_vals) ** 2 / np.std(h_vals, ddof=1) ** 2
+        def err2(N, vals):
+            # Use a "robust" method for estimating DoF - solve Eq. 14 in [2].
+            if N < 1:
+                N = 1
+            a = (scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)) * np.median(vals) / scipy.stats.chi2.ppf(0.5, N)
+            b = scipy.stats.iqr(vals, rng=(25, 75)) 
 
-    # As in conclusions of [1], Nq ~ rank(X)-n_components is expected;
-    # assuming near full rank then this is min(I,J)-n_components
-    # (n_components<=J)
-    res = scipy.optimize.minimize(
-        err2,
-        np.min([len(q_vals), n_features_in]) - n_components,
-        args=(q_vals),
-        method="Nelder-Mead",
-    )
-    if res.success and (try_robust == True):
-        # Robust method, if possible
-        Nq = res.x[0]
-    else:
-        # Use simple estimate if this fails (Eq. 23 in [1])
-        Nq = 2.0 * np.mean(q_vals) ** 2 / np.std(q_vals, ddof=1) ** 2
+            return (a - b) ** 2
 
-    # Bound below by 1
-    return np.max([round(Nh, 0), 1]), np.max([round(Nq, 0), 1])
+        def approximate(vals): 
+            # Eq. 16 in [2]
+            a = 0.72414
+            b = 2.68631
+            c = 0.84332
+            M = np.median(vals)
+            S = scipy.stats.iqr(vals, rng=(25, 75))
+
+            return int(round(np.exp(((1.0/a) * np.log(b*M/S))**(1.0/c)), 0))
+
+        def averaged_estimator(N, vals): 
+            # Eq. 17 in [2]
+            M = np.median(vals)
+            S = scipy.stats.iqr(vals, rng=(25, 75))
+
+            return 0.5*N*(M/scipy.stats.chi2.ppf(0.5, N) + S/(scipy.stats.chi2.ppf(0.75, N) - scipy.stats.chi2.ppf(0.25, N)))
+
+        res = scipy.optimize.minimize(
+            err2, 
+            (1 if initial_guess is None else initial_guess), 
+            args=(u_vals), 
+            method="Nelder-Mead"
+        )
+        if res.success:
+            # Direct method, if possible
+            Nu = int(np.max([round(res.x[0], 0), 1]))
+        else:
+            # Else, use analytical approximation
+            Nu = approximate(u_vals)
+        u0 = averaged_estimator(Nu, u_vals) 
+
+    return Nu, u0
+
 
 def pos_def_mat(S, inner_max=10, outer_max=100):
     """
-    Create a positive definite version of a matrix.
+    Create a positive definite approximation of a square, symmetric matrix.
 
     Parameters
     ----------

@@ -36,7 +36,7 @@ class PCA(ClassifierMixin, BaseEstimator):
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
-    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False):
+    def __init__(self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust='semi'):
         """
         Instantiate the class.
 
@@ -51,6 +51,16 @@ class PCA(ClassifierMixin, BaseEstimator):
             Significance level for determining outliers.
         scale_x : bool
             Whether or not to scale X columns by the standard deviation.
+        robust : str
+            Whether or not to apply robust methods to estimate degrees of freedom.  
+            'full' is not implemented yet, but involves robust PCA and robust
+            degrees of freedom estimation; 'semi' (default) is described in [4] and 
+            uses classical PCA but robust DoF estimation; all other values
+            revert to classical PCA and classical DoF estimation.
+            If the dataset is clean (no outliers) it is best practice to use a classical 
+            method [2], however, to initially test for and potentially remove these
+            points, a robust variant is recommended. This is why 'semi' is the 
+            default value. 
         """
         self.set_params(
             **{
@@ -58,6 +68,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "alpha": alpha,
                 "gamma": gamma,
                 "scale_x": scale_x,
+                "robust": robust
             }
         )
         self.is_fitted_ = False
@@ -75,6 +86,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "gamma": self.gamma,
             "scale_x": self.scale_x,
+            "robust": self.robust
         }
 
     def matrix_X_(self, X):
@@ -111,43 +123,58 @@ class PCA(ClassifierMixin, BaseEstimator):
         self.__X_ = check_array(self.__X_, accept_sparse=False)
         self.n_features_in_ = self.__X_.shape[1]
 
-        # 1. Preprocess X data
-        self.__x_scaler_ = CorrectedScaler(
-            with_mean=True, with_std=self.scale_x
-        )  # Always center and maybe scale X
+        if self.robust == 'full':
+            raise NotImplementedError
+        else:
+            # 1. Preprocess X data
+            self.__x_scaler_ = CorrectedScaler(
+                with_mean=True, with_std=self.scale_x
+            )  # Always center and maybe scale X
 
-        # 2. Perform PCA on X data
-        upper_bound = np.min(
-            [
-                self.__X_.shape[0] - 1,
-                self.__X_.shape[1],
-            ]
-        )
-        lower_bound = 1
-        if self.n_components > upper_bound or self.n_components < lower_bound:
-            raise Exception(
-                "n_components must [{}, min(n_samples-1 [{}], \
-n_features [{}])] = [{}, {}].".format(
-                    lower_bound,
+            # 2. Perform PCA on X data
+            upper_bound = np.min(
+                [
                     self.__X_.shape[0] - 1,
                     self.__X_.shape[1],
-                    lower_bound,
-                    upper_bound,
-                )
+                ]
             )
+            lower_bound = 1
+            if self.n_components > upper_bound or self.n_components < lower_bound:
+                raise Exception(
+                    "n_components must [{}, min(n_samples-1 [{}], \
+    n_features [{}])] = [{}, {}].".format(
+                        lower_bound,
+                        self.__X_.shape[0] - 1,
+                        self.__X_.shape[1],
+                        lower_bound,
+                        upper_bound,
+                    )
+                )
 
-        self.__pca_ = sklearn.decomposition.PCA(
-            n_components=self.n_components, svd_solver="auto"
-        )
-        self.__pca_.fit(self.__x_scaler_.fit_transform(self.__X_))
+            self.__pca_ = sklearn.decomposition.PCA(
+                n_components=self.n_components, svd_solver="auto"
+            )
+            self.__pca_.fit(self.__x_scaler_.fit_transform(self.__X_))
 
         self.is_fitted_ = True
 
-        # 5. Characterize outliers
+        # 3. Compute critical distances
         h_vals, q_vals = self.h_q_(self.__X_)
-        self.__h0_, self.__q0_ = np.mean(h_vals), np.mean(q_vals)
-        self.__Nh_, self.__Nq_ = estimate_dof(
-            h_vals, q_vals, self.n_components, self.n_features_in_
+
+        # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
+        self.__Nh_, self.__h0_ = estimate_dof(
+            h_vals,
+            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
+            initial_guess=self.n_components
+        )
+
+        # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
+        # assuming near full rank then this is min(I,J)-n_components
+        # (n_components<=J)
+        self.__Nq_, self.__q0_ = estimate_dof(
+            q_vals,
+            robust=(True if (self.robust == 'semi' or self.robust == 'full') else False),
+            initial_guess=np.min([len(q_vals), self.n_features_in_]) - self.n_components
         )
 
         self.__c_crit_ = scipy.stats.chi2.ppf(
@@ -351,6 +378,11 @@ n_features [{}])] = [{}, {}].".format(
 
         The 95% tolerance limit is given in black.  Points which fall outside these 
         bounds are highlighted.
+
+        Notes
+        -----
+        Both extreme points and outliers are considered "extremes" here.  In practice,
+        outliers should be removed before performing this analysis anyway.
         
         Parameters
         ----------

@@ -27,7 +27,7 @@ class TestDDSIMCA(unittest.TestCase):
             error = None
         self.assertIsNone(error, msg=error)"""
 
-    def test_ddsimca_model(self):
+    def test_ddsimca_model_semi(self):
         """Test DDSIMCA_Model explicitly."""
         df = pd.read_csv(
             os.path.dirname(os.path.realpath(__file__))
@@ -37,13 +37,14 @@ class TestDDSIMCA(unittest.TestCase):
         raw_y = np.array(df["Class"].values, dtype=str)
 
         dds = DDSIMCA_Model(
-            n_components=7, alpha=0.05, gamma=0.01, scale_x=False
+            n_components=7, alpha=0.05, gamma=0.01, scale_x=False,
+            robust='semi'
         )
         _ = dds.fit(raw_x, raw_y)
 
         # Check DoF
-        self.assertEqual(dds._DDSIMCA_Model__Nq_, 4)
-        self.assertEqual(dds._DDSIMCA_Model__Nh_, 3)
+        self.assertEqual(dds._DDSIMCA_Model__Nq_, 6)
+        self.assertEqual(dds._DDSIMCA_Model__Nh_, 5)
 
         # Check distances
         h, q = dds.h_q_(raw_x)
@@ -63,10 +64,10 @@ class TestDDSIMCA(unittest.TestCase):
         )
 
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__h0_ - 0.09722222222222224) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__h0_ - 0.08682028422484556) < 1.0e-12
         )
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__q0_ - 0.01785123484489048) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__q0_ - 0.01772901918522358) < 1.0e-12
         )
 
         dist = dds.distance(raw_x)
@@ -83,24 +84,24 @@ class TestDDSIMCA(unittest.TestCase):
 
         # Check critical distances
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__c_crit_ - 14.067140449340169) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__c_crit_ - 19.67513757268249) < 1.0e-12
         )
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__c_out_ - 29.08559157741169) < 1.0e-12
+            np.abs(dds._DDSIMCA_Model__c_out_ - 36.50224102208008) < 1.0e-12
         )
 
         # Check predictions of target class
         self.assertTrue(
             np.all(
                 np.where(~dds.predict(raw_x))[0]
-                == np.array([14, 18, 20, 21, 22, 65])
+                == np.array([6, 7, 14, 17, 18, 19, 20, 21, 22, 65, 69])
             )
         )
 
         # Check predictions of extreme/outliers
         ext, out = dds.check_outliers(raw_x)
         self.assertTrue(
-            np.all(np.where(ext)[0] == np.array([14, 18, 20, 21, 22, 65]))
+            np.all(np.where(ext)[0] == np.array([6, 7, 14, 17, 18, 19, 20, 21, 22, 65, 69]))
         )
         self.assertTrue(np.all(np.all(~out)))
 
@@ -129,16 +130,13 @@ class TestDDSIMCA(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.where(dds.predict(raw_x_a))[0]
-                == np.array([0, 3, 6, 7, 9, 15])
+                == np.array([9])
             )
         )
         ext, out = dds.check_outliers(raw_x_a)
-        self.assertTrue(np.all(np.where(ext)[0] == np.array([1, 4, 8, 12, 16])))
-        self.assertTrue(
-            np.all(np.where(out)[0] == np.array([2, 5, 10, 11, 13, 14, 17]))
-        )
+        self.assertTrue(np.where(~(ext|out))[0] == np.array([9]))
 
-    def test_ddsimca_classifier(self):
+    def test_ddsimca_classifier_semi(self):
         """Test SIMCA_Classifier using the DDSIMCA_Model."""
         df = pd.read_csv(
             os.path.dirname(os.path.realpath(__file__))
@@ -161,7 +159,8 @@ class TestDDSIMCA(unittest.TestCase):
             scale_x=False,
             style="dd-simca",
             target_class="Pure",
-            use="compliant"
+            use="compliant",
+            robust='semi'
         )
 
         # Fit on 2 classes - only uses Pure to train
@@ -180,3 +179,62 @@ class TestDDSIMCA(unittest.TestCase):
             )
             < 1.0e-12
         )
+        self.assertTrue(np.abs(metrics['tsns'] - 0.8472222222222222) < 1.0e-12)
+        self.assertTrue(np.abs(metrics['tsps'] - 0.9444444444444444) < 1.0e-12)
+
+    def test_ddsimca_classifier_classical(self):
+        """Test SIMCA_Classifier using the DDSIMCA_Model."""
+        df = pd.read_csv(
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/simca_train.csv"
+        )
+        raw_x = np.array(df.values[:, 3:], dtype=float)
+        raw_y = np.array(df["Class"].values, dtype=str)
+
+        df = pd.read_csv(
+            os.path.dirname(os.path.realpath(__file__))
+            + "/data/simca_test_alt.csv",
+            header=None,
+        )
+        raw_x_a = np.array(df.values[:, 3:], dtype=float)
+        raw_y_a = np.array(df.values[:, 1], dtype=str)
+
+        sc = SIMCA_Classifier(
+            n_components=7,
+            alpha=0.05,
+            scale_x=False,
+            style="dd-simca",
+            target_class="Pure",
+            use="compliant",
+            robust=False
+        )
+
+        # Fit on 2 classes - only uses Pure to train
+        _ = sc.fit(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
+
+        self.assertEqual(sc.model._DDSIMCA_Model__Nq_, 7)
+        self.assertEqual(sc.model._DDSIMCA_Model__Nh_, 3)
+
+        self.assertTrue(
+            np.abs(sc.model._DDSIMCA_Model__h0_ - 0.09722222222222225) < 1.0e-12
+        )
+        self.assertTrue(
+            np.abs(sc.model._DDSIMCA_Model__q0_ - 0.017851234844890485) < 1.0e-12
+        )
+
+        self.assertTrue(
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)['tsns'])
+        )  # Test only alt class 
+        self.assertTrue(
+            np.isnan(sc.metrics(raw_x, raw_y)['tsps'])
+        )  # Test only target class
+        metrics = sc.metrics(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
+        self.assertTrue(
+            np.abs(
+                metrics['teff']
+                - np.sqrt(metrics['tsps']*metrics['tsns'])
+            )
+            < 1.0e-12
+        )
+        self.assertTrue(np.abs(metrics['tsns'] - 0.9305555555555556) < 1.0e-12)
+        self.assertTrue(np.abs(metrics['tsps'] - 0.9444444444444444) < 1.0e-12)

@@ -24,7 +24,7 @@ class TestPLS_Scaled(unittest.TestCase):
         )
         self.X = np.array(df.values[:, 3:], dtype=float)
         self.y = np.array(df["Water"].values, dtype=float)
-        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=True)
+        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=True, robust=True)
         self.model.fit(self.X, self.y)
 
     """def test_sklearn_compatibility(self):
@@ -44,6 +44,12 @@ class TestPLS_Scaled(unittest.TestCase):
         res = self.model.transform(self.X).ravel()[:3]
         ans = np.array([-11.77911937, -7.40108219, -0.98177486])
         np.testing.assert_almost_equal(res, ans, decimal=6)
+        self.assertEqual(self.model._PLS__Nh_, 5)
+        self.assertEqual(self.model._PLS__Nq_, 1)
+        self.assertEqual(self.model._PLS__Nz_, 1)
+        np.testing.assert_almost_equal(self.model._PLS__h0_, 0.050062304729048504)
+        np.testing.assert_almost_equal(self.model._PLS__q0_, 0.09231118088499507)
+        np.testing.assert_almost_equal(self.model._PLS__z0_, 0.040841606976563964)
 
     def test_h_q(self):
         """Check some h and q values."""
@@ -56,7 +62,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        ans = np.array([9.15146807, 10.06191892, 2.75553153])
+        ans = np.array([13.12721385, 16.16208378,  4.21930139])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
@@ -68,7 +74,7 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_g(self):
         """Check some g values."""
         res = self.model.g_(self.X, self.y)[:3]
-        ans = np.array([9.18612277, 10.14127682, 5.2467719])
+        ans = np.array([13.16353211, 16.24525118,  6.83013148])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_predict(self):
@@ -80,13 +86,13 @@ class TestPLS_Scaled(unittest.TestCase):
     def test_x_out(self):
         """Check critical distances for X."""
         res = np.array([self.model._PLS__x_crit_, self.model._PLS__x_out_])
-        ans = np.array([9.48772904, 23.5870557])
+        ans = np.array([12.59158724, 27.93536325])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_xy_out(self):
         """Check critical distances for XY."""
         res = np.array([self.model._PLS__xy_crit_, self.model._PLS__xy_out_])
-        ans = np.array([11.07049769, 25.82159626])
+        ans = np.array([14.06714045, 29.95863241])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_score(self):
@@ -107,7 +113,7 @@ class TestPLS_Unscaled(unittest.TestCase):
         )
         self.X = np.array(df.values[:, 3:], dtype=float)
         self.y = np.array(df["Water"].values, dtype=float)
-        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=False)
+        self.model = PLS(n_components=6, alpha=0.05, gamma=0.01, scale_x=False, robust=True)
         self.model.fit(self.X, self.y)
 
     """def test_sklearn_compatibility(self):
@@ -139,7 +145,7 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        ans = np.array([11.61999155, 14.52809849, 3.50415465])
+        ans = np.array([18.13690428, 21.96959773, 5.42599725])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
@@ -151,7 +157,7 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_g(self):
         """Check some g values."""
         res = self.model.g_(self.X, self.y)[:3]
-        ans = np.array([11.62761631, 14.52809859, 5.83606502])
+        ans = np.array([18.14605433, 21.96959786, 8.22439253])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_predict(self):
@@ -163,13 +169,13 @@ class TestPLS_Unscaled(unittest.TestCase):
     def test_x_out(self):
         """Check critical distances for X."""
         res = np.array([self.model._PLS__x_crit_, self.model._PLS__x_out_])
-        ans = np.array([12.59158724, 27.93536325])
+        ans = np.array([15.50731306, 31.91074006])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_xy_out(self):
         """Check critical distances for XY."""
         res = np.array([self.model._PLS__xy_crit_, self.model._PLS__xy_out_])
-        ans = np.array([14.06714045, 29.95863241])
+        ans = np.array([16.9189776, 33.80494136])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_score(self):
