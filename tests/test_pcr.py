@@ -18,8 +18,109 @@ from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.regressor.pcr import PCR
 
 
-class TestPCR(unittest.TestCase):
-    """Test PCR class."""
+class TestPCR_scaling(unittest.TestCase):
+    """Test PCR class with data centering and scaling."""
+
+    @classmethod
+    def setUpClass(self):
+        """Set up class with a baseline model."""
+        df = pd.read_csv(
+            os.path.dirname(os.path.abspath(__file__)) + "/data/pcr_train.csv",
+            header=None,
+        )
+        self.X = np.array(df.values[:, 1:], dtype=float)
+        self.y = np.array(df.values[:, 0], dtype=float)
+        self.model = PCR(
+            n_components=4,
+            alpha=0.05,
+            gamma=0.01,
+            scale_x=True,
+            center_y=True,
+            scale_y=True,
+            robust="semi",
+        )
+        self.model.fit(self.X, self.y)
+
+    def test_scaling_params(self):
+        """Test scaling parameters."""
+        self.assertEqual(self.model._PCR__Nh_, 4)
+        self.assertEqual(self.model._PCR__Nq_, 7)
+        self.assertEqual(self.model._PCR__Nz_, 1)
+        np.testing.assert_almost_equal(
+            self.model._PCR__h0_, 0.13060986390853277
+        )
+        np.testing.assert_almost_equal(self.model._PCR__q0_, 5.116083367151128)
+        np.testing.assert_almost_equal(
+            self.model._PCR__z0_, 0.07785270261919164
+        )
+
+    def test_transform(self):
+        """Test transformation works."""
+        res = self.model.transform(self.X).ravel()[:3]
+        ans = np.array([-8.648716, 7.543241, -2.221983])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_h_q(self):
+        """Check some h and q values."""
+        h, q = self.model.h_q_(self.X)
+        ans_h = np.array([0.06977, 0.274621, 0.132318])
+        ans_q = np.array([4.187058, 5.961213, 4.029075])
+        np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
+        np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
+
+    def test_f(self):
+        """Check some f values."""
+        res = self.model.f_(*self.model.h_q_(self.X))[:3]
+        ans = np.array([7.86561, 16.566766, 9.565037])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_z(self):
+        """Check some z values."""
+        res = self.model.z_(self.X, self.y)[:3]
+        ans = np.array([8.908229e-03, 9.360893e-05, 1.642156e-01])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_g(self):
+        """Check some g values."""
+        res = self.model.g_(self.X, self.y)[:3]
+        ans = np.array([7.980034, 16.567968, 11.674349])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_predict(self):
+        """Check some predictions."""
+        res = self.model.predict(self.X).ravel()[:3]
+        ans = np.array([91.29438, 91.309671, 92.205238])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_x_out(self):
+        """Check critical distances for X."""
+        res = np.array([self.model._PCR__x_crit_, self.model._PCR__x_out_])
+        ans = np.array([19.675138, 33.823825])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_xy_out(self):
+        """Check critical distances for XY."""
+        res = np.array([self.model._PCR__xy_crit_, self.model._PCR__xy_out_])
+        ans = np.array([21.02607, 35.522474])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_x_outliers(self):
+        """Test detection of X outliers."""
+        ext, out = self.model.check_x_outliers(self.X)
+        self.assertEqual(np.sum(ext), 3)
+        self.assertEqual(np.sum(out), 0)
+        self.assertTrue(np.all(np.where(ext)[0] == np.array([10, 23, 25])))
+
+    def test_xy_outliers(self):
+        """Test detection of XY outliers."""
+        ext, out = self.model.check_xy_outliers(self.X, self.y)
+        self.assertEqual(np.sum(ext), 3)
+        self.assertEqual(np.sum(out), 0)
+        self.assertTrue(np.all(np.where(ext)[0] == np.array([10, 23, 25])))
+
+
+class TestPCR_center(unittest.TestCase):
+    """Test PCR class with only data centering."""
 
     @classmethod
     def setUpClass(self):
@@ -73,9 +174,53 @@ class TestPCR(unittest.TestCase):
     def test_f(self):
         """Check some f values."""
         res = self.model.f_(*self.model.h_q_(self.X))[:3]
-        print(res)
-        ans = np.array([13.12721385, 16.16208378, 4.21930139])
+        ans = np.array([6.41737275, 15.00138088, 8.18149178])
         np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_z(self):
+        """Check some z values."""
+        res = self.model.z_(self.X, self.y)[:3]
+        ans = np.array([0.01304151, 0.02088698, 0.01414838])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_g(self):
+        """Check some g values."""
+        res = self.model.g_(self.X, self.y)[:3]
+        ans = np.array([6.61326169, 15.3151121, 8.39400634])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_predict(self):
+        """Check some predictions."""
+        res = self.model.predict(self.X).ravel()[:3]
+        ans = np.array([91.31419632, 91.15547212, 91.91895004])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_x_out(self):
+        """Check critical distances for X."""
+        res = np.array([self.model._PCR__x_crit_, self.model._PCR__x_out_])
+        ans = np.array([15.50731306, 28.50941992])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_xy_out(self):
+        """Check critical distances for XY."""
+        res = np.array([self.model._PCR__xy_crit_, self.model._PCR__xy_out_])
+        ans = np.array([16.9189776, 30.32319996])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_x_outliers(self):
+        """Test detection of X outliers."""
+        ext, out = self.model.check_x_outliers(self.X)
+        self.assertEqual(np.sum(ext), 2)
+        self.assertEqual(np.sum(out), 2)
+        self.assertTrue(np.all(np.where(ext)[0] == np.array([6, 23])))
+        self.assertTrue(np.all(np.where(out)[0] == np.array([10, 25])))
+
+    def test_xy_outliers(self):
+        """Test detection of XY outliers."""
+        ext, out = self.model.check_xy_outliers(self.X, self.y)
+        self.assertEqual(np.sum(ext), 0)
+        self.assertEqual(np.sum(out), 2)
+        self.assertTrue(np.all(np.where(out)[0] == np.array([10, 25])))
 
 
 class TestPCR_sklearn(unittest.TestCase):
