@@ -298,10 +298,10 @@ class PCR(RegressorMixin, BaseEstimator):
         # This is based on [2]
         if not self.sft:
             train(X, y, robust=self.robust)
-            self.__sft_history = {}
+            self.__sft_history_ = {}
         else:
             X_tmp = np.array(X).copy()
-            y_tmp = self.column_y_(y)
+            y_tmp = np.array(y).ravel()
             outer_iters = 0
             max_outer = 100
             max_inner = 100
@@ -313,7 +313,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 train(X_tmp, y_tmp, robust="semi")
                 _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
                 X_out = copy.copy(X_tmp[outliers, :])
-                y_out = copy.copy(y_tmp[outliers, :])
+                y_out = copy.copy(y_tmp[outliers])
                 inner_iters = 0
                 while np.sum(outliers) > 0:
                     if inner_iters >= max_inner:
@@ -321,7 +321,7 @@ class PCR(RegressorMixin, BaseEstimator):
                             "Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking)."
                         )
                     X_tmp = X_tmp[~outliers, :]
-                    y_tmp = y_tmp[~outliers, :]
+                    y_tmp = y_tmp[~outliers]
                     if len(X_tmp) == 0:
                         raise Exception(
                             "Unable to iteratively clean data; all observations are considered outliers."
@@ -329,7 +329,7 @@ class PCR(RegressorMixin, BaseEstimator):
                     train(X_tmp, y_tmp, robust="semi")
                     _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
                     X_out = np.vstack((X_out, X_tmp[outliers, :]))
-                    y_out = np.vstack((y_out, y_tmp[outliers, :]))
+                    y_out = np.concatenate((y_out, y_tmp[outliers]))
                     inner_iters += 1
 
                 # All inside X_tmp are inliers or extremes (regular objects) now.
@@ -339,12 +339,12 @@ class PCR(RegressorMixin, BaseEstimator):
                 if len(X_out) > 0:
                     _, outliers = self.check_xy_outliers(X_out, y_out)
                     X_return = X_out[~outliers, :]
-                    y_return = y_out[~outliers, :]
+                    y_return = y_out[~outliers]
                     if len(X_return) == 0:
                         break
                     else:
                         X_tmp = np.vstack((X_tmp, X_return))
-                        y_tmp = np.vstack((y_tmp, y_return))
+                        y_tmp = np.concatenate((y_tmp, y_return))
                 else:
                     break
 
@@ -352,12 +352,17 @@ class PCR(RegressorMixin, BaseEstimator):
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [3].
             train(X_tmp, y_tmp, robust=False)
-            self.__sft_history = {
+            self.__sft_history_ = {
                 "outer_loops": outer_iters,
                 "removed": {"X": X_out, "y": y_out},
             }
 
         return self
+
+    @property
+    def sft_history(self):
+        """Return the sequential focused trimming history."""
+        return copy.deepcopy(self.__sft_history_)
 
     def h_q_(self, X):
         """Compute inner and outer (X) distances."""

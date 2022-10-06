@@ -944,7 +944,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         # This is based on [3]
         if not self.sft:
             train(X, robust=self.robust)
-            self.__sft_history = {}
+            self.__sft_history_ = {}
         else:
             X_tmp = np.array(X).copy()
             outer_iters = 0
@@ -992,12 +992,17 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [3].
             train(X_tmp, robust=False)
-            self.__sft_history = {
+            self.__sft_history_ = {
                 "outer_loops": outer_iters,
                 "removed": {"X": X_out},
             }
 
         return self
+
+    @property
+    def sft_history(self):
+        """Return the sequential focused trimming history."""
+        return copy.deepcopy(self.__sft_history_)
 
     def transform(self, X):
         """
