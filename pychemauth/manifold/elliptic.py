@@ -78,6 +78,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     212-223. https://www.tandfonline.com/doi/abs/10.1080/00401706.1999.10485670
     [3] "Least median of squares regression," P. J. Rousseeuw., J. Am Stat Ass.,
     79 (1984).
+    [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
     def __init__(
@@ -466,6 +468,74 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         return -np.sum(
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
+
+    def extremes_plot(self, X, upper_frac=0.25, ax=None):
+        """
+        Plot an "extremes plot" [4] to evalute the quality of the model.
+
+        This modifies the alpha value (type I error rate), keeping all other parameters
+        fixed, and computes the number of expected extremes (n_exp) vs. the number
+        observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
+
+        The 95% tolerance limit is given in black.  Points which fall outside these
+        bounds are highlighted.
+
+        Notes
+        -----
+        Both extreme points and outliers are considered "extremes" here.  In practice,
+        outliers should be removed before performing this analysis anyway.
+
+        Parameters
+        ----------
+        X : ndarray
+            Data to evaluate the number of outliers + extremes in.
+        upper_frac : float
+            Count the number of extremes and outliers for alpha values corresponding
+            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
+        ax : pyplot.axes
+            Axes to plot on.
+
+        Returns
+        -------
+        ax : pyplot.axes
+            Axes results are plotted.
+        """
+        X_ = check_array(X, accept_sparse=False)
+        N_tot = X_.shape[0]
+        n_values = np.arange(1, int(upper_frac * N_tot) + 1)
+        alpha_values = n_values / N_tot
+
+        n_observed = []
+        for a in alpha_values:
+            params = self.get_params()
+            params["alpha"] = a
+            model_ = EllipticManifold(**params)
+            model_.fit(X)
+            extremes, outliers = model_.check_outliers(X)
+            n_observed.append(np.sum(extremes) + np.sum(outliers))
+        n_observed = np.array(n_observed)
+
+        if ax is None:
+            fig = plt.figure()
+            ax = plt.gca()
+
+        n_upper = n_values + 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        n_lower = n_values - 2.0 * np.sqrt(n_values * (1.0 - n_values / N_tot))
+        ax.plot(n_values, n_upper, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_values, "-", color="k", alpha=0.5)
+        ax.plot(n_values, n_lower, "-", color="k", alpha=0.5)
+        ax.fill_between(
+            n_values, y1=n_upper, y2=n_lower, color="gray", alpha=0.25
+        )
+
+        mask = (n_lower <= n_observed) & (n_observed <= n_upper)
+        ax.plot(n_values[mask], n_observed[mask], "o", color="green")
+        ax.plot(n_values[~mask], n_observed[~mask], "o", color="red")
+
+        ax.set_xlabel("Expected")
+        ax.set_ylabel("Observed")
+
+        return ax
 
     def visualize(self, X_mats, labels, axes=None):
         """

@@ -467,7 +467,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
         """
-        Plot an "extremes plot" [2] to evalute the quality of PCA-based models.
+        Plot an "extremes plot" [4] to evalute the quality of the model.
 
         This modifies the alpha value (type I error rate), keeping all other parameters
         fixed, and computes the number of expected extremes (n_exp) vs. the number
