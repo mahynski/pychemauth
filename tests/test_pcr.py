@@ -70,6 +70,13 @@ class TestPCR(unittest.TestCase):
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
         np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
 
+    def test_f(self):
+        """Check some f values."""
+        res = self.model.f_(*self.model.h_q_(self.X))[:3]
+        print(res)
+        ans = np.array([13.12721385, 16.16208378, 4.21930139])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
 
 class TestPCR_sklearn(unittest.TestCase):
     """Test PCR class against scikit-learn."""
