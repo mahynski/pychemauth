@@ -4,7 +4,7 @@ Inspect ML models.
 A collection of tools, from various sources, for inspection of machine learning
 models.  Attribution to original sources is made available when appropriate.
 
-@author: nam
+author: nam
 """
 import matplotlib.pyplot as plt
 import numpy as np

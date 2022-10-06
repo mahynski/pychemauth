@@ -1,7 +1,7 @@
 """
 Filter data.
 
-@author: nam
+author: nam
 """
 import numpy as np
 import scipy.signal

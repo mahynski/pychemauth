@@ -5,7 +5,7 @@ A collection of tools, from various sources, for data inspection and
 exploratory data analysis (EDA) in ML and data science.  Attribution to
 original sources is made available when appropriate.
 
-@author: nam
+author: nam
 """
 import matplotlib.pyplot as plt
 import numpy as np

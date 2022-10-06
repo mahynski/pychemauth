@@ -1,6 +1,6 @@
 """
 Code version.
 
-@author: nam
+author: nam
 """
 __version__ = "0.0.0-alpha"

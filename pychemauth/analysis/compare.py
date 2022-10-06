@@ -1,7 +1,7 @@
 """
 Compare ML pipelines.
 
-@author: nam
+author: nam
 """
 import math
 

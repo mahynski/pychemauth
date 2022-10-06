@@ -1,7 +1,7 @@
 """
 Cross validation approaches.
 
-@author: nam
+author: nam
 """
 
 import numpy as np

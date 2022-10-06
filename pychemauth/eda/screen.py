@@ -1,7 +1,7 @@
 """
 Screening tools for features of data.
 
-@author: nam
+author: nam
 """
 
 import inspect

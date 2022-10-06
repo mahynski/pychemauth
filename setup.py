@@ -1,7 +1,7 @@
 """
 Install pychemauth.
 
-@author: nam
+author: nam
 """
 from setuptools import find_packages, setup
 

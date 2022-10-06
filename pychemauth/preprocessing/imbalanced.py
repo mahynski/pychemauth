@@ -1,7 +1,7 @@
 """
 Dealing with imbalanced datasets.
 
-@author: nam
+author: nam
 """
 
 from imblearn.combine import SMOTEENN

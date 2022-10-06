@@ -1,7 +1,7 @@
 """
 Feature selection algorithms.
 
-@author: nam
+author: nam
 """
 
 import matplotlib.pyplot as plt

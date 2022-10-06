@@ -1,6 +1,6 @@
 """
 Load all modules.
 
-@author: nam
+author: nam
 """
 __all__ = ["feature_selection", "filter", "imbalanced", "missing", "scaling"]
