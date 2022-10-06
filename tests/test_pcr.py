@@ -8,6 +8,7 @@ import os
 import unittest
 
 import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
@@ -19,6 +20,59 @@ from pychemauth.regressor.pcr import PCR
 
 class TestPCR(unittest.TestCase):
     """Test PCR class."""
+
+    @classmethod
+    def setUpClass(self):
+        """Set up class with a baseline model."""
+        df = pd.read_csv(
+            os.path.dirname(os.path.abspath(__file__)) + "/data/pcr_train.csv",
+            header=None,
+        )
+        self.X = np.array(df.values[:, 1:], dtype=float)
+        self.y = np.array(df.values[:, 0], dtype=float)
+        self.model = PCR(
+            n_components=4,
+            alpha=0.05,
+            gamma=0.01,
+            scale_x=False,
+            center_y=True,
+            scale_y=False,
+            robust="semi",
+        )
+        self.model.fit(self.X, self.y)
+
+    def test_scaling_params(self):
+        """Test scaling parameters."""
+        self.assertEqual(self.model._PCR__Nh_, 4)
+        self.assertEqual(self.model._PCR__Nq_, 4)
+        self.assertEqual(self.model._PCR__Nz_, 1)
+        np.testing.assert_almost_equal(
+            self.model._PCR__h0_, 0.08547084406857604
+        )
+        np.testing.assert_almost_equal(
+            self.model._PCR__q0_, 0.00020476865764116616
+        )
+        np.testing.assert_almost_equal(
+            self.model._PCR__z0_, 0.06657602899076177
+        )
+
+    def test_transform(self):
+        """Test transformation works."""
+        res = self.model.transform(self.X).ravel()[:3]
+        ans = np.array([-0.11708791, 0.10775746, -0.00019102])
+        np.testing.assert_almost_equal(res, ans, decimal=6)
+
+    def test_h_q(self):
+        """Check some h and q values."""
+        h, q = self.model.h_q_(self.X)
+        ans_h = np.array([0.05916447, 0.15571287, 0.10156415])
+        ans_q = np.array([0.00018677, 0.0003949, 0.0001755])
+        np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
+        np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
+
+
+class TestPCR_sklearn(unittest.TestCase):
+    """Test PCR class against scikit-learn."""
 
     """def test_sklearn_compatibility(self):
         #Check compatible with sklearn's estimator API.

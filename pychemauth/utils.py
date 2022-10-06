@@ -203,9 +203,13 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
             M = np.median(vals)
             S = scipy.stats.iqr(vals, rng=(25, 75))
 
-            return int(
-                round(np.exp(((1.0 / a) * np.log(b * M / S)) ** (1.0 / c)), 0)
-            )
+            arg = b * M / S
+            if arg < 1:
+                return 1
+            else:
+                return int(
+                    round(np.exp(((1.0 / a) * np.log(arg)) ** (1.0 / c)), 0)
+                )
 
         def averaged_estimator(N, vals):
             # Eq. 17 in [2]
@@ -237,6 +241,7 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
         else:
             # Else, use analytical approximation
             Nu = approximate(u_vals)
+
         u0 = averaged_estimator(Nu, u_vals)
 
     return Nu, u0
