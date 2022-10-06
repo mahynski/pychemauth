@@ -3,6 +3,8 @@ Principal Components Regression (PCR).
 
 author: nam
 """
+import copy
+
 import numpy as np
 import scipy
 from sklearn.base import BaseEstimator, RegressorMixin
@@ -49,6 +51,7 @@ class PCR(RegressorMixin, BaseEstimator):
         center_y=False,
         scale_y=False,
         robust="semi",
+        sft=False,
     ):
         """
         Instantiate the class.
@@ -78,6 +81,15 @@ class PCR(RegressorMixin, BaseEstimator):
             method [3], however, to initially test for and potentially remove these
             points, a robust variant is recommended. This is why 'semi' is the
             default value.
+        sft : bool
+            Whether or not to use the iterative outlier removal scheme described
+            in [2], called "sequential focused trimming."  If not used (default)
+            robust estimates of parameters may be attempted; if the iterative
+            approach is used, these robust estimates are only computed during the
+            outlier removal loop(s) while the final "clean" data uses classical
+            estimates.  This option may throw away data it is originally provided
+            for training; it keeps only "regular" samples (inliers and extremes)
+            to train the model.
         """
         self.set_params(
             **{
@@ -88,6 +100,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 "center_y": center_y,
                 "scale_y": scale_y,
                 "robust": robust,
+                "sft": sft,
             }
         )
         self.is_fitted_ = False
@@ -108,6 +121,7 @@ class PCR(RegressorMixin, BaseEstimator):
             "center_y": self.center_y,
             "scale_y": self.scale_y,
             "robust": self.robust,
+            "sft": self.sft,
         }
 
     def column_y_(self, y):
@@ -146,143 +160,202 @@ class PCR(RegressorMixin, BaseEstimator):
         -------
         self
         """
-        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-            raise ValueError("Cannot use sparse data.")
-        self.__X_ = np.array(X).copy()
-        self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
-        # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
-        self.__y_ = self.column_y_(
-            y
-        )  # scikit-learn expects 1D array, convert to columns
-        assert self.__y_.shape[1] == 1
 
-        if self.__X_.shape[0] != self.__y_.shape[0]:
-            raise ValueError(
-                "X ({}) and y ({}) shapes are not compatible".format(
-                    self.__X_.shape, self.__y_.shape
-                )
-            )
-        self.n_features_in_ = self.__X_.shape[1]
+        def train(X, y, robust):
+            """Train the model."""
+            if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
+                raise ValueError("Cannot use sparse data.")
+            self.__X_ = np.array(X).copy()
+            self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
+            # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
+            self.__y_ = self.column_y_(
+                y
+            )  # scikit-learn expects 1D array, convert to columns
+            assert self.__y_.shape[1] == 1
 
-        if self.robust == "full":
-            raise NotImplementedError
-        else:
-            # 1. Preprocess X data
-            self.__x_scaler_ = CorrectedScaler(
-                with_mean=True, with_std=self.scale_x
-            )  # Always center and maybe scale X
-
-            # 2. Preprocess Y data
-            self.__y_scaler_ = CorrectedScaler(
-                with_mean=self.center_y, with_std=self.scale_y
-            )  # Maybe center and maybe scale Y
-            self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)
-
-            # 3. Perform PCA on X data
-            upper_bound = np.min(
-                [
-                    self.__X_.shape[0] - 1,
-                    self.__X_.shape[1],
-                ]
-            )
-            lower_bound = 1
-            if (
-                self.n_components > upper_bound
-                or self.n_components < lower_bound
-            ):
-                raise Exception(
-                    "n_components must [{}, min(n_samples-1 [{}], \
-    n_features [{}])] = [{}, {}].".format(
-                        lower_bound,
-                        self.__X_.shape[0] - 1,
-                        self.__X_.shape[1],
-                        lower_bound,
-                        upper_bound,
+            if self.__X_.shape[0] != self.__y_.shape[0]:
+                raise ValueError(
+                    "X ({}) and y ({}) shapes are not compatible".format(
+                        self.__X_.shape, self.__y_.shape
                     )
                 )
+            self.n_features_in_ = self.__X_.shape[1]
 
-            self.__pca_ = PCA(
-                n_components=self.n_components,
-                random_state=0,
+            if robust == "full":
+                raise NotImplementedError
+            else:
+                # 1. Preprocess X data
+                self.__x_scaler_ = CorrectedScaler(
+                    with_mean=True, with_std=self.scale_x
+                )  # Always center and maybe scale X
+
+                # 2. Preprocess Y data
+                self.__y_scaler_ = CorrectedScaler(
+                    with_mean=self.center_y, with_std=self.scale_y
+                )  # Maybe center and maybe scale Y
+                self.__yt_ = self.__y_scaler_.fit_transform(self.__y_)
+
+                # 3. Perform PCA on X data
+                upper_bound = np.min(
+                    [
+                        self.__X_.shape[0] - 1,
+                        self.__X_.shape[1],
+                    ]
+                )
+                lower_bound = 1
+                if (
+                    self.n_components > upper_bound
+                    or self.n_components < lower_bound
+                ):
+                    raise Exception(
+                        "n_components must [{}, min(n_samples-1 [{}], \
+        n_features [{}])] = [{}, {}].".format(
+                            lower_bound,
+                            self.__X_.shape[0] - 1,
+                            self.__X_.shape[1],
+                            lower_bound,
+                            upper_bound,
+                        )
+                    )
+
+                self.__pca_ = PCA(
+                    n_components=self.n_components,
+                    random_state=0,
+                )
+
+            self.__T_train_ = self.__pca_.fit_transform(
+                self.__x_scaler_.fit_transform(self.__X_)
             )
 
-        self.__T_train_ = self.__pca_.fit_transform(
-            self.__x_scaler_.fit_transform(self.__X_)
-        )
+            # 4. Fit the projection
+            # Add column to include an intercept term in the projected space
+            t_new = np.hstack(
+                (np.ones((self.__T_train_.shape[0], 1)), self.__T_train_)
+            )
+            Q = np.matmul(
+                np.matmul(np.linalg.inv(np.matmul(t_new.T, t_new)), t_new.T),
+                self.__yt_,
+            )
+            self.__intercept_ = Q[0]
+            self.__coefs_ = Q[1:]
 
-        # 4. Fit the projection
-        # Add column to include an intercept term in the projected space
-        t_new = np.hstack(
-            (np.ones((self.__T_train_.shape[0], 1)), self.__T_train_)
-        )
-        Q = np.matmul(
-            np.matmul(np.linalg.inv(np.matmul(t_new.T, t_new)), t_new.T),
-            self.__yt_,
-        )
-        self.__intercept_ = Q[0]
-        self.__coefs_ = Q[1:]
+            self.is_fitted_ = True
 
-        self.is_fitted_ = True
+            # 5. Characterize outliers
+            h_vals, q_vals = self.h_q_(self.__X_)
 
-        # 5. Characterize outliers
-        h_vals, q_vals = self.h_q_(self.__X_)
+            # As in the conclusions of [4], Nh ~ n_components is expected so good initial guess
+            self.__Nh_, self.__h0_ = estimate_dof(
+                h_vals,
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=self.n_components,
+            )
 
-        # As in the conclusions of [4], Nh ~ n_components is expected so good initial guess
-        self.__Nh_, self.__h0_ = estimate_dof(
-            h_vals,
-            robust=(
-                True
-                if (self.robust == "semi" or self.robust == "full")
-                else False
-            ),
-            initial_guess=self.n_components,
-        )
+            # As in the conclusions of [4], Nq ~ rank(X)-n_components is expected;
+            # assuming near full rank then this is min(I,J)-n_components
+            # (n_components<=J)
+            self.__Nq_, self.__q0_ = estimate_dof(
+                q_vals,
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=np.min([len(q_vals), self.n_features_in_])
+                - self.n_components,
+            )
 
-        # As in the conclusions of [4], Nq ~ rank(X)-n_components is expected;
-        # assuming near full rank then this is min(I,J)-n_components
-        # (n_components<=J)
-        self.__Nq_, self.__q0_ = estimate_dof(
-            q_vals,
-            robust=(
-                True
-                if (self.robust == "semi" or self.robust == "full")
-                else False
-            ),
-            initial_guess=np.min([len(q_vals), self.n_features_in_])
-            - self.n_components,
-        )
+            self.__Nf_ = self.__Nh_ + self.__Nq_
+            self.__f0_ = (
+                self.__Nf_
+            )  # This term is a matter of convention to match the literature
 
-        self.__Nf_ = self.__Nh_ + self.__Nq_
-        self.__f0_ = (
-            self.__Nf_
-        )  # This term is a matter of convention to match the literature
+            z_vals = self.z_(
+                self.__X_, self.__y_
+            )  # Must come after fitting is otherwise complete
+            self.__Nz_, self.__z0_ = estimate_dof(
+                z_vals,
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=self.__y_.shape[1],
+            )
 
-        z_vals = self.z_(
-            self.__X_, self.__y_
-        )  # Must come after fitting is otherwise complete
-        self.__Nz_, self.__z0_ = estimate_dof(
-            z_vals,
-            robust=(
-                True
-                if (self.robust == "semi" or self.robust == "full")
-                else False
-            ),
-            initial_guess=self.__y_.shape[1],
-        )
+            self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
+            self.__x_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                self.__Nf_,
+            )
 
-        self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
-        self.__x_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nf_,
-        )
+            self.__xy_crit_ = scipy.stats.chi2.ppf(
+                1.0 - self.alpha, self.__Nf_ + self.__Nz_
+            )
+            self.__xy_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                self.__Nf_ + self.__Nz_,
+            )
 
-        self.__xy_crit_ = scipy.stats.chi2.ppf(
-            1.0 - self.alpha, self.__Nf_ + self.__Nz_
-        )
-        self.__xy_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nf_ + self.__Nz_,
-        )
+        # This is based on [2]
+        if not self.sft:
+            train(X, y, robust=self.robust)
+            self.__sft_history = {}
+        else:
+            X_tmp = np.array(X).copy()
+            y_tmp = self.column_y_(y)
+            outer_iters = 0
+            max_outer = 100
+            max_inner = 100
+            while True:  # Outer loop
+                if outer_iters >= max_outer:
+                    raise Exception(
+                        "Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping)."
+                    )
+                train(X_tmp, y_tmp, robust="semi")
+                _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
+                X_out = copy.copy(X_tmp[outliers, :])
+                y_out = copy.copy(y_tmp[outliers, :])
+                inner_iters = 0
+                while np.sum(outliers) > 0:
+                    if inner_iters >= max_inner:
+                        raise Exception(
+                            "Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking)."
+                        )
+                    X_tmp = X_tmp[~outliers, :]
+                    y_tmp = y_tmp[~outliers, :]
+                    if len(X_tmp) == 0:
+                        raise Exception(
+                            "Unable to iteratively clean data; all observations are considered outliers."
+                        )
+                    train(X_tmp, y_tmp, robust="semi")
+                    _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
+                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
+                    y_out = np.vstack((y_out, y_tmp[outliers, :]))
+                    inner_iters += 1
+
+                # All inside X_tmp are inliers or extremes (regular objects) now.
+                # Check that all outliers are predicted to be outliers in the latest version trained
+                # on only inlier and extremes.
+                outer_iters += 1
+                if len(X_out) > 0:
+                    _, outliers = self.check_xy_outliers(X_out, y_out)
+                    X_return = X_out[~outliers, :]
+                    y_return = y_out[~outliers, :]
+                    if len(X_return) == 0:
+                        break
+                    else:
+                        X_tmp = np.vstack((X_tmp, X_return))
+                        y_tmp = np.vstack((y_tmp, y_return))
+                else:
+                    break
+
+            # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
+            # which is considered "clean" so should try to use classical estimates of the parameters.
+            # train() assigns X_tmp to self.__X_ also. See [3].
+            train(X_tmp, y_tmp, robust=False)
+            self.__sft_history = {
+                "outer_loops": outer_iters,
+                "removed": {"X": X_out, "y": y_out},
+            }
 
         return self
 

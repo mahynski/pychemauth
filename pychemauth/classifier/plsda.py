@@ -361,6 +361,9 @@ n_features [{}])] = [{}, {}].".format(
         """
         Check if outliers exist in the training data originally fit to.
 
+        A point is tested for outlier status only with respect to its class.
+        This also, only works for "soft" PLS-DA.
+
         Returns
         -------
         outliers : ndarray

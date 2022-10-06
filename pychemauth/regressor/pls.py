@@ -3,6 +3,8 @@ Projection to Latent Structures (PLS).
 
 author: nam
 """
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -29,10 +31,18 @@ class PLS(RegressorMixin, BaseEstimator):
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
     [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev,
     Analytical Chemistry 92 (2020) 2656−2664.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
     def __init__(
-        self, n_components=1, alpha=0.05, gamma=0.01, scale_x=False, robust=True
+        self,
+        n_components=1,
+        alpha=0.05,
+        gamma=0.01,
+        scale_x=False,
+        robust=True,
+        sft=False,
     ):
         """
         Instantiate the class.
@@ -50,11 +60,20 @@ class PLS(RegressorMixin, BaseEstimator):
             Whether or not to scale X columns by the standard deviation.
         robust : bool
             Whether or not to apply robust methods to estimate degrees of freedom.
-            True (default) is described in [3,4] and uses robust DoF estimation, otherwise
+            True (default) is described in [3] and uses robust DoF estimation, otherwise
             classical estimators are used. If the dataset is clean (no outliers)
             it is best practice to use a classical method [3], however, to initially
             test for and potentially remove these points, a robust variant is recommended.
             This is why `True` is the default value.
+        sft : bool
+            Whether or not to use the iterative outlier removal scheme described
+            in [2], called "sequential focused trimming."  If not used (default)
+            robust estimates of parameters may be attempted; if the iterative
+            approach is used, these robust estimates are only computed during the
+            outlier removal loop(s) while the final "clean" data uses classical
+            estimates.  This option may throw away data it is originally provided
+            for training; it keeps only "regular" samples (inliers and extremes)
+            to train the model.
         """
         self.set_params(
             **{
@@ -63,6 +82,7 @@ class PLS(RegressorMixin, BaseEstimator):
                 "gamma": gamma,
                 "scale_x": scale_x,
                 "robust": robust,
+                "sft": sft,
             }
         )
         self.is_fitted_ = False
@@ -81,6 +101,7 @@ class PLS(RegressorMixin, BaseEstimator):
             "gamma": self.gamma,
             "scale_x": self.scale_x,
             "robust": self.robust,
+            "sft": self.sft,
         }
 
     def column_y_(self, y):
@@ -119,113 +140,192 @@ class PLS(RegressorMixin, BaseEstimator):
         -------
         self
         """
-        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-            raise ValueError("Cannot use sparse data.")
-        self.__X_ = np.array(X).copy()
-        self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
-        # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
-        self.__y_ = self.column_y_(
-            y
-        )  # scikit-learn expects 1D array, convert to columns
-        assert self.__y_.shape[1] == 1
 
-        if self.__X_.shape[0] != self.__y_.shape[0]:
-            raise ValueError(
-                "X ({}) and y ({}) shapes are not compatible".format(
-                    self.__X_.shape, self.__y_.shape
+        def train(X, y, robust):
+            """
+            Train the model.
+
+            Parameters
+            ----------
+            X : ndarray
+                X data to train on.
+            y : ndarray
+                y data to train on.
+            robust : bool
+                Whether or not to use robust parameter estimation in [3].
+            """
+            if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
+                raise ValueError("Cannot use sparse data.")
+            self.__X_ = np.array(X).copy()
+            self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
+            # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
+            self.__y_ = self.column_y_(
+                y
+            )  # scikit-learn expects 1D array, convert to columns
+            assert self.__y_.shape[1] == 1
+
+            if self.__X_.shape[0] != self.__y_.shape[0]:
+                raise ValueError(
+                    "X ({}) and y ({}) shapes are not compatible".format(
+                        self.__X_.shape, self.__y_.shape
+                    )
                 )
-            )
-        self.n_features_in_ = self.__X_.shape[1]
+            self.n_features_in_ = self.__X_.shape[1]
 
-        # 1. Preprocess X data
-        self.__x_scaler_ = CorrectedScaler(
-            with_mean=True, with_std=self.scale_x
-        )  # Always center and maybe scale X
-        self.__x_scaler_.fit(self.__X_)
+            # 1. Preprocess X data
+            self.__x_scaler_ = CorrectedScaler(
+                with_mean=True, with_std=self.scale_x
+            )  # Always center and maybe scale X
+            self.__x_scaler_.fit(self.__X_)
 
-        # 2. Preprocess Y data
-        self.__y_scaler_ = CorrectedScaler(
-            with_mean=True, with_std=False
-        )  # Always center and maybe scale Y
-        self.__y_scaler_.fit(self.__y_)
+            # 2. Preprocess Y data
+            self.__y_scaler_ = CorrectedScaler(
+                with_mean=True, with_std=False
+            )  # Always center and maybe scale Y
+            self.__y_scaler_.fit(self.__y_)
 
-        # 3. Perform PLS
-        upper_bound = np.min(
-            [
-                self.__X_.shape[0] - 1,
-                self.__X_.shape[1],
-            ]
-        )
-        lower_bound = 1
-        if self.n_components > upper_bound or self.n_components < lower_bound:
-            raise Exception(
-                "n_components must [{}, min(n_samples-1 [{}], \
-n_features [{}])] = [{}, {}].".format(
-                    lower_bound,
+            # 3. Perform PLS
+            upper_bound = np.min(
+                [
                     self.__X_.shape[0] - 1,
                     self.__X_.shape[1],
-                    lower_bound,
-                    upper_bound,
+                ]
+            )
+            lower_bound = 1
+            if (
+                self.n_components > upper_bound
+                or self.n_components < lower_bound
+            ):
+                raise Exception(
+                    "n_components must [{}, min(n_samples-1 [{}], \
+    n_features [{}])] = [{}, {}].".format(
+                        lower_bound,
+                        self.__X_.shape[0] - 1,
+                        self.__X_.shape[1],
+                        lower_bound,
+                        upper_bound,
+                    )
                 )
+
+            self.__pls_ = PLSRegression(
+                n_components=self.n_components,
+                scale=self.scale_x,
+                max_iter=10000,
             )
 
-        self.__pls_ = PLSRegression(
-            n_components=self.n_components,
-            scale=self.scale_x,
-            max_iter=10000,
-        )
+            # 4. Fit the projection
+            self.__pls_.fit(
+                self.__x_scaler_.transform(self.__X_),
+                self.__y_scaler_.transform(self.__y_),
+            )
 
-        # 4. Fit the projection
-        self.__pls_.fit(
-            self.__x_scaler_.transform(self.__X_),
-            self.__y_scaler_.transform(self.__y_),
-        )
+            # 5. Characterize outliers according to [2]
+            self.is_fitted_ = True
 
-        # 5. Characterize outliers according to [2]
-        self.is_fitted_ = True
+            h_vals, q_vals = self.h_q_(self.__X_)
 
-        h_vals, q_vals = self.h_q_(self.__X_)
+            # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
+            self.__Nh_, self.__h0_ = estimate_dof(
+                h_vals, robust=robust, initial_guess=self.n_components
+            )
 
-        # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
-        self.__Nh_, self.__h0_ = estimate_dof(
-            h_vals, robust=self.robust, initial_guess=self.n_components
-        )
+            # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
+            # assuming near full rank then this is min(I,J)-n_components
+            # (n_components<=J)
+            self.__Nq_, self.__q0_ = estimate_dof(
+                q_vals,
+                robust=robust,
+                initial_guess=np.min([len(q_vals), self.n_features_in_])
+                - self.n_components,
+            )
 
-        # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
-        # assuming near full rank then this is min(I,J)-n_components
-        # (n_components<=J)
-        self.__Nq_, self.__q0_ = estimate_dof(
-            q_vals,
-            robust=self.robust,
-            initial_guess=np.min([len(q_vals), self.n_features_in_])
-            - self.n_components,
-        )
+            self.__Nf_ = self.__Nh_ + self.__Nq_
+            self.__f0_ = (
+                self.__Nf_
+            )  # This term is a matter of convention to match the literature
 
-        self.__Nf_ = self.__Nh_ + self.__Nq_
-        self.__f0_ = (
-            self.__Nf_
-        )  # This term is a matter of convention to match the literature
+            z_vals = self.z_(
+                self.__X_, self.__y_
+            )  # Must come after fitting is otherwise complete
+            self.__Nz_, self.__z0_ = estimate_dof(
+                z_vals, robust=robust, initial_guess=self.__y_.shape[1]
+            )
 
-        z_vals = self.z_(
-            self.__X_, self.__y_
-        )  # Must come after fitting is otherwise complete
-        self.__Nz_, self.__z0_ = estimate_dof(
-            z_vals, robust=self.robust, initial_guess=self.__y_.shape[1]
-        )
+            self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
+            self.__x_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                self.__Nf_,
+            )
 
-        self.__x_crit_ = scipy.stats.chi2.ppf(1.0 - self.alpha, self.__Nf_)
-        self.__x_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nf_,
-        )
+            self.__xy_crit_ = scipy.stats.chi2.ppf(
+                1.0 - self.alpha, self.__Nf_ + self.__Nz_
+            )
+            self.__xy_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                self.__Nf_ + self.__Nz_,
+            )
 
-        self.__xy_crit_ = scipy.stats.chi2.ppf(
-            1.0 - self.alpha, self.__Nf_ + self.__Nz_
-        )
-        self.__xy_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nf_ + self.__Nz_,
-        )
+        # This is based on [2]
+        if not self.sft:
+            train(X, y, robust=self.robust)
+            self.__sft_history = {}
+        else:
+            X_tmp = np.array(X).copy()
+            y_tmp = self.column_y_(y)
+            outer_iters = 0
+            max_outer = 100
+            max_inner = 100
+            while True:  # Outer loop
+                if outer_iters >= max_outer:
+                    raise Exception(
+                        "Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping)."
+                    )
+                train(X_tmp, y_tmp, robust=True)
+                _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
+                X_out = copy.copy(X_tmp[outliers, :])
+                y_out = copy.copy(y_tmp[outliers, :])
+                inner_iters = 0
+                while np.sum(outliers) > 0:
+                    if inner_iters >= max_inner:
+                        raise Exception(
+                            "Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking)."
+                        )
+                    X_tmp = X_tmp[~outliers, :]
+                    y_tmp = y_tmp[~outliers, :]
+                    if len(X_tmp) == 0:
+                        raise Exception(
+                            "Unable to iteratively clean data; all observations are considered outliers."
+                        )
+                    train(X_tmp, y_tmp, robust=True)
+                    _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
+                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
+                    y_out = np.vstack((y_out, y_tmp[outliers, :]))
+                    inner_iters += 1
+
+                # All inside X_tmp are inliers or extremes (regular objects) now.
+                # Check that all outliers are predicted to be outliers in the latest version trained
+                # on only inlier and extremes.
+                outer_iters += 1
+                if len(X_out) > 0:
+                    _, outliers = self.check_xy_outliers(X_out, y_out)
+                    X_return = X_out[~outliers, :]
+                    y_return = y_out[~outliers, :]
+                    if len(X_return) == 0:
+                        break
+                    else:
+                        X_tmp = np.vstack((X_tmp, X_return))
+                        y_tmp = np.vstack((y_tmp, y_return))
+                else:
+                    break
+
+            # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
+            # which is considered "clean" so should try to use classical estimates of the parameters.
+            # train() assigns X_tmp to self.__X_ also. See [3].
+            train(X_tmp, y_tmp, robust=False)
+            self.__sft_history = {
+                "outer_loops": outer_iters,
+                "removed": {"X": X_out, "y": y_out},
+            }
 
         return self
 

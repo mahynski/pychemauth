@@ -3,6 +3,8 @@ Principal Components Analysis (PCA).
 
 author: nam
 """
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -43,6 +45,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         gamma=0.01,
         scale_x=False,
         robust="semi",
+        sft=False,
     ):
         """
         Instantiate the class.
@@ -68,6 +71,15 @@ class PCA(ClassifierMixin, BaseEstimator):
             method [2], however, to initially test for and potentially remove these
             points, a robust variant is recommended. This is why 'semi' is the
             default value.
+        sft : bool
+            Whether or not to use the iterative outlier removal scheme described
+            in [2], called "sequential focused trimming."  If not used (default)
+            robust estimates of parameters may be attempted; if the iterative
+            approach is used, these robust estimates are only computed during the
+            outlier removal loop(s) while the final "clean" data uses classical
+            estimates.  This option may throw away data it is originally provided
+            for training; it keeps only "regular" samples (inliers and extremes)
+            to train the model.
         """
         self.set_params(
             **{
@@ -76,6 +88,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "gamma": gamma,
                 "scale_x": scale_x,
                 "robust": robust,
+                "sft": sft,
             }
         )
         self.is_fitted_ = False
@@ -94,6 +107,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             "gamma": self.gamma,
             "scale_x": self.scale_x,
             "robust": self.robust,
+            "sft": self.sft,
         }
 
     def matrix_X_(self, X):
@@ -126,83 +140,149 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
-        self.__X_ = np.array(X).copy()
-        self.__X_ = check_array(self.__X_, accept_sparse=False)
-        self.n_features_in_ = self.__X_.shape[1]
 
-        if self.robust == "full":
-            raise NotImplementedError
-        else:
-            # 1. Preprocess X data
-            self.__x_scaler_ = CorrectedScaler(
-                with_mean=True, with_std=self.scale_x
-            )  # Always center and maybe scale X
+        def train(X, robust):
+            """
+            Train the model.
 
-            # 2. Perform PCA on X data
-            upper_bound = np.min(
-                [
-                    self.__X_.shape[0] - 1,
-                    self.__X_.shape[1],
-                ]
-            )
-            lower_bound = 1
-            if (
-                self.n_components > upper_bound
-                or self.n_components < lower_bound
-            ):
-                raise Exception(
-                    "n_components must [{}, min(n_samples-1 [{}], \
-    n_features [{}])] = [{}, {}].".format(
-                        lower_bound,
+            Parameters
+            ----------
+            X : ndarray
+                Data to train on.
+            robust : str
+                'full' = robust PCA + robust parameter estimation in [4] (not yet implemented);
+                'semi' = classical PCA + robust parameter estimation in [4];
+                otherwise = classical PCA + classical parameter estimation in [4];
+            """
+            self.__X_ = np.array(X).copy()
+            self.__X_ = check_array(self.__X_, accept_sparse=False)
+            self.n_features_in_ = self.__X_.shape[1]
+
+            if robust == "full":
+                raise NotImplementedError
+            else:
+                # 1. Preprocess X data
+                self.__x_scaler_ = CorrectedScaler(
+                    with_mean=True, with_std=self.scale_x
+                )  # Always center and maybe scale X
+
+                # 2. Perform PCA on X data
+                upper_bound = np.min(
+                    [
                         self.__X_.shape[0] - 1,
                         self.__X_.shape[1],
-                        lower_bound,
-                        upper_bound,
-                    )
+                    ]
                 )
+                lower_bound = 1
+                if (
+                    self.n_components > upper_bound
+                    or self.n_components < lower_bound
+                ):
+                    raise Exception(
+                        "n_components must [{}, min(n_samples-1 [{}], \
+        n_features [{}])] = [{}, {}].".format(
+                            lower_bound,
+                            self.__X_.shape[0] - 1,
+                            self.__X_.shape[1],
+                            lower_bound,
+                            upper_bound,
+                        )
+                    )
 
-            self.__pca_ = sklearn.decomposition.PCA(
-                n_components=self.n_components, svd_solver="auto"
+                self.__pca_ = sklearn.decomposition.PCA(
+                    n_components=self.n_components, svd_solver="auto"
+                )
+                self.__pca_.fit(self.__x_scaler_.fit_transform(self.__X_))
+
+            self.is_fitted_ = True
+
+            # 3. Compute critical distances
+            h_vals, q_vals = self.h_q_(self.__X_)
+
+            # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
+            self.__Nh_, self.__h0_ = estimate_dof(
+                h_vals,
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=self.n_components,
             )
-            self.__pca_.fit(self.__x_scaler_.fit_transform(self.__X_))
 
-        self.is_fitted_ = True
+            # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
+            # assuming near full rank then this is min(I,J)-n_components
+            # (n_components<=J)
+            self.__Nq_, self.__q0_ = estimate_dof(
+                q_vals,
+                robust=(
+                    True if (robust == "semi" or robust == "full") else False
+                ),
+                initial_guess=np.min([len(q_vals), self.n_features_in_])
+                - self.n_components,
+            )
 
-        # 3. Compute critical distances
-        h_vals, q_vals = self.h_q_(self.__X_)
+            self.__c_crit_ = scipy.stats.chi2.ppf(
+                1.0 - self.alpha, self.__Nh_ + self.__Nq_
+            )
+            self.__c_out_ = scipy.stats.chi2.ppf(
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                self.__Nh_ + self.__Nq_,
+            )
 
-        # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
-        self.__Nh_, self.__h0_ = estimate_dof(
-            h_vals,
-            robust=(
-                True
-                if (self.robust == "semi" or self.robust == "full")
-                else False
-            ),
-            initial_guess=self.n_components,
-        )
+        # This is based on [2]
+        if not self.sft:
+            train(X, robust=self.robust)
+            self.__sft_history = {}
+        else:
+            X_tmp = np.array(X).copy()
+            outer_iters = 0
+            max_outer = 100
+            max_inner = 100
+            while True:  # Outer loop
+                if outer_iters >= max_outer:
+                    raise Exception(
+                        "Unable to iteratively clean data; exceeded maximum allowable outer loops (to eliminate swamping)."
+                    )
+                train(X_tmp, robust="semi")
+                _, outliers = self.check_outliers(X_tmp)
+                X_out = copy.copy(X_tmp[outliers, :])
+                inner_iters = 0
+                while np.sum(outliers) > 0:
+                    if inner_iters >= max_inner:
+                        raise Exception(
+                            "Unable to iteratively clean data; exceeded maximum allowable inner loops (to eliminate masking)."
+                        )
+                    X_tmp = X_tmp[~outliers, :]
+                    if len(X_tmp) == 0:
+                        raise Exception(
+                            "Unable to iteratively clean data; all observations are considered outliers."
+                        )
+                    train(X_tmp, robust="semi")
+                    _, outliers = self.check_outliers(X_tmp)
+                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
+                    inner_iters += 1
 
-        # As in the conclusions of [1], Nq ~ rank(X)-n_components is expected;
-        # assuming near full rank then this is min(I,J)-n_components
-        # (n_components<=J)
-        self.__Nq_, self.__q0_ = estimate_dof(
-            q_vals,
-            robust=(
-                True
-                if (self.robust == "semi" or self.robust == "full")
-                else False
-            ),
-            initial_guess=np.min([len(q_vals), self.n_features_in_])
-            - self.n_components,
-        )
+                # All inside X_tmp are inliers or extremes (regular objects) now.
+                # Check that all outliers are predicted to be outliers in the latest version trained
+                # on only inlier and extremes.
+                outer_iters += 1
+                if len(X_out) > 0:
+                    _, outliers = self.check_outliers(X_out)
+                    X_return = X_out[~outliers, :]
+                    if len(X_return) == 0:
+                        break
+                    else:
+                        X_tmp = np.vstack((X_tmp, X_return))
+                else:
+                    break
 
-        self.__c_crit_ = scipy.stats.chi2.ppf(
-            1.0 - self.alpha, self.__Nh_ + self.__Nq_
-        )
-        self.__c_out_ = scipy.stats.chi2.ppf(
-            (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-            self.__Nh_ + self.__Nq_,
-        )
+            # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
+            # which is considered "clean" so should try to use classical estimates of the parameters.
+            # train() assigns X_tmp to self.__X_ also. See [2].
+            train(X_tmp, robust=False)
+            self.__sft_history = {
+                "outer_loops": outer_iters,
+                "removed": {"X": X_out},
+            }
 
         return self
 
