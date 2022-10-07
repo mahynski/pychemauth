@@ -91,7 +91,7 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 * [EllipticManifold](manifold/elliptic.py) - a combined manifold learning/dimensionality reduction step followed by the determination of a elliptical boundary to detect outliers.
 
 ## General Machine Learning [Large amount of data available]
-> These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.
+> These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.  Detecting "new or unusual" objects with AI/ML is usually formulated as an outlier detection problem.  This is a fairly mature field when it comes to feature-vector data for conventional ML/statistical algorithms, but deep learning approaches currently struggle to outperform their other ML counterparts (see the [``Familiarity Hypothesis''](https://www.sciencedirect.com/science/article/pii/S0031320322004125) by Dietterich and Guyer).
 * Outlier detection with [PyOD](https://pyod.readthedocs.io/en/latest/) - This encompasses many different approaches including isolation forests and autoencoders.
 * Semi-supervised [Positive-Unlabeled (PU) learning](https://pulearn.github.io/pulearn/)
 
@@ -99,8 +99,9 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 
 > In general, the problem of detecting novelties (many unknown classes) when a finite of known classes are available for training is known as [open set recognition](https://www.wjscheirer.com/projects/openset-recognition/).  Here are some references for further reading:
 * A curated [GitHub](https://github.com/iCGY96/awesome_OpenSetRecognition_list) list of papers and resources.
-* [Geng, C., S.-J. Huang, and S. Chen. "Recent Advances in Open Set Recognition: A Survey" (2018): arXiv:1811.08581v4](https://arxiv.org/pdf/1811.08581.pdf)
+* [Geng, C., S.-J. Huang, and S. Chen. "Recent Advances in Open Set Recognition: A Survey." (2018): arXiv:1811.08581v4](https://arxiv.org/pdf/1811.08581.pdf)
 * [Vaze, S., H. Han, A. Vedaldi, and A. Zisserman. "Open-Set Recognition: a Good Closed-Set Classifier is All You Need?" (2021): arXiv:2110.06207v2 ](https://arxiv.org/pdf/2110.06207.pdf)
+* [Dietterich, T., and A. Guyer. "The familiarity hypothesis: Explaining the behavior of deep open set methods." Pattern Recognition 132 (2022): 108931](https://www.sciencedirect.com/science/article/pii/S0031320322004125)
 
 ## Explanations and Interpretations
 > While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
