@@ -3,7 +3,6 @@ Dealing with imbalanced datasets.
 
 author: nam
 """
-
 from imblearn.combine import SMOTEENN
 from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import EditedNearestNeighbours as ENN
@@ -122,7 +121,7 @@ class ScaledSMOTEENN:
             "k_enn": self.k_enn,
             "kind_sel_enn": self.kind_sel_enn,
             "random_state": self.random_state,
-            "scaler": copy.copy(self.scaler),
+            "scaler": self.scaler,
         }
 
     def fit_resample(self, X, y):
