@@ -483,8 +483,10 @@ class JensenShannonDivergence:
                 _ = ax_.set_xticklabels(xv, rotation=90)
                 plt.tight_layout()
         else:  # Plot results by mean across all classes
-            _ = plt.figure(figsize=figsize)
-            ax = plt.gca()
+            if ax is None:
+                _ = plt.figure(figsize=figsize)
+                ax = plt.gca()
+
             if self.per_class:
                 arbitrary_class = list(self.divergence.keys())[0]
                 xv = [a[0] for a in self.divergence[arbitrary_class]]
@@ -502,7 +504,7 @@ class JensenShannonDivergence:
             ax.bar(x=np.arange(1, len(xv) + 1), height=yv)
             if threshold is not None:
                 ax.axhline(threshold, color="r")
-            ax_.set_xticks(np.arange(1, len(xv) + 1))
+            ax.set_xticks(np.arange(1, len(xv) + 1))
             _ = ax.set_xticklabels(xv, rotation=90)
             plt.tight_layout()
 
