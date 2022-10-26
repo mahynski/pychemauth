@@ -234,9 +234,12 @@ class PCA(ClassifierMixin, BaseEstimator):
             self.__sft_history_ = {}
         else:
             X_tmp = np.array(X).copy()
+            total_data_points = X_tmp.shape[0]
+            X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
             outer_iters = 0
             max_outer = 100
             max_inner = 100
+            sft_tracker = {}
             while True:  # Outer loop
                 if outer_iters >= max_outer:
                     raise Exception(
@@ -244,7 +247,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                     )
                 train(X_tmp, robust="semi")
                 _, outliers = self.check_outliers(X_tmp)
-                X_out = copy.copy(X_tmp[outliers, :])
+                X_delete_ = X_tmp[outliers, :]
                 inner_iters = 0
                 while np.sum(outliers) > 0:
                     if inner_iters >= max_inner:
@@ -258,19 +261,29 @@ class PCA(ClassifierMixin, BaseEstimator):
                         )
                     train(X_tmp, robust="semi")
                     _, outliers = self.check_outliers(X_tmp)
-                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
+                    X_delete_ = np.vstack((X_delete_, X_tmp[outliers, :]))
                     inner_iters += 1
+                X_out = np.vstack((X_out, X_delete_))
+                assert (
+                    X_tmp.shape[0] + X_out.shape[0] == total_data_points
+                )  # Sanity check
 
                 # All inside X_tmp are inliers or extremes (regular objects) now.
                 # Check that all outliers are predicted to be outliers in the latest version trained
                 # on only inlier and extremes.
                 outer_iters += 1
+                sft_tracker[outer_iters] = {
+                    "initially removed": X_delete_,
+                    "returned": None,
+                }
                 if len(X_out) > 0:
                     _, outliers = self.check_outliers(X_out)
                     X_return = X_out[~outliers, :]
+                    X_out = X_out[outliers, :]
                     if len(X_return) == 0:
                         break
                     else:
+                        sft_tracker[outer_iters]["returned"] = X_return
                         X_tmp = np.vstack((X_tmp, X_return))
                 else:
                     break
@@ -278,10 +291,14 @@ class PCA(ClassifierMixin, BaseEstimator):
             # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [2].
+            assert (
+                X_out.shape[0] + self.__X_.shape[0] == total_data_points
+            )  # Sanity check
             train(X_tmp, robust=False)
             self.__sft_history_ = {
                 "outer_loops": outer_iters,
                 "removed": {"X": X_out},
+                "iterations": sft_tracker,
             }
 
         return self
