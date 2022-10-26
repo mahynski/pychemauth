@@ -302,9 +302,13 @@ class PCR(RegressorMixin, BaseEstimator):
         else:
             X_tmp = np.array(X).copy()
             y_tmp = np.array(y).ravel()
+            total_data_points = X_tmp.shape[0]
+            X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
+            y_out = np.empty(len(y_tmp), dtype=type(y_tmp))
             outer_iters = 0
             max_outer = 100
             max_inner = 100
+            sft_tracker = {}
             while True:  # Outer loop
                 if outer_iters >= max_outer:
                     raise Exception(
@@ -312,8 +316,8 @@ class PCR(RegressorMixin, BaseEstimator):
                     )
                 train(X_tmp, y_tmp, robust="semi")
                 _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
-                X_out = copy.copy(X_tmp[outliers, :])
-                y_out = copy.copy(y_tmp[outliers])
+                X_delete_ = X_tmp[outliers, :]
+                y_delete_ = y_tmp[outliers]
                 inner_iters = 0
                 while np.sum(outliers) > 0:
                     if inner_iters >= max_inner:
@@ -328,21 +332,39 @@ class PCR(RegressorMixin, BaseEstimator):
                         )
                     train(X_tmp, y_tmp, robust="semi")
                     _, outliers = self.check_xy_outliers(X_tmp, y_tmp)
-                    X_out = np.vstack((X_out, X_tmp[outliers, :]))
-                    y_out = np.concatenate((y_out, y_tmp[outliers]))
+                    X_delete_ = np.vstack((X_delete_, X_tmp[outliers, :]))
+                    y_delete_ = np.concatenate((y_delete_, y_tmp[outliers]))
                     inner_iters += 1
+                X_out = np.vstack((X_out, X_delete_))
+                y_out = np.concatenate((y_out, y_delete_))
+                assert (
+                    X_tmp.shape[0] + X_out.shape[0] == total_data_points
+                )  # Sanity check
+                assert (
+                    len(y_tmp) + len(y_out) == total_data_points
+                )  # Sanity check
 
                 # All inside X_tmp are inliers or extremes (regular objects) now.
                 # Check that all outliers are predicted to be outliers in the latest version trained
                 # on only inlier and extremes.
                 outer_iters += 1
+                sft_tracker[outer_iters] = {
+                    "initially removed X": X_delete_,
+                    "initially removed y": y_delete_,
+                    "returned X": None,
+                    "returned y": None,
+                }
                 if len(X_out) > 0:
                     _, outliers = self.check_xy_outliers(X_out, y_out)
                     X_return = X_out[~outliers, :]
                     y_return = y_out[~outliers]
+                    X_out = X_out[outliers, :]
+                    y_out = y_out[outliers, :]
                     if len(X_return) == 0:
                         break
                     else:
+                        sft_tracker[outer_iters]["returned X"] = X_return
+                        sft_tracker[outer_iters]["returned y"] = y_return
                         X_tmp = np.vstack((X_tmp, X_return))
                         y_tmp = np.concatenate((y_tmp, y_return))
                 else:
@@ -351,10 +373,17 @@ class PCR(RegressorMixin, BaseEstimator):
             # Outliers have been iteratively found, and X_tmp is a consistent set of data to use
             # which is considered "clean" so should try to use classical estimates of the parameters.
             # train() assigns X_tmp to self.__X_ also. See [3].
+            assert (
+                X_out.shape[0] + self.__X_.shape[0] == total_data_points
+            )  # Sanity check
+            assert (
+                len(y_out) + self.__y_.shape[0] == total_data_points
+            )  # Sanity check
             train(X_tmp, y_tmp, robust=False)
             self.__sft_history_ = {
                 "outer_loops": outer_iters,
                 "removed": {"X": X_out, "y": y_out},
+                "iterations": sft_tracker,
             }
 
         return self
