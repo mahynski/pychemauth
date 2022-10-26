@@ -896,18 +896,18 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 self.__ss_ = CorrectedScaler(
                     with_mean=True, with_std=self.scale_x
                 )
-                self.__ss_.fit(X)
+                self.__ss_.fit(self.__X_)
 
                 # 2. Perform PCA on standardized coordinates
                 self.__pca_ = PCA(
                     n_components=self.n_components, random_state=0
                 )
-                self.__pca_.fit(self.__ss_.transform(X))
+                self.__pca_.fit(self.__ss_.transform(self.__X_))
 
             self.is_fitted_ = True
 
             # 3. Compute critical distances
-            h_vals, q_vals = self.h_q_(X)
+            h_vals, q_vals = self.h_q_(self.__X_)
 
             # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
             self.__Nh_, self.__h0_ = estimate_dof(
@@ -937,7 +937,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
             # Eq. 20 in [2]
             self.__c_out_ = scipy.stats.chi2.ppf(
-                (1.0 - self.gamma) ** (1.0 / X.shape[0]),
+                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
                 self.__Nh_ + self.__Nq_,
             )
 
