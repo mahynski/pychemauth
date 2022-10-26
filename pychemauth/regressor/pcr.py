@@ -359,7 +359,7 @@ class PCR(RegressorMixin, BaseEstimator):
                     X_return = X_out[~outliers, :]
                     y_return = y_out[~outliers]
                     X_out = X_out[outliers, :]
-                    y_out = y_out[outliers, :]
+                    y_out = y_out[outliers]
                     if len(X_return) == 0:
                         break
                     else:
