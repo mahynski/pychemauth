@@ -274,7 +274,7 @@ class PLS(RegressorMixin, BaseEstimator):
             y_tmp = np.array(y).ravel()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
-            y_out = np.empty(len(y_tmp), dtype=type(y_tmp))
+            y_out = np.array([], dtype=type(y_tmp))
             outer_iters = 0
             max_outer = 100
             max_inner = 100
@@ -310,7 +310,6 @@ class PLS(RegressorMixin, BaseEstimator):
                 assert (
                     X_tmp.shape[0] + X_out.shape[0] == total_data_points
                 )  # Sanity check
-                print(len(y_tmp), len(y_out))
                 assert (
                     len(y_tmp) + len(y_out) == total_data_points
                 )  # Sanity check
@@ -373,17 +372,21 @@ class PLS(RegressorMixin, BaseEstimator):
 
         X_ = self.__x_scaler_.transform(X)
         x_scores = self.__pls_.transform(X_)
+        
+        X_t_ = self.__x_scaler_.transform(self.__X_)
+        x_scores_t_ = self.__pls_.transform(X_t_)
+        
         h = np.diagonal(
             np.matmul(
                 np.matmul(
-                    x_scores, np.linalg.inv(np.matmul(x_scores.T, x_scores))
+                    x_scores, np.linalg.inv(np.matmul(x_scores_t_.T, x_scores_t_))
                 ),
                 x_scores.T,
             )
         )
 
         q = np.sum(
-            (self.__pls_.inverse_transform(self.__pls_.transform(X_)) - X_)
+            (self.__pls_.inverse_transform(x_scores) - X_)
             ** 2,
             axis=1,
         )
