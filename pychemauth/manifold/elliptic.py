@@ -16,6 +16,12 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 
     This process can be summarized as follows.  For each individual class:
+    
+    Step 0: Outlier removal.  In principle, it may be optimal to remove outliers before any analysis
+    so that they do not impact the development of the manifold / dimensionality reduction.  For high
+    dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction
+    step is robust against outliers (e.g., ROBPCA) then this might be not be necessary; however, in
+    general, consider adding this to the pipeline before training.
 
     Step 1: Perform a dimensionality reduction (DR) step using some model to obtain
     a projection ("scores" or "embedding").
@@ -109,7 +115,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
             Mahalanobis distances.
         center : str
-            If 'score', center the ellipse in the score space; otherwise go from projection
+            If 'score', center the ellipse in the score space; otherwise go from transformation
             of the mean in the original data space.
         """
         self.set_params(
@@ -221,9 +227,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         # covariance/plot_mahalanobis_distances.html?highlight=outlier%20detection
         # Do NOT perform additional centering to respect the decision above.
         if self.robust:
-            cov = EmpiricalCovariance(assume_centered=True).fit(t)
-        else:
             cov = MinCovDet(assume_centered=True).fit(t)
+        else:
+            cov = EmpiricalCovariance(assume_centered=True).fit(t)
         self.__S_ = cov.covariance_
 
         return self
