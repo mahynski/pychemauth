@@ -310,6 +310,7 @@ class PLS(RegressorMixin, BaseEstimator):
                 assert (
                     X_tmp.shape[0] + X_out.shape[0] == total_data_points
                 )  # Sanity check
+                print(len(y_tmp), len(y_out))
                 assert (
                     len(y_tmp) + len(y_out) == total_data_points
                 )  # Sanity check
