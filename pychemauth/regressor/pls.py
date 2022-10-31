@@ -373,9 +373,7 @@ class PLS(RegressorMixin, BaseEstimator):
         X_ = self.__x_scaler_.transform(X)
         x_scores = self.__pls_.transform(X_)
         
-        X_t_ = self.__x_scaler_.transform(self.__X_)
-        x_scores_t_ = self.__pls_.transform(X_t_)
-        
+        x_scores_t_ = self.transform(self.__X_)
         h = np.diagonal(
             np.matmul(
                 np.matmul(
