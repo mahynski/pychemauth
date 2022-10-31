@@ -304,7 +304,7 @@ class PCR(RegressorMixin, BaseEstimator):
             y_tmp = np.array(y).ravel()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
-            y_out = np.empty(len(y_tmp), dtype=type(y_tmp))
+            y_out = np.array([], dtype=type(y_tmp))
             outer_iters = 0
             max_outer = 100
             max_inner = 100
@@ -405,7 +405,7 @@ class PCR(RegressorMixin, BaseEstimator):
         h = np.diagonal(
             np.matmul(
                 np.matmul(
-                    x_scores, np.linalg.inv(np.matmul(x_scores.T, x_scores))
+                    x_scores, np.linalg.inv(np.matmul(self._T_train_.T, self._T_train_))
                 ),
                 x_scores.T,
             )
