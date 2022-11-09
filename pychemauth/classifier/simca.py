@@ -54,6 +54,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         self,
         n_components=1,
         alpha=0.05,
+        gamma=0.01,
         target_class=None,
         style="dd-simca",
         use="rigorous",
@@ -79,7 +80,9 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         n_components : int
             Number of components to use in the SIMCA model.
         alpha : float
-            Significance level for SIMCA model.
+            Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
+        gamma : float
+            Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
         target_class : str or int
             The class used to fit the SIMCA model; the rest are used
             to test specificity.
@@ -119,6 +122,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             **{
                 "n_components": n_components,
                 "alpha": alpha,
+                "gamma": gamma,
                 "target_class": target_class,
                 "style": style,
                 "use": use,
@@ -141,6 +145,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         return {
             "n_components": self.n_components,
             "alpha": self.alpha,
+            "gamma": self.gamma,
             "target_class": self.target_class,
             "style": self.style,
             "use": self.use,
@@ -183,6 +188,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             self.__model_ = DDSIMCA_Model(
                 n_components=self.n_components,
                 alpha=self.alpha,
+                gamma=self.gamma,
                 scale_x=self.scale_x,
                 robust=self.robust,
                 sft=self.sft,
