@@ -1411,26 +1411,17 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 (
                     "g",
                     in_mask,
-                    class_
-                    + " = "
-                    + self.__label_
-                    + " ({})".format(np.sum(in_mask)),
+                    class_ + " = Inlier" + " ({})".format(np.sum(in_mask)),
                 ),
                 (
                     "orange",
                     ext_mask,
-                    class_
-                    + " = Extreme "
-                    + self.__label_
-                    + " ({})".format(np.sum(ext_mask)),
+                    class_ + " = Extreme" + " ({})".format(np.sum(ext_mask)),
                 ),
                 (
                     "r",
                     out_mask,
-                    class_
-                    + " = Outlier "
-                    + self.__label_
-                    + " ({})".format(np.sum(out_mask)),
+                    class_ + " = Outlier" + " ({})".format(np.sum(out_mask)),
                 ),
             ]:
                 if np.sum(mask) > 0:
