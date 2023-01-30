@@ -92,6 +92,7 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 
 ## General Machine Learning [Large amount of data available]
 > In ML/AI, the problem of detecting novelties (many unknown classes) when only a finite subset of known classes are available for training is known as [open set recognition](https://www.wjscheirer.com/projects/openset-recognition/).  Here are some references for further reading:
+* [Yang, J., Zhou K., Li Y., and Z. Liu, "Generalized Out-of-distribution detection: A survey," (2022): arXiv:2101.03064](https://arxiv.org/abs/2110.11334)
 * A curated [GitHub](https://github.com/iCGY96/awesome_OpenSetRecognition_list) list of papers and resources.
 * [Perera, P., P. Oza, and V. M. Patel, "One-class classification: A survey," (2021): arXiv:2101.03064](https://arxiv.org/abs/2101.03064)
 * [Geng, C., S.-J. Huang, and S. Chen. "Recent Advances in Open Set Recognition: A Survey." (2018): arXiv:1811.08581v4](https://arxiv.org/pdf/1811.08581.pdf)
