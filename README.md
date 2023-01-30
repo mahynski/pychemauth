@@ -11,7 +11,7 @@ This is a toolkit, implemented in python, to perform chemometric authentication.
 
 Within the context of anomaly detection, [scikit-learn](https://scikit-learn.org/stable/modules/outlier_detection.html) differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is ``clean'' and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; this is a nice resource for a summary of [anomaly detection resources](https://github.com/yzhao062/anomaly-detection-resources).
 
-Out-of-distribution (OOD) detection is a more general term which encompasses these and other taks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found [here](https://arxiv.org/abs/2110.11334) and [here](https://arxiv.org/abs/2110.14051).
+Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found [here](https://arxiv.org/abs/2110.11334) and further reading [here](https://arxiv.org/abs/2110.14051).
 
 ## License Information
 * See LICENSE for more information.
