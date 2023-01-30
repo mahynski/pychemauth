@@ -11,7 +11,7 @@ This is a toolkit, implemented in python, to perform chemometric authentication.
 
 Within the context of anomaly detection, [scikit-learn](https://scikit-learn.org/stable/modules/outlier_detection.html) differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is ``clean'' and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; this is a nice resource for a summary of [anomaly detection resources](https://github.com/yzhao062/anomaly-detection-resources).
 
-Out-of-distribution (OOD) detection is a more general term which encompasses these and other taks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found [here](https://arxiv.org/abs/2110.11334).
+Out-of-distribution (OOD) detection is a more general term which encompasses these and other taks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found [here](https://arxiv.org/abs/2110.11334) and [here](https://arxiv.org/abs/2110.14051).
 
 ## License Information
 * See LICENSE for more information.
@@ -92,9 +92,10 @@ You should always perform [exploratory data analysis](https://www.itl.nist.gov/d
 
 ## General Machine Learning [Large amount of data available]
 > In ML/AI, the problem of detecting novelties (many unknown classes) when only a finite subset of known classes are available for training is known as [open set recognition](https://www.wjscheirer.com/projects/openset-recognition/).  Here are some references for further reading:
-* [Yang, J., Zhou K., Li Y., and Z. Liu, "Generalized Out-of-distribution detection: A survey," (2022): arXiv:2101.03064](https://arxiv.org/abs/2110.11334)
+* [Yang, J., Zhou K., Li Y., and Z. Liu. "Generalized out-of-distribution detection: A survey," (2022): arXiv:2110.11334](https://arxiv.org/abs/2110.11334)
+* [Salehi, M., Mirzaei, H., Hendrycks, D., Li, Y., Rohban, M. H., and M. Sabokrou. "A unified survey on anomaly, novelty, open-set, and out-of-distribution detection: Solutions and future challenges," (2021): arXiv:2110.14051](https://arxiv.org/abs/2110.14051)
 * A curated [GitHub](https://github.com/iCGY96/awesome_OpenSetRecognition_list) list of papers and resources.
-* [Perera, P., P. Oza, and V. M. Patel, "One-class classification: A survey," (2021): arXiv:2101.03064](https://arxiv.org/abs/2101.03064)
+* [Perera, P., P. Oza, and V. M. Patel. "One-class classification: A survey," (2021): arXiv:2101.03064](https://arxiv.org/abs/2101.03064)
 * [Geng, C., S.-J. Huang, and S. Chen. "Recent Advances in Open Set Recognition: A Survey." (2018): arXiv:1811.08581v4](https://arxiv.org/pdf/1811.08581.pdf)
 * [Vaze, S., H. Han, A. Vedaldi, and A. Zisserman. "Open-Set Recognition: a Good Closed-Set Classifier is All You Need?" (2021): arXiv:2110.06207v2 ](https://arxiv.org/pdf/2110.06207.pdf)
 * [Dietterich, T., and A. Guyer. "The familiarity hypothesis: Explaining the behavior of deep open set methods." Pattern Recognition 132 (2022): 108931](https://www.sciencedirect.com/science/article/pii/S0031320322004125)
