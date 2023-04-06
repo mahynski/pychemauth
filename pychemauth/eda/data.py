@@ -121,12 +121,16 @@ class InspectData:
         """
         Identify collinear features using the Spearman rank order correlation.
 
-        Ward clustering is used to cluster collinear features based on Spearman
-        rank order correlation and select a single feature from each
-        macro-cluster.
+        Ward clustering is used to cluster collinear features based on "distance",
+        computed from Spearman rank order correlations, and select a single feature 
+        from each macro-cluster.
 
         See https://scikit-learn.org/stable/auto_examples/inspection/
         plot_permutation_importance_multicollinear.html
+
+        Note that as of sklearn v1.0.2 the distance is linkage recommendation changed
+        from directly using the correlation matrix to a distance metric.  Results 
+        appear largely similar qualitatively, but are not quantitatively identical. 
 
         This can be used as a preprocessing step since it is unsupervised.
 
@@ -216,13 +220,16 @@ class InspectData:
 
         corr = spearmanr(X).correlation
         assert(np.max(np.abs(corr - (corr+corr.T)/2.0)) < 1.0e-12), "Spearman R matrix is not symmetric"
-        corr_linkage = hierarchy.ward(corr)
+        np.fill_diagonal(corr, 1)
+        
+        distance_matrix = 1 - np.abs(corr)
+        dist_linkage = hierarchy.ward(squareform(distance_matrix))
 
         # If no specification for where to cut, guess
-        guess = (np.sqrt(np.max(corr_linkage)) / 3.0) if t is None else t
+        guess = (np.sqrt(np.max(dist_linkage)) / 3.0) if t is None else t
 
         cluster_ids = hierarchy.fcluster(
-            corr_linkage, t=guess, criterion="distance"
+            dist_linkage, t=guess, criterion="distance"
         )
         cluster_id_to_feature_ids = defaultdict(list)
         for idx, cluster_id in enumerate(cluster_ids):
@@ -250,7 +257,7 @@ class InspectData:
                     labels[i] = decorate(labels[i])
 
             dendro = hierarchy.dendrogram(
-                corr_linkage,
+                dist_linkage,
                 ax=ax1,
                 labels=labels,
                 leaf_rotation=90,
@@ -493,7 +500,7 @@ class InspectData:
         ----------
         df : DataFrame
             DataFrame with (dense) X predictors.  It may or may not contain a
-            column for the predictin target.  For classification tasks, this
+            column for the prediction target.  For classification tasks, this
             can be visualized using 'hue' as shown below.
 
         Example
