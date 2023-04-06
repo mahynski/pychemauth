@@ -215,7 +215,7 @@ class InspectData:
                 return feature_names[i]
 
         corr = spearmanr(X).correlation
-        assert(np.max(np.abs(corr - (corr+corr.T))) < 1.0e-12), "Spearman R matrix is not symmetric"
+        assert(np.max(np.abs(corr - (corr+corr.T)/2.0)) < 1.0e-12), "Spearman R matrix is not symmetric"
         corr_linkage = hierarchy.ward(corr)
 
         # If no specification for where to cut, guess
