@@ -156,7 +156,8 @@ class LOD:
         # Take all missing values as below LOD.
         # Convert to new DataFrame, even if already one, so it works for np arrays, too.
         columns_ = np.arange(0, self.n_features_in_)
-        X_df = pd.DataFrame(data=X_checked, columns=columns_)
+        index_ = X.index if isinstance(X, pd.DataFrame) else np.arange(0, X_checked.shape[0])
+        X_df = pd.DataFrame(data=X_checked, columns=columns_, index=index_)
         lod_dict = dict(zip(columns_, self.lod))
         def impute_(x, lod):
             if x == self.ignore:
