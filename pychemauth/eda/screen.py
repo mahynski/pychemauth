@@ -289,7 +289,7 @@ class JSBinary:
     comparison between individual classes instead of a OvA comparison done in
     JSScreen.
 
-    It can be helpful to look for the "elbow" as you plot number of bins vs. 
+    It can be helpful to look for the "elbow" as you plot number of bins vs.
     max JSD to get a sense for the optimal value.
     """
 
