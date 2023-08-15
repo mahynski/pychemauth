@@ -173,8 +173,13 @@ class LOD:
             if x == self.ignore:
                 return x
 
-            if (x < lod) or (x == self.missing_values):
-                return np.random.random() * lod
+            if np.isnan(self.missing_values):
+                compare = lambda x: np.isnan(x)
+            else:
+                compare = lambda x: x == self.missing_values
+
+            if (x < lod) or compare(x):
+                return self.__rng_.random() * lod
             else:
                 # If NaN not used for missing value, this is ok because (np.nan < float) is never true
                 # so the value will be left alone by this loop.
