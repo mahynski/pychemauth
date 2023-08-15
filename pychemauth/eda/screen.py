@@ -120,13 +120,13 @@ class RedFlags:
     def check_nan(self, X, y=None):
         """Check if any entries are np.nan."""
         found = False
-        if np.any(np.isnan(np.asarray(X).flatten())):
+        if np.any(np.isnan(np.asarray(X, dtype=np.float64).flatten())):
             warnings.warn("X contains NaN values; this will require imputation")
             found = True
 
         if not (y is None):
             if self.y_type == "float":
-                if np.any(np.isnan(np.asarray(y).flatten())):
+                if np.any(np.isnan(np.asarray(y, dtype=np.float64).flatten())):
                     warnings.warn("y contains NaN values")
                     found = True
         return found
@@ -134,13 +134,13 @@ class RedFlags:
     def check_inf(self, X, y=None):
         """Check if any entries are np.inf."""
         found = False
-        if np.any(np.isinf(np.asarray(X).flatten())):
+        if np.any(np.isinf(np.asarray(X, dtype=np.float64).flatten())):
             warnings.warn("X contains Inf values; this will require imputation")
             found = True
 
         if not (y is None):
             if self.y_type == "float":
-                if np.any(np.isinf(np.asarray(y).flatten())):
+                if np.any(np.isinf(np.asarray(y, dtype=np.float64).flatten())):
                     warnings.warn("y contains Inf values")
                     found = True
         return found
@@ -213,11 +213,15 @@ class RedFlags:
     def check_duplicates(self, X, y=None):
         """Check if any rows in X are duplicates (numerically)."""
         tol = 1.0e-12
-        if np.any(scipy.spatial.distance.pdist(X, metric="euclidean") < tol):
-            warnings.warn("There are duplicate rows in X")
-            return True
-        else:
-            return False
+        try:
+            if np.any(scipy.spatial.distance.pdist(X, metric="euclidean") < tol):
+                warnings.warn("There are duplicate rows in X")
+                return True
+            else:
+                return False
+        except:
+            warnings.warn('Unable to perform duplicate check - there is probably a NaN or Inf value present')
+            return False 
 
     def check_zero_class_variance(self, X, y=None):
         """
