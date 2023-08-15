@@ -122,15 +122,15 @@ class InspectData:
         Identify collinear features using the Spearman rank order correlation.
 
         Ward clustering is used to cluster collinear features based on "distance",
-        computed from Spearman rank order correlations, and select a single feature 
+        computed from Spearman rank order correlations, and select a single feature
         from each macro-cluster.
 
         See https://scikit-learn.org/stable/auto_examples/inspection/
         plot_permutation_importance_multicollinear.html
 
         Note that as of sklearn v1.0.2 the distance is linkage recommendation changed
-        from directly using the correlation matrix to a distance metric.  Results 
-        appear largely similar qualitatively, but are not quantitatively identical. 
+        from directly using the correlation matrix to a distance metric.  Results
+        appear largely similar qualitatively, but are not quantitatively identical.
 
         This can be used as a preprocessing step since it is unsupervised.
 
@@ -219,9 +219,11 @@ class InspectData:
                 return feature_names[i]
 
         corr = spearmanr(X).correlation
-        assert(np.max(np.abs(corr - (corr+corr.T)/2.0)) < 1.0e-12), "Spearman R matrix is not symmetric"
+        assert (
+            np.max(np.abs(corr - (corr + corr.T) / 2.0)) < 1.0e-12
+        ), "Spearman R matrix is not symmetric"
         np.fill_diagonal(corr, 1)
-        
+
         distance_matrix = 1 - np.abs(corr)
         dist_linkage = hierarchy.ward(squareform(distance_matrix))
 

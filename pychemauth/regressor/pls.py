@@ -372,20 +372,20 @@ class PLS(RegressorMixin, BaseEstimator):
 
         X_ = self.__x_scaler_.transform(X)
         x_scores = self.__pls_.transform(X_)
-        
+
         x_scores_t_ = self.transform(self.__X_)
         h = np.diagonal(
             np.matmul(
                 np.matmul(
-                    x_scores, np.linalg.inv(np.matmul(x_scores_t_.T, x_scores_t_))
+                    x_scores,
+                    np.linalg.inv(np.matmul(x_scores_t_.T, x_scores_t_)),
                 ),
                 x_scores.T,
             )
         )
 
         q = np.sum(
-            (self.__pls_.inverse_transform(x_scores) - X_)
-            ** 2,
+            (self.__pls_.inverse_transform(x_scores) - X_) ** 2,
             axis=1,
         )
 

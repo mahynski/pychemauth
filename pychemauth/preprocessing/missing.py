@@ -22,7 +22,7 @@ class LOD:
     -----
     Data in the feature matrix (X) is assumed "missing" because it is
     below the limit of detection (LOD).  Also, any values explicitly less than
-    the LODs provided are selected for imputation. In these cases, random values 
+    the LODs provided are selected for imputation. In these cases, random values
     are chosen between 0 and the LOD (which must be provided by the user).
 
     See examples/imputing_examples.ipynb for an example.
@@ -50,7 +50,12 @@ class LOD:
             mask certain values as needed; e.g., for future processing.
         """
         self.set_params(
-                **{"lod": lod, "missing_values": missing_values, "seed": seed, "ignore": ignore}
+            **{
+                "lod": lod,
+                "missing_values": missing_values,
+                "seed": seed,
+                "ignore": ignore,
+            }
         )
         self.is_fitted_ = False
 
@@ -66,7 +71,7 @@ class LOD:
             "lod": self.lod,
             "missing_values": self.missing_values,
             "seed": self.seed,
-            "ignore": self.ignore
+            "ignore": self.ignore,
         }
 
     def fit(self, X, y=None):
@@ -156,25 +161,32 @@ class LOD:
         # Take all missing values as below LOD.
         # Convert to new DataFrame, even if already one, so it works for np arrays, too.
         columns_ = np.arange(0, self.n_features_in_)
-        index_ = X.index if isinstance(X, pd.DataFrame) else np.arange(0, X_checked.shape[0])
+        index_ = (
+            X.index
+            if isinstance(X, pd.DataFrame)
+            else np.arange(0, X_checked.shape[0])
+        )
         X_df = pd.DataFrame(data=X_checked, columns=columns_, index=index_)
         lod_dict = dict(zip(columns_, self.lod))
+
         def impute_(x, lod):
             if x == self.ignore:
                 return x
 
             if (x < lod) or (x == self.missing_values):
-                return np.random.random()*lod
+                return np.random.random() * lod
             else:
                 # If NaN not used for missing value, this is ok because (np.nan < float) is never true
                 # so the value will be left alone by this loop.
                 return x
 
         for column in X_df.columns:
-            X_df[column] = X_df[column].apply(lambda x: impute_(x, lod_dict[column]))
+            X_df[column] = X_df[column].apply(
+                lambda x: impute_(x, lod_dict[column])
+            )
 
         if isinstance(X, pd.DataFrame):
-            return X_df.rename(dict(zip(columns_, X.columns)), axis='columns') 
+            return X_df.rename(dict(zip(columns_, X.columns)), axis="columns")
         else:
             return X_df.values
 

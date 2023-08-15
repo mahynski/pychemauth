@@ -16,7 +16,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 
     This process can be summarized as follows.  For each individual class:
-    
+
     Step 0: Outlier removal.  In principle, it may be optimal to remove outliers before any analysis
     so that they do not impact the development of the manifold / dimensionality reduction.  For high
     dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction

@@ -405,7 +405,10 @@ class PCR(RegressorMixin, BaseEstimator):
         h = np.diagonal(
             np.matmul(
                 np.matmul(
-                    x_scores, np.linalg.inv(np.matmul(self.__T_train_.T, self.__T_train_))
+                    x_scores,
+                    np.linalg.inv(
+                        np.matmul(self.__T_train_.T, self.__T_train_)
+                    ),
                 ),
                 x_scores.T,
             )
