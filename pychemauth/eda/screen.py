@@ -288,6 +288,9 @@ class JSBinary:
     across all features between pairs of classes.  This creates a binary
     comparison between individual classes instead of a OvA comparison done in
     JSScreen.
+
+    It can be helpful to look for the "elbow" as you plot number of bins vs. 
+    max JSD to get a sense for the optimal value.
     """
 
     def __init__(self, js_bins=25, robust=False):

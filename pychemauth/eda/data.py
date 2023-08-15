@@ -197,12 +197,13 @@ class InspectData:
 
         Returns
         -------
-        selected_features, cluster_id_to_feature_ids
+        selected_features, cluster_id_to_feature_ids, fig
         """
         from collections import defaultdict
 
         from scipy.cluster import hierarchy
         from scipy.stats import spearmanr
+        from scipy.spatial.distance import squareform
 
         X = np.array(X)
         if feature_names is None:
@@ -222,13 +223,14 @@ class InspectData:
         assert (
             np.max(np.abs(corr - (corr + corr.T) / 2.0)) < 1.0e-12
         ), "Spearman R matrix is not symmetric"
+        corr = (corr + corr.T) / 2.0 # To make it perfectly symmetric
         np.fill_diagonal(corr, 1)
 
         distance_matrix = 1 - np.abs(corr)
         dist_linkage = hierarchy.ward(squareform(distance_matrix))
 
         # If no specification for where to cut, guess
-        guess = (np.sqrt(np.max(dist_linkage)) / 3.0) if t is None else t
+        guess = np.sqrt(np.max(dist_linkage[:,2])) if t is None else t
 
         cluster_ids = hierarchy.fcluster(
             dist_linkage, t=guess, criterion="distance"
@@ -280,7 +282,7 @@ class InspectData:
             else:
                 fig.tight_layout()
 
-        return selected_features, cluster_id_to_feature_ids
+        return selected_features, cluster_id_to_feature_ids, fig if display else None
 
     def minimize_cluster_label_entropy(
         cluster_id_to_feature_ids,
