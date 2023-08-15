@@ -4,6 +4,7 @@ Fill in missing data.
 author: nam
 """
 import numpy as np
+import pandas as pd
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
 from sklearn.impute import MissingIndicator, SimpleImputer
@@ -15,25 +16,16 @@ from pychemauth.preprocessing.scaling import CorrectedScaler
 
 class LOD:
     """
-    Fill in "missing" measurement values that are below LOD.
+    Fill in "missing" measurement values and those that are below LOD randomly.
 
     Notes
     -----
-    Data in the feature matrix (X) is "missing" but is really because it is
-    below the limit of detection (LOD).  In this case, random values are
-    created that chosen between 0 (some baseline) and the LOD (which must
-    be provided by the user).
+    Data in the feature matrix (X) is assumed "missing" because it is
+    below the limit of detection (LOD).  Also, any values explicitly less than
+    the LODs provided are selected for imputation. In these cases, random values 
+    are chosen between 0 and the LOD (which must be provided by the user).
 
-    Values are divided by LOD's and if less than 1, or are explicitly noted
-    as a missing value, are imputed to a random number [0, 1) and multiplied
-    by the LOD for that column.  Note that this is done to preserve the sign
-    of the measurement.
-
-    If there is data that is truly missing, i.e., corrupted or not measured,
-    and you wish to impute these values based on PCA_IA, for example, you need
-    to indicate values that are "truly missing" vs. those that are missing
-    because < LOD with a different indicator. This can be problematic - see
-    examples/imputing_examples.ipynb for an example.
+    See examples/imputing_examples.ipynb for an example.
 
     Example
     -------
@@ -41,7 +33,7 @@ class LOD:
     >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's for missing
     """
 
-    def __init__(self, lod, missing_values=np.nan, seed=0):
+    def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None):
         """
         Instantiate the class.
 
@@ -53,9 +45,12 @@ class LOD:
             The value in the X matrix that indicates a missing value.
         seed : int
             Random number generator seed.
+        ignore : int, float, None
+            Anything in X with this value is ignored. You can use this to
+            mask certain values as needed; e.g., for future processing.
         """
         self.set_params(
-            **{"lod": lod, "missing_values": missing_values, "seed": seed}
+                **{"lod": lod, "missing_values": missing_values, "seed": seed, "ignore": ignore}
         )
         self.is_fitted_ = False
 
@@ -71,6 +66,7 @@ class LOD:
             "lod": self.lod,
             "missing_values": self.missing_values,
             "seed": self.seed,
+            "ignore": self.ignore
         }
 
     def fit(self, X, y=None):
@@ -101,8 +97,10 @@ class LOD:
         self.n_features_in_ = X.shape[1]
 
         self.lod = self.lod.ravel()
-        if len(self.lod) != X.T.shape[0]:
+        if len(self.lod) != self.n_features_in_:
             raise ValueError("LOD must be specified for each column in X")
+        if np.any(self.lod < 0.0):
+            raise ValueError("LODs must be non-negative.")
 
         self.__rng_ = np.random.default_rng(self.seed)
         self.is_fitted_ = True
@@ -145,7 +143,7 @@ class LOD:
         X : matrix-like
             Matrix with missing data filled in.
         """
-        X = check_array(
+        X_checked = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
@@ -153,39 +151,31 @@ class LOD:
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        assert X_checked.shape[1] == self.n_features_in_
 
-        temp = 0
-        mask = np.isnan(X)
-        if not np.isnan(self.missing_values) and np.any(mask):
-            # Still have NaN but being used for something else, so temporarily
-            # modify to a unique random number. This is because MissingIndicator
-            # is incompatible with np.nan if it is NOT the missing value.
-            while True:
-                temp = np.random.random()
-                if not np.any(X == temp) and temp != self.missing_values:
-                    break
-            X[mask] = temp
+        # Take all missing values as below LOD.
+        # Convert to new DataFrame, even if already one, so it works for np arrays, too.
+        columns_ = np.arange(0, self.n_features_in_)
+        X_df = pd.DataFrame(data=X_checked, columns=columns_)
+        lod_dict = dict(zip(columns_, self.lod))
+        def impute_(x, lod):
+            if x == self.ignore:
+                return x
 
-        # Find any missing values and take as below LOD
-        indicator = MissingIndicator(
-            missing_values=self.missing_values, features="all"
-        )
-        explicit_mask = indicator.fit_transform(X)
+            if (x < lod) or (x == self.missing_values):
+                return np.random.random()*lod
+            else:
+                # If NaN not used for missing value, this is ok because (np.nan < float) is never true
+                # so the value will be left alone by this loop.
+                return x
 
-        if temp > 0:
-            # Change back to nan if it was modified earlier
-            X[mask] = np.nan
+        for column in X_df.columns:
+            X_df[column] = X_df[column].apply(lambda x: impute_(x, lod_dict[column]))
 
-        # We are going to impute anything explicitly missing and anything below LOD
-        below_mask = (X / self.lod) < 1.0
-        mask = (explicit_mask) | (below_mask)
-
-        # Replace missing values with the imputed ones
-        X_scaled = X / self.lod
-        X_scaled[mask] = self.__rng_.random(np.sum(mask))
-
-        return X_scaled * self.lod
+        if isinstance(X, pd.DataFrame):
+            return X_df.rename(dict(zip(columns_, X.columns)), axis='columns') 
+        else:
+            return X_df.values
 
 
 class PCA_IA:
