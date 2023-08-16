@@ -50,7 +50,7 @@ class TestDDSIMCA(unittest.TestCase):
 
         h_test = np.array(
             [0.05547138082139136, 0.02909437276782147, 0.09955524352200402]
-        )*(raw_x.shape[0]-1)
+        ) * (raw_x.shape[0] - 1)
         q_test = np.array(
             [0.012305979489635022, 0.010783302341881816, 0.006410844205906461]
         )
@@ -63,7 +63,11 @@ class TestDDSIMCA(unittest.TestCase):
         )
 
         self.assertTrue(
-            np.abs(dds._DDSIMCA_Model__h0_ - 0.08682028422484556*(raw_x.shape[0]-1)) < 1.0e-12
+            np.abs(
+                dds._DDSIMCA_Model__h0_
+                - 0.08682028422484556 * (raw_x.shape[0] - 1)
+            )
+            < 1.0e-12
         )
         self.assertTrue(
             np.abs(dds._DDSIMCA_Model__q0_ - 0.01772901918522358) < 1.0e-12
@@ -214,7 +218,11 @@ class TestDDSIMCA(unittest.TestCase):
         self.assertEqual(sc.model._DDSIMCA_Model__Nh_, 3)
 
         self.assertTrue(
-            np.abs(sc.model._DDSIMCA_Model__h0_ - 0.09722222222222225*(raw_x.shape[0]-1)) < 1.0e-12
+            np.abs(
+                sc.model._DDSIMCA_Model__h0_
+                - 0.09722222222222225 * (raw_x.shape[0] - 1)
+            )
+            < 1.0e-12
         )
         self.assertTrue(
             np.abs(sc.model._DDSIMCA_Model__q0_ - 0.017851234844890485)

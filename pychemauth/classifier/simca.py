@@ -1333,7 +1333,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax.set_ylabel("Observed")
 
         return ax
-    
+
     def plot_loadings(self, feature_names=None, ax=None):
         """
         Make a 2D loadings plot.
@@ -1356,19 +1356,29 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             ax = plt.gca()
 
         if self.n_components < 2:
-            raise ValueError("Cannot visualize when using less than 2 components.")
+            raise ValueError(
+                "Cannot visualize when using less than 2 components."
+            )
 
         if len(feature_names) != self.n_features_in_:
             raise ValueError("Must provide a name for each column.")
 
         a = self.__pca_.components_.T
-        ax.plot(a[:,0], a[:,1], 'o')
-        ax.axvline(0, ls='--', color='k')
-        ax.axhline(0, ls='--', color='k')
+        ax.plot(a[:, 0], a[:, 1], "o")
+        ax.axvline(0, ls="--", color="k")
+        ax.axhline(0, ls="--", color="k")
         for i, label in zip(range(len(a), feature_names)):
-            ax.text(a[i,0], a[i,1], label)
-        ax.set_xlabel('PC 1 ({}%)'.format('%.4f'%self.__pca_.explained_variance_ratio_[0]*100.0))
-        ax.set_ylabel('PC 2 ({}%)'.format('%.4f'%self.__pca_.explained_variance_ratio_[1]*100.0))
+            ax.text(a[i, 0], a[i, 1], label)
+        ax.set_xlabel(
+            "PC 1 ({}%)".format(
+                "%.4f" % self.__pca_.explained_variance_ratio_[0] * 100.0
+            )
+        )
+        ax.set_ylabel(
+            "PC 2 ({}%)".format(
+                "%.4f" % self.__pca_.explained_variance_ratio_[1] * 100.0
+            )
+        )
 
         return ax
 

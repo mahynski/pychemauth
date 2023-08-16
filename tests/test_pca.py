@@ -62,7 +62,9 @@ class TestPCA_Scaled(unittest.TestCase):
     def test_h_q(self):
         """Check some h and q values."""
         h, q = self.model.h_q_(self.X)
-        ans_h = np.array([0.07847804, 0.03866518, 0.14480451])*(self.X.shape[0]-1)
+        ans_h = np.array([0.07847804, 0.03866518, 0.14480451]) * (
+            self.X.shape[0] - 1
+        )
         ans_q = np.array([16.39823482, 24.55049204, 26.46794849])
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
         np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
@@ -465,7 +467,9 @@ class TestPCA_Unscaled(unittest.TestCase):
     def test_h_q(self):
         """Check some h and q values."""
         h, q = self.model.h_q_(self.X)
-        ans_h = np.array([0.08629, 0.04169701, 0.12818276])*(self.X.shape[0]-1)
+        ans_h = np.array([0.08629, 0.04169701, 0.12818276]) * (
+            self.X.shape[0] - 1
+        )
         ans_q = np.array([11.27227657, 18.55001329, 23.00931321])
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
         np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
