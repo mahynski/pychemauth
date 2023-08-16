@@ -1068,9 +1068,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
 
         # SD
-        h_vals = np.sum(T**2 / self.__pca_.explained_variance_, axis=1) / (
-            self.__X_.shape[0] - 1
-        )
+        h_vals = np.sum(T**2 / self.__pca_.explained_variance_, axis=1)
 
         return h_vals, q_vals
 
