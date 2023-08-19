@@ -5,39 +5,41 @@ author: nam
 """
 from setuptools import find_packages, setup
 
-try:
-    from version import __version__
-except ModuleNotFoundError:
-    exec(open("version.py").read())
+exec(open("pychemauth/__init__.py").read())
 
 setup(
     name="pychemauth",
     description="Python-based Chemometric Authentication",
     author="Nathan A. Mahynski",
+    homepage="https://github.com/mahynski/pychemauth",
     python_requires=">=3.7.0",
     version=__version__,
     packages=find_packages(),
     license_files=("LICENSE",),
     test_suite="tests",
     tests_require=["pytest"],
+    classifiers=[
+        'Intended Audience :: Science/Research',
+        'Operating System :: POSIX :: Linux'
+        ],
     install_requires=[
-        "baycomp",
-        "bokeh",
+        "baycomp==1.0.3",
+        "bokeh==3.2.2",
         "BorutaShap",
-        "imbalanced-learn",
+        "imbalanced-learn==0.11.0",
         "IPython",
         "ipywidgets",
-        "matplotlib",
-        "nodejs",
-        "numpy",
-        "pandas",
+        "matplotlib==3.7.2",
+        "nodejs==0.1.1",
+        "numpy==1.24.4",
+        "pandas==2.0.3",
         "pre-commit",
-        "scikit-learn",
-        "scipy",
-        "seaborn",
-        "shap",
-        "tqdm",
-        "umap-learn",
-        "watermark",
+        "scikit-learn==1.3.0",
+        "scipy==1.11.1",
+        "seaborn==0.12.2",
+        "shap==0.42.1",
+        "tqdm==4.66.1",
+        "umap-learn==0.5.3",
+        "watermark==2.4.3",
     ],
 )
