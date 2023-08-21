@@ -24,7 +24,7 @@ setup(
         ],
     install_requires=[
         "baycomp==1.0.3",
-        "bokeh",
+        "bokeh==3.2.2",
         "BorutaShap",
         "imbalanced-learn==0.11.0",
         "IPython",
