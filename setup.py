@@ -12,7 +12,7 @@ setup(
     description="Python-based Chemometric Authentication",
     author="Nathan A. Mahynski",
     homepage="https://github.com/mahynski/pychemauth",
-    python_requires=">=3.7.0",
+    python_requires=">=3.9.0",
     version=__version__,
     packages=find_packages(),
     license_files=("LICENSE",),
