@@ -28,6 +28,8 @@ class Compare:
         """
         Plot a radial graph of performances for different pipelines.
 
+        Notes
+        -----
         When nested k-fold or repeated k-fold tests on different pipelines
         has been done, plot the mean and standard deviation of them from best
         (average) to worst.  These should be done on the same splits of data.
@@ -38,19 +40,22 @@ class Compare:
 
         Parameters
         ----------
-        results : dict(list)
+        results : dict(list(float))
             Dictionary of results for different pipelines evaluated on the same
             folds of data.  For example {'pipe1':[0.7, 0.5, 0.8], 'pipe2':[0.5,
             0.6, 0.35]}.
-        n_repeats : int
+
+        n_repeats : scalar(int)
             Number of times k-fold was repeated; k is inferred from the overall
             length based on this.
-        alpha : float
+
+        alpha : scalar(float), optional(default=0.05)
             Significance level.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
+        ax : matplotlib.pyplot.Axes
+            Axes the radial graph is plotted on.
         """
 
         def perf(results, n_repeats, alpha):
@@ -116,6 +121,8 @@ class Compare:
         """
         Perform repeated (stratified) k-fold cross validation to get scores.
 
+        Notes
+        -----
         The random state of the CV is the same for each so each pipeline or
         algorithm is tested on exactly the same dataset.  This enables paired
         t-test hypothesis testing using these scores.
@@ -125,33 +132,45 @@ class Compare:
 
         Parameters
         ----------
-        pipe1 : sklearn.pipeline.Pipeline or BaseEstimator
+        pipe1 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
             Any pipeline or estimator that implements the fit() and score()
             methods. Can also be a GridSearchCV object.
-        pipe2 : sklearn.pipeline.Pipeline or BaseEstimator
+
+        pipe2 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
             Pipeline to compare against. Can also be a GridSearchCV object.
-        X : ndarray
-            Array of features.
-        y : ndarray
+        
+        X : array_like(float, ndim=2)
+            Matrix of features.
+        
+        y : array_like(float, ndim=1)
             Array of outputs to predict.
-        n_repeats : int
+        
+        n_repeats : scalar(int), optional(default=5)
             Number of times cross-validator needs to be repeated.
-        k : int
+        
+        k : scalar(int), optional(default=2)
             K-fold cross-validation to use.
-        random_state : int or RandomState instance
+        
+        random_state : scalar(int) or numpy.random.RandomState instance, optional(default=0)
             Controls the randomness of each repeated cross-validation instance.
-        stratify : bool
+        
+        stratify : scalar(bool), optional(default=True)
             If True, use RepeatedStratifiedKFold - this is only valid for
             classification tasks.
-        pipe1_mask : bool
+        
+        pipe1_mask : array_like(bool, ndim=1), optional(default=None)
             Which columns of X to use in pipe1; default of None uses all columns.
-        pipe2_mask : bool
+        
+        pipe2_mask : array_like(bool, ndim=1), optional(default=None)
             Which columns of X to use in pipe2; default of None uses all columns.
 
         Returns
         -------
-        scores1, scores2
-            List of scores for each pipeline.
+        scores1 : list(float)
+            List of scores for pipeline1.
+
+        scores2 : list(float)
+            List of scores for pipeline2.
         """
         if stratify:
             rkf = RepeatedStratifiedKFold(
@@ -162,17 +181,17 @@ class Compare:
                 n_splits=k, n_repeats=n_repeats, random_state=random_state
             )
 
-        X = np.array(X)
-        y = np.array(y)
+        X = np.asarray(X)
+        y = np.asarray(y)
 
         if pipe1_mask:
-            pipe1_mask = np.array(pipe1_mask, dtype=bool)
+            pipe1_mask = np.asarray(pipe1_mask, dtype=bool)
             assert len(pipe1_mask) == X.shape[1]
         else:
             pipe1_mask = np.array([True] * X.shape[1])
 
         if pipe2_mask:
-            pipe2_mask = np.array(pipe2_mask, dtype=bool)
+            pipe2_mask = np.asarray(pipe2_mask, dtype=bool)
             assert len(pipe2_mask) == X.shape[1]
         else:
             pipe2_mask = np.array([True] * X.shape[1])
@@ -196,14 +215,14 @@ class Compare:
         """
         Perform corrected 1-sided t-test to compare two pipelines.
 
+        Notes
+        -----
         Perform 1-sided hypothesis testing to see if any difference in
         pipelines' performances are statisically significant using a
         correlated, paired t-test with the Nadeau & Bengio (2003)
         correction. The test checks if the first pipeline is superior to the
         second using the alternative hypothesis, H1: mean(scores1-scores2) > 0.
 
-        Notes
-        -----
         Reject H0 (that pipelines are equally good) in favor of H1 (pipeline1
         is better) if p < alpha, otherwise fail to reject H0 (not enough
         evidence to suggest they are different). The formulation of this test
@@ -212,16 +231,18 @@ class Compare:
 
         Parameters
         ----------
-        scores1 : array-like
+        scores1 : array_like(float, ndim=1)
             List of scores from pipeline 1.
-        scores2 : array-like
+
+        scores2 : array_like(float, ndim=1)
             List of scores from pipeline 2.
-        n_repeats : int
-            Number of times k-fold was repeated. (i.e., k_outer in NestedCV)
+
+        n_repeats : scalar(int)
+            Number of times k-fold was repeated (i.e., k_outer in NestedCV).
 
         Returns
         -------
-        p
+        p : scalar(float)
             P value
         """
         assert len(scores1) == len(
@@ -241,10 +262,12 @@ class Compare:
         return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=n - 1)  # 1-sided test
 
     @staticmethod
-    def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0):
+    def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0.0):
         """
         Bayesian comparison between pipelines to assess relative performance.
 
+        Notes
+        -----
         Perform Bayesian analysis to predict the probability that pipe(line)1
         outperforms pipe(line)2 based on repeated kfold cross validation
         results using a correlated t-test.
@@ -253,27 +276,31 @@ class Compare:
         If no prob's reach this threshold, make no decision about the
         super(infer)iority of the pipelines relative to each other.
 
-        Notes
+        References
         -----
         See https://baycomp.readthedocs.io/en/latest/functions.html.
 
         Parameters
         ----------
-        scores1 : array-like
+        scores1 : array_like(float, ndim=1)
             List of scores from each repeat of each CV fold for pipe1.
-        scores2 : array-like
+
+        scores2 : array_like(float, ndim=1)
             List of scores from each repeat of each CV fold for pipe2.
-        n_repeats : int
+
+        n_repeats : scalar(int)
             Number of repetitions of cross validation.
-        alpha : float
+
+        alpha : scalar(float)
             Statistical significance level.
-        rope : float
+
+        rope : scalar(float), optional(default=0.0)
             The width of the region of practical equivalence.
 
         Returns
         -------
-        probs
-            Tuple of (prob_1, p_equiv, prob_2)
+        probs : tuple(float, float , float)
+            Tuple of (prob_1, p_equiv, prob_2).
         """
         scores1 = np.array(scores1).flatten()
         scores2 = np.array(scores2).flatten()
