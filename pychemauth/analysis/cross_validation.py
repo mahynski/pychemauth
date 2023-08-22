@@ -12,6 +12,8 @@ class NestedCV:
     """
     Perform nested GridSearchCV and get all validation fold scores.
 
+    Notes
+    -----
     This differs from scikit-learn's "built in" method of doing nested CV of
     cross_val_score(GridSeachCV()) in that cross_val_score() only returns
     the score from the test fold on the outer loop, after the best model is
@@ -28,8 +30,6 @@ class NestedCV:
     pipeline.  Thus, these estimates can be uses to asses the relative
     performances of different pipelines using corrected paired t-tested, etc.
 
-    Note
-    -----
     Typically, it is sufficient to perform relatively coarse grid searching
     when comparing different pipelines.  After pipelines are evaluated, the
     chosen one may be further optimized with more care, but these estimates
@@ -44,6 +44,8 @@ class NestedCV:
     where hyperparameter optimization was not assumed to be occuring
     simultaneously.
 
+    References
+    ----------
     [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and
     subsequent selection bias in performance evaluation. J. Mach. Learn. Res
     2010, 11, 2079-2107.
@@ -58,9 +60,10 @@ class NestedCV:
 
         Parameters
         ----------
-        k_inner : int
+        k_inner : scalar(int), optional(default=2)
             K-fold for inner loop.
-        k_outer : int
+
+        k_outer : scalar(int), optional(default=5)
             K-fold for outer loop.
         """
         self.__k_inner = k_inner
@@ -111,6 +114,8 @@ class NestedCV:
         """
         Perform nested grid search CV.
 
+        Notes
+        -----
         For an RxK nested loop, R*K total scores are returned.  For
         classification tasks, KFolds are stratified.
 
@@ -118,18 +123,22 @@ class NestedCV:
         ----------
         pipeline : sklearn.pipeline or imblearn.pipeline
             Pipeline to evaluate.
+
         param_grid : list(dict)
             GridSearchCV.param_grid object to perform grid search over.
-        X : ndarray
+
+        X : ndarray(float, ndim=2)
             Dense 2D array of observations (rows) of features (columns).
-        y : ndarray
+
+        y : ndarray(float, ndim=1)
             Array of targets.
-        classification : bool
+
+        classification : scalar(bool), optional(default=True)
             Is this a classification task (otherwise assumed to be regression)?
 
         Returns
         -------
-        scores : ndarray
+        scores : ndarray(float, ndim=1)
             Array of length K*R containing scores from all test folds.
         """
         self.gs = GridSearchCV(
