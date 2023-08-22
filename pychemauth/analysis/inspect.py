@@ -29,9 +29,31 @@ class InspectModel:
         """
         Plot a confusion matrix for a classifier.
 
+        Notes
+        -----
         Compare classification models based on true/false positive rates.
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
         https://github.com/rasbt/python-machine-learning-book-2nd-edition
+
+        Parameters
+        ----------
+        model : sklearn.base.BaseEstimator or sklearn.pipeline.Pipeline
+            Any function that implements a predict() method following
+            sklearn's estimator API.
+
+        X : array_like(float, ndim=2)
+            Feature matrix for model to make predictions on.
+
+        y_true : array_like(string or int, ndim=1)
+            Correct labels.
+
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot confusion matrix on.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes the confusion matrix has been plotted on.
         """
         confmat = confusion_matrix(y_true=y_true, y_pred=model.predict(X))
 
@@ -58,8 +80,30 @@ class InspectModel:
         """
         Select classification models based on true/false positive rates.
 
+        References
+        ----------
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
-        https://github.com/rasbt/python-machine-learning-book-2nd-edition
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition.
+
+        Parameters
+        ----------
+        model : sklearn.base.BaseEstimator or sklearn.pipeline.Pipeline
+            Any function that implements a predict() method following
+            sklearn's estimator API.
+
+        X : array_like(float, ndim=2)
+            Feature matrix for model to make predictions on.
+
+        y : array_like(string or int, ndim=1)
+            Class labels.
+
+        n_splits : scalar(int), optional(default=10)
+            N-fold CV to use.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes the ROC curve has been plotted on.
         """
         from scipy import interp
         from sklearn.metrics import auc, roc_curve
@@ -126,10 +170,14 @@ class InspectModel:
         """
         Diagnose bias/variance issues in a model.
 
+        Notes
+        -----
         The validation and training accuracy curves should converge "quickly"
         (if not, high variance) and to a "high" accuracy (if not, high bias).
         If it doesn't converge, it probably needs more data to train on.
 
+        References
+        ----------
         See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
         https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
@@ -138,19 +186,22 @@ class InspectModel:
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+
+        y : array_like(float, ndim=1)
             Response values.
-        cv : int or sklearn.model_selection object
+
+        cv : scalar(int) or sklearn.model_selection object, optional(default=3)
             Cross-validation strategy; uses k-fold CV if an integer is provided.
-        train_sizes : array-like
+
+        train_sizes : array_like(float, ndim=1)
             Fractions of provided data to use for training.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
+        ax : matplotlib.pyplot.axes
             Axes the figure is plotted on.
 
         Example
@@ -224,16 +275,24 @@ class InspectModel:
         """
         Plot residuals and fit to a Gaussian distribution.
 
+        Notes
+        -----
         A good fit might indicate all predictive "information" has been
         extracted and the remaining uncertainty is due to random noise.
 
         Parameters
         ----------
-        y_true : ndarray
+        y_true : ndarray(float, ndim=1)
           N x K array of N observations made of K outputs.
-        y_pred : ndarray
+
+        y_pred : ndarray(float, ndim=1)
           N x K array of N predictions of K variables. A model with a scalar
           output, for example, is just a column vector (K=1).
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes the figure is plotted on.
         """
         n_vars = y_true.shape[1]
         assert y_true.shape[1] == y_pred.shape[1]
@@ -248,6 +307,8 @@ class InspectModel:
         """
         Partial dependence plots for features in X.
 
+        Notes
+        -----
         Partial dependence plots (PDP) show the dependence between the target
         response and a set of target features, marginalizing over the values of
         all other features (the complement features). Intuitively, we can
@@ -263,44 +324,77 @@ class InspectModel:
         PDPs with two target features show the interactions among the two
         features.
 
-        Notes
-        -----
+        References
+        ----------
         See `sklearn.inspection.plot_partial_dependence`.
 
         Example
         -------
         >>> from sklearn.datasets import make_hastie_10_2
         >>> from sklearn.ensemble import GradientBoostingClassifier
-        >>> from sklearn.inspection import plot_partial_dependence
 
         >>> X, y = make_hastie_10_2(random_state=0)
         >>> clf = GradientBoostingClassifier(n_estimators=100,
         ... learning_rate=1.0, max_depth=1, random_state=0).fit(X, y)
-        >>> features = [0, 1, (0, 1)]
+        >>> features = [0, 1]
         >>> InspectModel.pdp(clf, X, features)
 
         Parameters
         ----------
-        model : BaseEstimator
+        model : sklearn.base.BaseEstimator
             A fitted scikit-learn estimator.
-        X : array-like, shape (n_samples, n_features)
+
+        X : array_like(float, ndim=2)
             Dense grid used to build the grid of values on which the dependence
             will be evaluated. **This is usually the training data.**
-        features : list of {int, str, pair of int, pair of str}
+
+        features : list(int) or list(tuple(int, int))
             The target features for which to create the PDPs.
-            If features[i] is an int or a string, a one-way PDP is created; if
+            If features[i] is an int, a one-way PDP is created; if
             features[i] is a tuple, a two-way PDP is created. Each tuple must
             be of size 2.
-        """
-        from sklearn.inspection import plot_partial_dependence
 
-        return plot_partial_dependence(model, X, features, **kwargs)
+        Returns
+        -------
+        display : sklearn.inspection.PartialDependenceDisplay
+            PDP display.
+        """
+        from sklearn.inspection import PartialDependenceDisplay
+
+        return PartialDependenceDisplay.from_estimator(model, X, features, **kwargs)
 
     @staticmethod
     def pfi(model, X, y, n_repeats=30, feature_names=None, visualize=False):
         """
         Compute permutation feature importances.
 
+        Parameters
+        ----------
+        model : sklearn.base.BaseEstimator or sklearn.pipeline.Pipeline
+            A fitted estimator compatible with sklearn's estimator API.
+
+        X : ndarray(float, ndim=2) or pandas.DataFrame
+            Feature matrix model will predict.
+
+        y : ndarray(float, ndim=1) or None
+            Targets for supervised or None for unsupervised.
+
+        n_repeats : scalar(int), optional(default=30)
+            Number of times to permute a feature.
+
+        feature_names : list(str), optional(default=None)
+            Optional list of feature names in order.
+
+        visualize : scalar(bool)
+            Whether or not to visualize the results.
+
+        Returns
+        -------
+        df : pandas.DataFrame
+            Results in a dataframe.
+
+        Notes
+        -----
         Permutation feature importance is a model inspection technique that can
         be used for any fitted estimator **when the data is tabular.** The
         permutation feature importance is defined to be the decrease in a model
@@ -347,8 +441,6 @@ class InspectModel:
         remove those correlations (see Note below) then pfi's are more
         meaningful.
 
-        Note
-        ----
         When two features are correlated and one of the features is permuted,
         the model will still have access to the feature through its correlated
         feature. This will result in a lower importance value for both
