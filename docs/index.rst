@@ -20,7 +20,7 @@ Python-based Chemometric Authentication
 This is a toolkit to perform chemometric authentication.  These methods are designed to follow `scikit-learn's estimator API <https://scikit-learn.org/stable/developers/develop.html>`_ so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning tools.  Authentication is typically a `one-class classification (OCC) <https://en.wikipedia.org/wiki/One-class_classification>`_, or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discriminative) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on.
 
 .. image:: ../pychemauth.png
-   
+
 Within the context of anomaly detection, `scikit-learn <https://scikit-learn.org/stable/modules/outlier_detection.html>`_ differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is "clean" and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; this is a nice resource for a summary of `anomaly detection resources <https://github.com/yzhao062/anomaly-detection-resources>`_.
 
 Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_.
@@ -68,6 +68,16 @@ Generating Synthetic Data
 Feature Selection
 =================
 `Feature extraction <https://scikit-learn.org/stable/modules/feature_extraction.html>`_, such as PCA, involves manipulating inputs to produce new "dimensions" or composite features, such as the first principal component. `Feature selection <https://scikit-learn.org/stable/modules/feature_selection.html>`_ simply involves selecting a subset of known features (such as columns) to use.  scikit-learn has many `built-in examples <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection>`_ that you can use.  Additional tools such as `BorutaSHAP <https://github.com/Ekeany/Boruta-Shap>`_ and some based on the `Jensen-Shannon Divergence <https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence>`_ are also implemented here.
+
+Conventional Chemometrics [Small data limit]
+############################################
+
+Topological Methods [Intermediate data limit]
+#############################################
+
+Machine Learning [Large data limit]
+###################################
+
 
 .. toctree::
    :maxdepth: 2
