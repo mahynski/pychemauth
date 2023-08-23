@@ -36,3 +36,4 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 pygments_style = 'sphinx'
+nbsphinx_execute = 'never' # Always run notebooks and save their output - just display
