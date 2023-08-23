@@ -10,7 +10,7 @@ Welcome to PyChemAuth's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   pychemauth
+   modules
 
 Indices and tables
 ==================
