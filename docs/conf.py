@@ -36,16 +36,16 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'jupyter']
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 pygments_style = 'sphinx'
-nbsphinx_execute = 'never' # Always run notebooks and save their output - just display
+nbsphinx_execute = 'never' # Always pre-run notebooks and save their output - just display on readthedocs
 # nbsphinx_kernel_name = 'pychemauth-kernel'
 
 nbsphinx_thumbnails = {
-        'jupyter/gallery/simca_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/imputing_examples': 'gallery/thumbs/default.png',
-        'jupyter/gallery/pca_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/pls_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/plsda_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/simca_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/elliptic_manifold_example': 'gallery/thumbs/default.png',
-        'jupyter/gallery/shap_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/simca_example': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/imputing_examples': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/pca_example': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/pls_example': 'juyter/thumbs/default.png',
+        'jupyter/gallery/plsda_example': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/simca_example': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/elliptic_manifold_example': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/shap_example': 'jupyter/thumbs/default.png',
 }

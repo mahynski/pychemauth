@@ -161,10 +161,15 @@ Diagnostics
    :caption: Contents:
 
    quickstart 
-   examples
    citation
    contributing
    modules
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorial
+
+   examples
 
 Indices and tables
 ==================

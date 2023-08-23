@@ -49,7 +49,7 @@ Deploying on `Colab <https://colab.google/>`_
 You can use pychemauth in the cloud for free by using `Google Colab <https://colab.research.google.com>`_.
 Click the link and follow the instructions to set up an account if you do not already have one.
 
-.. image:: ../examples/colab_example.gif
+.. image:: colab_example.gif
 
 Below is the code that accompanies the gif above.
 
