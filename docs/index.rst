@@ -166,7 +166,7 @@ Diagnostics
    modules
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 0
    :caption: Tutorial
 
    examples
