@@ -20,15 +20,16 @@ Community contributions to pychemauth are also welcome.  If you would like to co
 8. Sync the updated pychemauth master back to your fork.
 
 Code Standards
-**************
+##############
 
 Linting
-=======
+*******
 
-Please note, style and code linting is enforce with `pre-commit <https://pre-commit.com/>`_.  Refer to the .pre-commit-config.yaml file for specific details.  
+Please note, style and code linting is enforce with `pre-commit <https://pre-commit.com/>`_.  Refer to the .pre-commit-config.yaml file in the `GitHub repo <https://github.com/mahynski/pychemauth>`_ for specific details.  
 Here is some pseudocode illustrating how to use this after you (USERNAME) have created your own fork of pychemauth.
 
 .. code-block:: bash
+
     git clone https://github.com/USERNAME/forked-pychemauth.git
     cd pychemauth
     pip install pre-commit
@@ -37,12 +38,11 @@ Here is some pseudocode illustrating how to use this after you (USERNAME) have c
     ...
     pre-commit run --all-files
     git commit -m "I added some new features!" .
-    code
 
 Documentation
-=============
+*************
 
-Code is documented using numpy docstrings.  This style is documented `here <https://numpydoc.readthedocs.io/en/latest/format.html>`_. 
+Code is documented using numpy docstrings.  This style is documented `here <https://numpydoc.readthedocs.io/en/latest/format.html>`_ and an illustrative example is available `here <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html>`_.
 Please document any changes and follow this convention when making contributions.
 
 
