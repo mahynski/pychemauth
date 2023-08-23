@@ -163,6 +163,7 @@ Diagnostics
    quickstart 
    contributing
    citation
+   examples
    modules
 
 Indices and tables
