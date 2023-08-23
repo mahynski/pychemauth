@@ -68,10 +68,13 @@ Notebooks are a great way to illustrate the correct use of your code and facilit
 Use `pandoc flavored markdown <https://pandoc.org/MANUAL.html#pandocs-markdown>`_ comments in your notebook with a single level-one heading in the top cell to denote the notebook's name; e.g., <h1>DD-SIMCA Example</h1>.  A subsequent cell can be used to describe the notebook further.
 
 .. code-block:: html
+   :linenos:
 
-   <h1>DD-SIMCA Example</h1>
+   DD-SIMCA Example
+   ===
 
 .. code-block:: html
+   :linenos:
 
    Author: Nathan A. Mahynski
 
