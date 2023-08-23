@@ -2,6 +2,6 @@ Examples
 ========
 
 .. nbgallery::
-   :includehidden:
+   :hidden:
 
    jupyter/gallery/simca_example

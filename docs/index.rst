@@ -157,7 +157,7 @@ Diagnostics
 * `Confusion matrices` help identify which classes a model tends to confuse and which it can easily distinguish between.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    quickstart 
@@ -166,7 +166,7 @@ Diagnostics
    modules
 
 .. toctree::
-   :includehidden:
+   :titlesonly:
    :caption: Tutorial
 
    examples
