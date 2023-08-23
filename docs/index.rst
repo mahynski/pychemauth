@@ -115,6 +115,7 @@ Machine Learning (Large data limit)
 ###################################
 
 In ML/AI, the problem of detecting novelties (a previously unknown class) when only a finite subset of known classes are available for training is known as `open set recognition <https://www.wjscheirer.com/projects/openset-recognition/>`_.  Here are some references for further reading:
+
 * `Yang, J., Zhou K., Li Y., and Z. Liu. "Generalized out-of-distribution detection: A survey," (2022): arXiv:2110.11334 <https://arxiv.org/abs/2110.11334>`_
 * `Salehi, M., Mirzaei, H., Hendrycks, D., Li, Y., Rohban, M. H., and M. Sabokrou. "A unified survey on anomaly, novelty, open-set, and out-of-distribution detection: Solutions and future challenges," (2021): arXiv:2110.14051 <https://arxiv.org/abs/2110.14051>`_
 * A curated `GitHub repo <https://github.com/iCGY96/awesome_OpenSetRecognition_list>`_ list of papers and resources.
@@ -132,14 +133,16 @@ Explanations and Interpretations
 
 :py:mod:`pychemauth.analysis.inspect` provides a number of tools and wrappers for model inspection methods.  For example:
 
-* :py:func:`Partial dependence plots (pychemauth.analysis.inspect.InspectModel.pdp)` illustrate the dependence of the response variable, :math:`\vec{y}`, and each of its features (columns in :math:`\mathbf{X}`) by averaging over the values of the rest of the features.  See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/partial_dependence.html>`_ for more information.
-* :py:func:`Permutation feature importance (pychemauth.analysis.inspect.InspectModel.pfi)` is an inspection method that describes the importance of a feature based on how much more poorly a fitted model performs when it is shuffled.  This is model agnostic, but can be strongly influenced by strongly correlated features. See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/permutation_importance.html#permutation-feature-importance>`_ for more information.
+* :py:func:`Partial dependence plots` illustrate the dependence of the response variable, :math:`\vec{y}`, and each of its features (columns in :math:`\mathbf{X}`) by averaging over the values of the rest of the features.  See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/partial_dependence.html>`_ for more information.
+* :py:func:`Permutation feature importance` is an inspection method that describes the importance of a feature based on how much more poorly a fitted model performs when it is shuffled.  This is model agnostic, but can be strongly influenced by strongly correlated features. See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/permutation_importance.html#permutation-feature-importance>`_ for more information.
 
 While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
+
 * `SHAP <https://shap.readthedocs.io/en/latest/>`_ - "(SHapley Additive exPlanations) is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions."  Its model-agnostic nature means that this can be employed to explain any model or pipeline.
 * `LIME <https://github.com/marcotcr/lime>`_ - Local Interpretable Model-agnostic Explanations constructs a simpler, more interpretable model around a point in question to help understand why a prediction about this point has been made.
 
 "Interpretable AI" refers to models which are inherently a "glassbox" and their inner-workings are transparent.  This is `not the same as "explained black boxes" (XAI) <https://projecteuclid.org/journals/statistics-surveys/volume-16/issue-none/Interpretable-machine-learning-Fundamental-principles-and-10-grand-challenges/10.1214/21-SS133.full>`_ which are inscrutable, by definition, but methods like SHAP can be used to help the user develop a sense of (dis)trust about the model and potentially debug it.  Explainable boosting machines (EBM) are a discriminative method, but can be helpful to compare and contrast with explained black boxes or authentication models. EBMs are slow to train so they are best for small-medium data applications, which many chemometric applications fall under.
+
 * An `EBM <https://interpret.ml/docs/ebm.html>`_ from `interpretML <https://interpret.ml>`_ is a "tree-based, cyclic gradient boosting Generalized Additive Model with automatic interaction detection. EBMs are often as accurate as state-of-the-art blackbox models while remaining completely interpretable."
 * `pyGAM <https://pygam.readthedocs.io/en/latest/index.html>`_ does not follow scikit-learn's API but are very useful glassbox models to consider.
 
@@ -158,6 +161,8 @@ Diagnostics
    :caption: Contents:
 
    quickstart 
+   contributing
+   citations
    modules
 
 Indices and tables
