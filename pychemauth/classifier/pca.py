@@ -20,20 +20,61 @@ class PCA(ClassifierMixin, BaseEstimator):
     """
     Create a Principal Components Analysis (PCA) model.
 
+    Parameters
+    ----------
+    n_components : scalar(int), optional(default=1)
+        Number of dimensions to project into. Should be in the range
+        [1, num_features].
+        
+    alpha : scalar(float), optional(default=0.05)
+        Type I error rate (significance level).
+        
+    gamma : scalar(float), optional(default=0.01)
+        Significance level for determining outliers.
+        
+    scale_x : scalar(bool), optional(default=False)
+        Whether or not to scale X columns by the standard deviation.
+        
+    robust : str, optional(default='semi')
+        Whether or not to apply robust methods to estimate degrees of freedom.
+        'full' is not implemented yet, but involves robust PCA and robust
+        degrees of freedom estimation; 'semi' (default) is described in [4] and
+        uses classical PCA but robust DoF estimation; all other values
+        revert to classical PCA and classical DoF estimation.
+        If the dataset is clean (no outliers) it is best practice to use a classical
+        method [2], however, to initially test for and potentially remove these
+        points, a robust variant is recommended. This is why 'semi' is the
+        default value.
+        
+    sft : scalar(bool), optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described
+        in [2], called "sequential focused trimming."  If not used (default)
+        robust estimates of parameters may be attempted; if the iterative
+        approach is used, these robust estimates are only computed during the
+        outlier removal loop(s) while the final "clean" data uses classical
+        estimates.  This option may throw away data it is originally provided
+        for training; it keeps only "regular" samples (inliers and extremes)
+        to train the model.
+        
+    Notes
+    -----
     This enables deeper inspection of data through outlier analysis, etc. as
     detailed in the references below.  PCA only creates a quantitive model
     of the X data; no responses are considered (y). The primary use case for
     this is to inspect the data to classify/detect any extremes or outliers.
 
-    Notes
-    -----
+    References
+    ----------
     See references such as:
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
+    
     [2] "Detection of Outliers in Projection-Based Modeling", Rodionova OY., Pomerantsev AL.,
     Anal. Chem. 2020, 92, 2656−2664.
+    
     [3] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    
     [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
@@ -47,40 +88,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         robust="semi",
         sft=False,
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        n_components : int
-            Number of dimensions to project into. Should be in the range
-            [1, num_features].
-        alpha : float
-            Type I error rate (signficance level).
-        gamma : float
-            Significance level for determining outliers.
-        scale_x : bool
-            Whether or not to scale X columns by the standard deviation.
-        robust : str
-            Whether or not to apply robust methods to estimate degrees of freedom.
-            'full' is not implemented yet, but involves robust PCA and robust
-            degrees of freedom estimation; 'semi' (default) is described in [4] and
-            uses classical PCA but robust DoF estimation; all other values
-            revert to classical PCA and classical DoF estimation.
-            If the dataset is clean (no outliers) it is best practice to use a classical
-            method [2], however, to initially test for and potentially remove these
-            points, a robust variant is recommended. This is why 'semi' is the
-            default value.
-        sft : bool
-            Whether or not to use the iterative outlier removal scheme described
-            in [2], called "sequential focused trimming."  If not used (default)
-            robust estimates of parameters may be attempted; if the iterative
-            approach is used, these robust estimates are only computed during the
-            outlier removal loop(s) while the final "clean" data uses classical
-            estimates.  This option may throw away data it is originally provided
-            for training; it keeps only "regular" samples (inliers and extremes)
-            to train the model.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "n_components": n_components,
@@ -110,7 +118,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def matrix_X_(self, X):
+    def _matrix_X(self, X):
         """Check that observations are rows of X."""
         X = np.array(X)
         if X.ndim == 1:
@@ -127,16 +135,17 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+            
+        y : array_like(float, ndim=1), optional(default=None)
             Response values. Ignored - this is here for compatability with
             scikit-learn.
 
         Returns
         -------
-        self
+        self : PCA
         """
         if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
             raise ValueError("Cannot use sparse data.")
@@ -147,7 +156,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
             Parameters
             ----------
-            X : ndarray
+            X : ndarray(float, ndim=2)
                 Data to train on.
             robust : str
                 'full' = robust PCA + robust parameter estimation in [4] (not yet implemented);
@@ -197,7 +206,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             self.is_fitted_ = True
 
             # 3. Compute critical distances
-            h_vals, q_vals = self.h_q_(self.__X_)
+            h_vals, q_vals = self._h_q(self.__X_)
 
             # As in the conclusions of [1], Nh ~ n_components is expected so good initial guess
             self.__Nh_, self.__h0_ = estimate_dof(
@@ -314,19 +323,19 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
         -------
-        t-scores : matrix-like
+        t-scores : ndarray(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
         return self.__pca_.transform(
-            self.__x_scaler_.transform(self.matrix_X_(X))
+            self.__x_scaler_.transform(self._matrix_X(X))
         )
 
     def fit_transform(self, X, y=None):
@@ -334,11 +343,11 @@ class PCA(ClassifierMixin, BaseEstimator):
         self.fit(X, y)
         return self.transform(X)
 
-    def h_q_(self, X):
+    def _h_q(self, X):
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
-        X = self.matrix_X_(X)
+        X = self._matrix_X(X)
         assert X.shape[1] == self.n_features_in_
 
         X_raw_std = self.__x_scaler_.transform(X)
@@ -357,47 +366,54 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         Compute how far away points are from this class.
 
-        This is computed as a sum of the OD and OD to be used with acceptance
-        rule II from [3].
-
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
         -------
-        distance : ndarray
+        distance : ndarray(float, ndim=2)
             Distance to class.
+            
+        Notes
+        -----
+        This is computed as a sum of the OD and OD to be used with acceptance
+        rule II from [3].
         """
-        h, q = self.h_q_(X)
+        h, q = self._h_q(X)
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
 
     def decision_function(self, X, y=None):
         """
         Compute the decision function for each sample.
-
-        Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(chi-squared distance) shifted by the cutoff distance,
-        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
-
-        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
-
+        
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+            
+        y : array_like(float, ndim=1), optional(default=None)
             Response. Ignored if it is not used (unsupervised methods).
 
         Returns
         -------
-        decision_function : ndarray
+        decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
+            
+        Notes
+        -----
+        Following scikit-learn's EllipticEnvelope, this returns the negative
+        sqrt(chi-squared distance) shifted by the cutoff distance,
+        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+
+        References
+        ----------
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
@@ -405,6 +421,23 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         Predict the probability that observations are inliers.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+            
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        phi : ndarray
+            2D array as sigmoid function of the decision_function(). First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            
+        Notes
+        -----
         Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
@@ -415,21 +448,9 @@ class PCA(ClassifierMixin, BaseEstimator):
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
-        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
-
-        Parameters
+        References
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
-
-        Returns
-        -------
-        phi : ndarray
-            2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
         p_inlier = p_inlier = 1.0 / (
             1.0
@@ -448,14 +469,14 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        predictions : ndarray
-            Bolean array of whether a point belongs to this class.
+        predictions : ndarray(bool, ndim=1)
+            Boolean array of whether a point belongs to this class.
         """
         d = self.distance(X)
 
@@ -468,16 +489,18 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        extremes, outliers : ndarray, ndarray
-            Boolean mask of X if each point falls between acceptance threshold
-            (belongs to class) and the outlier threshold (extreme), or beyond
-            the outlier (outlier) threshold.
+        extremes : ndarray(bool, ndim=1)
+             Boolean mask of X if each point falls between acceptance threshold
+            (belongs to class) and the outlier threshold.
+            
+        outliers : ndarray(bool, ndim=1)
+            Boolean mask of X if each point falls beyond the outlier threshold.
         """
         dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
@@ -489,32 +512,34 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         Plot an "extremes plot" [4] to evalute the quality of the model.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Data to evaluate the number of outliers + extremes in.
+        
+        upper_frac : scalar(float), optional(default=0.25)
+            Count the number of extremes and outliers for alpha values corresponding
+            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot on.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted.
+            
+        Notes
+        -----
         This modifies the alpha value (type I error rate), keeping all other parameters
         fixed, and computes the number of expected extremes (n_exp) vs. the number
         observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
 
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
-
-        Notes
-        -----
+        
         Both extreme points and outliers are considered "extremes" here.  In practice,
         outliers should be removed before performing this analysis anyway.
-
-        Parameters
-        ----------
-        X : ndarray
-            Data to evaluate the number of outliers + extremes in.
-        upper_frac : float
-            Count the number of extremes and outliers for alpha values corresponding
-            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
-        ax : pyplot.axes
-            Axes to plot on.
-
-        Returns
-        -------
-        ax : pyplot.axes
-            Axes results are plotted.
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
@@ -556,16 +581,22 @@ class PCA(ClassifierMixin, BaseEstimator):
     def score(self, X, y, eps=1.0e-15):
         """
         Compute the negative log-loss, or logistic/cross-entropy loss.
-
-        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
-
+        
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+            
+        y : array_like(bools, ndim=1)
             Correct labels; True for inlier, False for outlier.
+           
+        eps : scalar(float), optional(default=1.0e-15)
+            Numerical addition to enable evaluation when log(p ~ 0).
+            
+        References
+        ----------
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         assert len(X) == len(y)
         assert np.all(
@@ -588,18 +619,23 @@ class PCA(ClassifierMixin, BaseEstimator):
         """
         Make a 2D loadings plot.
 
-        This uses the top 2 eigenvectors regardless of the model dimensionality. If it
-        is less than 2 a ValueError is returned.
-
         Parameters
         ----------
-        feature_names : array-like
+        feature_names : array_like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
-
+        
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot on.
+            
         Returns
         -------
-        ax : pyplot.axes
+        ax : matplotlib.pyplot.axes
             Axes results are plotted on.
+          
+        Notes
+        -----
+        This uses the top 2 eigenvectors regardless of the model dimensionality. If it
+        is less than 2 a ValueError is returned.
         """
         if ax is None:
             fig = plt.figure()
@@ -638,9 +674,17 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(str, ndim=1)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot on.
+            
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
 
@@ -650,7 +694,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         else:
             axis = ax
 
-        h_, q_ = self.h_q_(X)
+        h_, q_ = self._h_q(X)
         h_lim = np.linspace(0, self.__c_crit_ * self.__h0_ / self.__Nh_, 1000)
         h_lim_out = np.linspace(
             0, self.__c_out_ * self.__h0_ / self.__Nh_, 1000
