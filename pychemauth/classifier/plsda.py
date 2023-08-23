@@ -198,7 +198,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         # 1. Preprocess data (one hot encoding, centering)
         self.__ohencoder_ = OneHotEncoder(
-            sparse=False, handle_unknown="error"
+            sparse_output=False, handle_unknown="error"
         )  # Convert integers to OHE
         self.__x_pls_scaler_ = CorrectedScaler(
             with_mean=True, with_std=self.scale_x

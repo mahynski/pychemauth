@@ -290,7 +290,7 @@ class JensenShannonDivergence:
                             np.percentile(
                                 self.__X_[:, column],
                                 25,
-                                interpolation="midpoint",
+                                method="midpoint",
                             )
                             - 1.5 * iqr,
                             np.min(self.__X_[:, column]),
@@ -301,7 +301,7 @@ class JensenShannonDivergence:
                             np.percentile(
                                 self.__X_[:, column],
                                 75,
-                                interpolation="midpoint",
+                                method="midpoint",
                             )
                             + 1.5 * iqr,
                             np.max(self.__X_[:, column]),

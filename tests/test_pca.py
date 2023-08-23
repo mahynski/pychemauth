@@ -61,7 +61,7 @@ class TestPCA_Scaled(unittest.TestCase):
 
     def test_h_q(self):
         """Check some h and q values."""
-        h, q = self.model.h_q_(self.X)
+        h, q = self.model._h_q(self.X)
         ans_h = np.array([0.07847804, 0.03866518, 0.14480451]) * (
             self.X.shape[0] - 1
         )
@@ -466,7 +466,7 @@ class TestPCA_Unscaled(unittest.TestCase):
 
     def test_h_q(self):
         """Check some h and q values."""
-        h, q = self.model.h_q_(self.X)
+        h, q = self.model._h_q(self.X)
         ans_h = np.array([0.08629, 0.04169701, 0.12818276]) * (
             self.X.shape[0] - 1
         )

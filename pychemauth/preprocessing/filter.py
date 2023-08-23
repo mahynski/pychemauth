@@ -230,7 +230,7 @@ class SNV:
                 X = ((X.T - ave_) / scale_).T
             else:  # Uses algorithm from [1] pp 165.
                 for row, per in enumerate(
-                    np.percentile(X, q=self.q, axis=1, interpolation="linear")
+                    np.percentile(X, q=self.q, axis=1, method="linear")
                 ):
                     scale = iqr(
                         X[row, :],
