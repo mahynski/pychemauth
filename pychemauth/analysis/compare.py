@@ -28,16 +28,6 @@ class Compare:
         """
         Plot a radial graph of performances for different pipelines.
 
-        Notes
-        -----
-        When nested k-fold or repeated k-fold tests on different pipelines
-        has been done, plot the mean and standard deviation of them from best
-        (average) to worst.  These should be done on the same splits of data.
-        A corrected, paired t-test is then performed and pipelines that we
-        fail to reject H0 for (they perform the same as best) are colored via
-        a colormap, whereas those that we do reject (performs worse than best)
-        are colored in gray.
-
         Parameters
         ----------
         results : dict(list(float))
@@ -56,6 +46,16 @@ class Compare:
         -------
         ax : matplotlib.pyplot.Axes
             Axes the radial graph is plotted on.
+            
+        Notes
+        -----
+        When nested k-fold or repeated k-fold tests on different pipelines
+        has been done, plot the mean and standard deviation of them from best
+        (average) to worst.  These should be done on the same splits of data.
+        A corrected, paired t-test is then performed and pipelines that we
+        fail to reject H0 for (they perform the same as best) are colored via
+        a colormap, whereas those that we do reject (performs worse than best)
+        are colored in gray.
         """
 
         def perf(results, n_repeats, alpha):
@@ -121,15 +121,6 @@ class Compare:
         """
         Perform repeated (stratified) k-fold cross validation to get scores.
 
-        Notes
-        -----
-        The random state of the CV is the same for each so each pipeline or
-        algorithm is tested on exactly the same dataset.  This enables paired
-        t-test hypothesis testing using these scores.
-
-        When comparing 2 pipelines that use different columns of X, use the
-        pipeX_mask variables to specify which columns to use.
-
         Parameters
         ----------
         pipe1 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
@@ -171,6 +162,15 @@ class Compare:
 
         scores2 : list(float)
             List of scores for pipeline2.
+            
+        Notes
+        -----
+        The random state of the CV is the same for each so each pipeline or
+        algorithm is tested on exactly the same dataset.  This enables paired
+        t-test hypothesis testing using these scores.
+
+        When comparing 2 pipelines that use different columns of X, use the
+        pipeX_mask variables to specify which columns to use.
         """
         if stratify:
             rkf = RepeatedStratifiedKFold(
@@ -215,20 +215,6 @@ class Compare:
         """
         Perform corrected 1-sided t-test to compare two pipelines.
 
-        Notes
-        -----
-        Perform 1-sided hypothesis testing to see if any difference in
-        pipelines' performances are statisically significant using a
-        correlated, paired t-test with the Nadeau & Bengio (2003)
-        correction. The test checks if the first pipeline is superior to the
-        second using the alternative hypothesis, H1: mean(scores1-scores2) > 0.
-
-        Reject H0 (that pipelines are equally good) in favor of H1 (pipeline1
-        is better) if p < alpha, otherwise fail to reject H0 (not enough
-        evidence to suggest they are different). The formulation of this test
-        is that pipeline1 has the best (average) performance or score of the
-        two, and you want to check if that is statistically significant or not.
-
         Parameters
         ----------
         scores1 : array_like(float, ndim=1)
@@ -243,7 +229,21 @@ class Compare:
         Returns
         -------
         p : scalar(float)
-            P value
+            p value
+            
+        Notes
+        -----
+        Perform 1-sided hypothesis testing to see if any difference in
+        pipelines' performances are statisically significant using a
+        correlated, paired t-test with the Nadeau & Bengio (2003)
+        correction. The test checks if the first pipeline is superior to the
+        second using the alternative hypothesis, H1: mean(scores1-scores2) > 0.
+
+        Reject H0 (that pipelines are equally good) in favor of H1 (pipeline1
+        is better) if p < alpha, otherwise fail to reject H0 (not enough
+        evidence to suggest they are different). The formulation of this test
+        is that pipeline1 has the best (average) performance or score of the
+        two, and you want to check if that is statistically significant or not.
         """
         assert len(scores1) == len(
             scores2
@@ -266,20 +266,6 @@ class Compare:
         """
         Bayesian comparison between pipelines to assess relative performance.
 
-        Notes
-        -----
-        Perform Bayesian analysis to predict the probability that pipe(line)1
-        outperforms pipe(line)2 based on repeated kfold cross validation
-        results using a correlated t-test.
-
-        If prob[X] > 1.0 - alpha, then you make the decision that X is better.
-        If no prob's reach this threshold, make no decision about the
-        super(infer)iority of the pipelines relative to each other.
-
-        References
-        -----
-        See https://baycomp.readthedocs.io/en/latest/functions.html.
-
         Parameters
         ----------
         scores1 : array_like(float, ndim=1)
@@ -301,6 +287,20 @@ class Compare:
         -------
         probs : tuple(float, float , float)
             Tuple of (prob_1, p_equiv, prob_2).
+            
+        Notes
+        -----
+        Perform Bayesian analysis to predict the probability that pipe(line)1
+        outperforms pipe(line)2 based on repeated kfold cross validation
+        results using a correlated t-test.
+
+        If prob[X] > 1.0 - alpha, then you make the decision that X is better.
+        If no prob's reach this threshold, make no decision about the
+        super(infer)iority of the pipelines relative to each other.
+
+        References
+        -----
+        See https://baycomp.readthedocs.io/en/latest/functions.html.
         """
         scores1 = np.array(scores1).flatten()
         scores2 = np.array(scores2).flatten()
