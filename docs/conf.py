@@ -20,14 +20,15 @@ extensions = [
         'sphinx.ext.autodoc',
         'sphinx.ext.viewcode',
         'sphinx.ext.napoleon',
+        'sphinx.ext.mathjax',
         'sphinx_search.extension',
         'nbsphinx',
-        'sphinx_gallery.load_style'
+        'sphinx_gallery.load_style',
+        'sphinxcontrib.bibtex'
 ]
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'jupyter']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -37,3 +38,4 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 pygments_style = 'sphinx'
 nbsphinx_execute = 'never' # Always run notebooks and save their output - just display
+# nbsphinx_kernel_name = 'pychemauth-kernel'
