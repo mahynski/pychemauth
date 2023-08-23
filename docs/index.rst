@@ -166,7 +166,7 @@ Diagnostics
    modules
 
 .. toctree::
-   :titlesonly:
+   :hidden:
    :caption: Tutorial
 
    examples
