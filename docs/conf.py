@@ -24,7 +24,6 @@ extensions = [
         'sphinx_search.extension',
         'nbsphinx',
         'sphinx_gallery.load_style',
-        'sphinxcontrib.bibtex'
 ]
 
 templates_path = ['_templates']
@@ -39,3 +38,14 @@ html_static_path = ['_static']
 pygments_style = 'sphinx'
 nbsphinx_execute = 'never' # Always run notebooks and save their output - just display
 # nbsphinx_kernel_name = 'pychemauth-kernel'
+
+nbsphinx_thumbnails = {
+        'jupyter/gallery/simca_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/imputing_examples': 'gallery/thumbs/default.png',
+        'jupyter/gallery/pca_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/pls_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/plsda_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/simca_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/elliptic_manifold_example': 'gallery/thumbs/default.png',
+        'jupyter/gallery/shap_example': 'gallery/thumbs/default.png',
+}
