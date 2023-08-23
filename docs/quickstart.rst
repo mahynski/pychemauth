@@ -76,7 +76,7 @@ Below is the code that accompanies the gif above.
 .. code-block:: python
    :linenos:
 
-   # 3. Clone pychemauth repo
+   # 3. Clone PyChemAuth repo
    !git clone https://github.com/mahynski/pychemauth.git --depth 1 --branch vX.Y.Z
    !cd pychemauth; pip install .; cd ..
 
