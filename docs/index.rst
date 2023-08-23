@@ -19,13 +19,11 @@ Python-based Chemometric Authentication
 
 This is a toolkit to perform chemometric analysis, though it is primarily focused on authentication.  These methods are designed to follow `scikit-learn's estimator API <https://scikit-learn.org/stable/developers/develop.html>`_ so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning tools.  `Wikipedia <https://en.wikipedia.org/wiki/Chemometrics>`_ defines chemometrics as "the science of extracting information from chemical systems by data-driven means." Unlike other areas of science, technology and engineering, many chemical systems remain difficult to collect measurements on making data more scarce than in other arenas.  As a result, conventional statistical methods remain the predominant tool with which chemometric analysis is performed.  As instruments improve, databases are developed, and advanced algorithms become less data-intensive it is clear that modern machine learning and artificial intelligence methods will be brought to bear on these problems.  A consistent API enables many different models to be easily deployed and compared.
 
-[ADD DISCUSSION ABOUT TRADEOFFS BELOW]
-
 .. image:: ../pychemauth.png
 
-Authentication is typically a `one-class classification (OCC) <https://en.wikipedia.org/wiki/One-class_classification>`_, or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discriminative) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on. Within the context of anomaly detection, `scikit-learn <https://scikit-learn.org/stable/modules/outlier_detection.html>`_ differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is "clean" and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; this is a nice resource for a summary of `anomaly detection resources <https://github.com/yzhao062/anomaly-detection-resources>`_.
+Authentication is typically a `one-class classification (OCC) <https://en.wikipedia.org/wiki/One-class_classification>`_, or class modeling, approach designed to detect anomalies. This contrasts with conventional multi-class classification (discriminative) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of such a model is that it cannot predict if a new sample belongs to **none** of the classes trained on. Within the context of anomaly detection, `scikit-learn <https://scikit-learn.org/stable/modules/outlier_detection.html>`_ differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is "clean" and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; here is a nice repository for more `anomaly detection resources <https://github.com/yzhao062/anomaly-detection-resources>`_.
 
-Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_.
+Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_. Detecting distribution shifts in the data at test-time is critical to building safe, reliable models deployed in real (open) world settings.
 
 License Information
 ###################
@@ -37,11 +35,11 @@ Core Capabilities
 
 Exploratory Data Analysis
 *************************
-You should always perform `exploratory data analysis <https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm>`_ to understand your data.  For example, understanding missing values, NaN, inf and basic `descriptive statistics <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html>`_.  While python libraries like `Pandas <>`_ and `DTale <>`_ are excellent pre-existing tools, the `eda` module contains additional methods.
+You should always perform `exploratory data analysis <https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm>`_ to understand your data.  For example, understanding missing values, NaN, inf and basic `descriptive statistics <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html>`_.  While python libraries like `Pandas <https://pandas.pydata.org/>`_ and `DTale <https://github.com/man-group/dtale>`_ are excellent pre-existing tools, the :py:mod:`eda` module herein contains additional methods.
 
 Preprocessors
 *************
-`scikit-learn <https://scikit-learn.org>`_ provides a number of other simple `preprocessing <https://scikit-learn.org/stable/modules/preprocessing.html>`_ steps, including data standardization and imputation approaches.  Here, these are extended to include:
+`scikit-learn <https://scikit-learn.org>`_ provides a number of other simple `preprocessing <https://scikit-learn.org/stable/modules/preprocessing.html>`_ and normalization steps, including data standardization and imputation approaches.  PyChemAuth extends these to include:
 
 Imputing Missing Data
 =====================
@@ -63,20 +61,20 @@ Filtering
 
 Generating Synthetic Data
 =========================
-* `Resampling <https://scikit-learn.org/stable/modules/generated/sklearn.utils.resample.html#sklearn.utils.resample>`_ can be used to balance classes during training, or to supplement measurements that are very hard to make.  New, synthetic data can also be generated by various means; `imblearn` pipelines are designed to work with various up/down sampling routines and can be used as drop-in replacements for standard scikit-learn pipelines.
-* `Imbalanced Learning <https://imbalanced-learn.org/stable/index.html>`_ - SMOTE, ADASYN, etc.
+* `Resampling <https://scikit-learn.org/stable/modules/generated/sklearn.utils.resample.html#sklearn.utils.resample>`_ can be used to balance classes during training, or to supplement measurements that are very hard to make.  New, synthetic data can also be generated by various means; `imblearn <https://imbalanced-learn.org/stable/>`_ pipelines are designed to work with various up/down sampling routines and can be used as drop-in replacements for standard scikit-learn pipelines.
+* See `Imbalanced Learning <https://imbalanced-learn.org/stable/index.html>`_ for methods like SMOTE, ADASYN, etc.
 
 Feature Selection
 =================
 `Feature extraction <https://scikit-learn.org/stable/modules/feature_extraction.html>`_, such as PCA, involves manipulating inputs to produce new "dimensions" or composite features, such as the first principal component. `Feature selection <https://scikit-learn.org/stable/modules/feature_selection.html>`_ simply involves selecting a subset of known features (such as columns) to use.  scikit-learn has many `built-in examples <https://scikit-learn.org/stable/modules/classes.html#module-sklearn.feature_selection>`_ that you can use.  Additional tools such as `BorutaSHAP <https://github.com/Ekeany/Boruta-Shap>`_ and some based on the `Jensen-Shannon Divergence <https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence>`_ are also implemented here.
 
-Conventional Chemometrics [Small data limit]
+Conventional Chemometrics (Small data limit)
 ############################################
 
-Topological Methods [Intermediate data limit]
+Topological Methods (Intermediate data limit)
 #############################################
 
-Machine Learning [Large data limit]
+Machine Learning (Large data limit)
 ###################################
 
 

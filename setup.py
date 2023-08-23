@@ -5,6 +5,7 @@ author: nam
 """
 from setuptools import find_packages, setup
 
+# Get __version__ from __init__ file
 exec(open("pychemauth/__init__.py").read())
 
 setup(
