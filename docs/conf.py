@@ -38,9 +38,8 @@ html_static_path = ['_static']
 pygments_style = 'sphinx'
 nbsphinx_execute = 'never' # Always pre-run notebooks and save their output - just display on readthedocs
 # nbsphinx_kernel_name = 'pychemauth-kernel'
-
 nbsphinx_thumbnails = {
-        'jupyter/gallery/*.ipynb': 'jupyter/thumbs/default.png',
+        'jupyter/gallery/*': '_static/default.png',
 #        'jupyter/gallery/simca_example': 'jupyter/thumbs/default.png',
 #        'jupyter/gallery/imputing_examples': 'jupyter/thumbs/default.png',
 #        'jupyter/gallery/pca_example': 'jupyter/thumbs/default.png',
