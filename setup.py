@@ -34,7 +34,7 @@ setup(
         "nodejs==0.1.1",
         "numpy==1.24.4",
         "pandas==2.0.3",
-        "pre-commit",
+        "pre-commit==3.3.3",
         "scikit-learn==1.3.0",
         "scipy==1.11.1",
         "seaborn==0.12.2",
