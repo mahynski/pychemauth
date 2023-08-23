@@ -436,11 +436,10 @@ class InspectModel:
         total drop in performance, but the sum is larger. Only if there is no
         interaction between the features, as in a linear model, the importances
         add up approximately.''
-         - https://christophm.github.io/interpretable-ml-book/
-         feature-importance.html
+         - https://christophm.github.io/interpretable-ml-book/feature-importance.html
 
-        For further advantages of pfi, see https://scikit-learn.org/stable/
-        modules/permutation_importance.html. One of particular note is that pfi
+        For further advantages of pfi, see https://scikit-learn.org/stable/modules/permutation_importance.html. 
+        One of particular note is that pfi
         place too much emphasis on unrealistic inputs; this is because
         permuting features breaks correlations between features.  If you can
         remove those correlations (see Note below) then pfi's are more
