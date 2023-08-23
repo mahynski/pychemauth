@@ -40,12 +40,4 @@ nbsphinx_execute = 'never' # Always pre-run notebooks and save their output - ju
 # nbsphinx_kernel_name = 'pychemauth-kernel'
 nbsphinx_thumbnails = {
         'jupyter/gallery/*': '_static/default.png',
-#        'jupyter/gallery/simca_example': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/imputing_examples': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/pca_example': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/pls_example': 'juyter/thumbs/default.png',
-#        'jupyter/gallery/plsda_example': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/simca_example': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/elliptic_manifold_example': 'jupyter/thumbs/default.png',
-#        'jupyter/gallery/shap_example': 'jupyter/thumbs/default.png',
 }
