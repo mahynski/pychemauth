@@ -12,6 +12,14 @@ class NestedCV:
     """
     Perform nested GridSearchCV and get all validation fold scores.
 
+    Parameters
+    ----------
+    k_inner : scalar(int), optional(default=2)
+        K-fold for inner loop.
+
+    k_outer : scalar(int), optional(default=5)
+        K-fold for outer loop.
+            
     Notes
     -----
     This differs from scikit-learn's "built in" method of doing nested CV of
@@ -49,27 +57,18 @@ class NestedCV:
     [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and
     subsequent selection bias in performance evaluation. J. Mach. Learn. Res
     2010, 11, 2079-2107.
+    
     [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when
     selecting classifiers is overzealous for most practical applications."
     Expert Systems with Applications 182 (2021): 115222.
     """
 
     def __init__(self, k_inner=2, k_outer=5):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        k_inner : scalar(int), optional(default=2)
-            K-fold for inner loop.
-
-        k_outer : scalar(int), optional(default=5)
-            K-fold for outer loop.
-        """
+        """Instantiate the class."""
         self.__k_inner = k_inner
         self.__k_outer = k_outer
 
-    def get_test_scores_(self, gs):
+    def _get_test_scores(self, gs):
         """Extract test scores from the GridSearch object."""
         # From the grid, extract the results from the hyperparameter set with
         # the best mean test score (lowest rank = best)
@@ -106,18 +105,13 @@ class NestedCV:
             # decorrelate different repeats of the inner fold.  The "basic"
             # alternative is not to bother with the "outer fold" and just
             # repeat the inner fold procedure k_outer times (on the same data).
-            scores = np.concatenate((scores, self.get_test_scores_(pipeline)))
+            scores = np.concatenate((scores, self._get_test_scores(pipeline)))
 
         return scores
 
     def grid_search(self, pipeline, param_grid, X, y, classification=True):
         """
         Perform nested grid search CV.
-
-        Notes
-        -----
-        For an RxK nested loop, R*K total scores are returned.  For
-        classification tasks, KFolds are stratified.
 
         Parameters
         ----------
@@ -140,6 +134,11 @@ class NestedCV:
         -------
         scores : ndarray(float, ndim=1)
             Array of length K*R containing scores from all test folds.
+            
+        Notes
+        -----
+        For an RxK nested loop, R*K total scores are returned.  For
+        classification tasks, KFolds are stratified.
         """
         self.gs = GridSearchCV(
             estimator=pipeline,
