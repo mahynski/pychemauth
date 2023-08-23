@@ -30,14 +30,14 @@ Here is some pseudocode illustrating how to use this after you (USERNAME) have c
 
 .. code-block:: bash
 
-    git clone https://github.com/USERNAME/forked-pychemauth.git
-    cd pychemauth
-    pip install pre-commit
-    pre-commit install
-    # Make your changes
-    ...
-    pre-commit run --all-files
-    git commit -m "I added some new features!" .
+   git clone https://github.com/USERNAME/forked-pychemauth.git
+   cd pychemauth
+   pip install pre-commit
+   pre-commit install
+   # Make your changes
+   ...
+   pre-commit run --all-files
+   git commit -m "I added some new features!" .
 
 Documentation
 *************
