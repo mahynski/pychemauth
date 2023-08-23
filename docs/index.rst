@@ -162,7 +162,7 @@ Diagnostics
 
    quickstart 
    contributing
-   citations
+   citation
    modules
 
 Indices and tables
