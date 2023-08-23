@@ -19,7 +19,8 @@ author = 'Nathan A. Mahynski'
 extensions = [
         'sphinx.ext.autodoc',
         'sphinx.ext.viewcode',
-        'sphinx.ext.napoleon'
+        'sphinx.ext.napoleon',
+        'sphinx_search.extension'
 ]
 
 templates_path = ['_templates']
