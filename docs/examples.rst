@@ -2,4 +2,4 @@ Examples
 ========
 
 .. nbgallery::
-   ../examples/simca_examples
+   ../examples/simca_example
