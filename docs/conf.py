@@ -20,7 +20,9 @@ extensions = [
         'sphinx.ext.autodoc',
         'sphinx.ext.viewcode',
         'sphinx.ext.napoleon',
-        'sphinx_search.extension'
+        'sphinx_search.extension',
+        'nbsphinx',
+        'sphinx_gallery.load_style'
 ]
 
 templates_path = ['_templates']
