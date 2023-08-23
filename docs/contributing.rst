@@ -60,6 +60,11 @@ This uses reStructuredText for python:
 * Documentation can be found `here <https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#the-python-domain>`_.
 * A nice `cheatsheet <https://github.com/ralsina/rst-cheatsheet/blob/master/rst-cheatsheet.rst>`_.
 
+Jupyter Notebooks
+#################
 
+Notebooks are a great way to illustrate the correct use of your code and facilitates its adoption.  We welcome contributed notebooks as well, subject to review. 
+
+* Some good suggestions to improve readability are given `here <https://www.kaggle.com/code/alejopaullier/make-your-notebooks-look-better>`_.
 
 

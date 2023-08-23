@@ -2,4 +2,4 @@ Examples
 ========
 
 .. nbgallery::
-   ../examples/simca_example
+   jupyter/simca_example

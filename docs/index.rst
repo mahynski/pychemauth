@@ -161,9 +161,9 @@ Diagnostics
    :caption: Contents:
 
    quickstart 
-   contributing
-   citation
    examples
+   citation
+   contributing
    modules
 
 Indices and tables
