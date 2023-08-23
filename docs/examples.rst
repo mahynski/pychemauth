@@ -3,7 +3,6 @@ Examples
 
 .. nbgallery::
    :hidden:
-   :maxdepth: 5
 
    jupyter/gallery/imputing_examples
    jupyter/gallery/pca_example
