@@ -1,12 +1,21 @@
 Contributing
 ============
 
+Bugs
+####
+
 If you find a bug, please `submit a bug report <https://github.com/mahynski/pychemauth/issues/new/choose>`_ using the pre-configured template on the repository.  In your report, please include:
 
 1. A minimum amount of code to reproduce the error from scratch (including raw data), and
 2. The anticipated output which differs from what you were expecting.
 
+New Features
+############
+
 You put also make `feature requests <https://github.com/mahynski/pychemauth/issues/new/choose>`_ using the pre-configured template on the repository.
+
+Community Contributions
+########################
 
 Community contributions to pychemauth are also welcome.  If you would like to contribute, follow the recommended `GitHub workflow <https://git-scm.com/book/en/v2/GitHub-Contributing-to-a-Project>`_:
 
@@ -29,6 +38,7 @@ Please note, style and code linting is enforce with `pre-commit <https://pre-com
 Here is some pseudocode illustrating how to use this after you (USERNAME) have created your own fork of pychemauth.
 
 .. code-block:: bash
+   :linenos:
 
    git clone https://github.com/USERNAME/forked-pychemauth.git
    cd pychemauth
@@ -44,5 +54,12 @@ Documentation
 
 Code is documented using numpy docstrings.  This style is documented `here <https://numpydoc.readthedocs.io/en/latest/format.html>`_ and an illustrative example is available `here <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html>`_.
 Please document any changes and follow this convention when making contributions.
+
+This uses reStructuredText for python:
+
+* Documentation can be found `here <https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#the-python-domain>`_.
+* A nice `cheatsheet <https://github.com/ralsina/rst-cheatsheet/blob/master/rst-cheatsheet.rst>`_.
+
+
 
 
