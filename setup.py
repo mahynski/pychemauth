@@ -14,7 +14,7 @@ setup(
     homepage="https://github.com/mahynski/pychemauth",
     python_requires=">=3.9.0",
     version=__version__,
-    packages=['pychemauth'], #find_packages(),
+    packages=find_packages(),
     license_files=("LICENSE",),
     test_suite="tests",
     tests_require=["pytest"],
