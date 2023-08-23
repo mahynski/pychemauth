@@ -12,13 +12,18 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedKFold, learning_curve
 
-# Resources:
-# https://christophm.github.io/interpretable-ml-book/
-# https://github.com/rasbt/python-machine-learning-book-2nd-edition
-
 
 class InspectModel:
-    """Inspect machine learning models."""
+    """
+    Inspect machine learning models.
+    
+    References
+    ----------
+    https://christophm.github.io/interpretable-ml-book/
+
+    https://github.com/rasbt/python-machine-learning-book-2nd-edition
+
+    """
 
     def __init__(self):
         """Initialize the class."""
@@ -326,7 +331,7 @@ class InspectModel:
 
         References
         ----------
-        See `sklearn.inspection.plot_partial_dependence`.
+        See `sklearn.inspection.PartialDependenceDisplay`.
 
         Example
         -------
