@@ -89,7 +89,7 @@ class NestedCV:
             )
         return np.array(scores)
 
-    def outer_loop_(self, pipeline, X, y, cv):
+    def _outer_loop(self, pipeline, X, y, cv):
         """Perform outer loop."""
         scores = []
         for train_index, test_index in cv.split(X, y):
@@ -152,7 +152,7 @@ class NestedCV:
             return_train_score=True,  # Results from the test folds are stored
         )
 
-        scores = self.outer_loop_(
+        scores = self._outer_loop(
             self.gs,
             X,
             y,

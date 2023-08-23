@@ -22,7 +22,6 @@ class InspectModel:
     https://christophm.github.io/interpretable-ml-book/
 
     https://github.com/rasbt/python-machine-learning-book-2nd-edition
-
     """
 
     def __init__(self):
@@ -33,12 +32,6 @@ class InspectModel:
     def confusion_matrix(model, X, y_true, ax=None):
         """
         Plot a confusion matrix for a classifier.
-
-        Notes
-        -----
-        Compare classification models based on true/false positive rates.
-        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
-        https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
         Parameters
         ----------
@@ -59,6 +52,15 @@ class InspectModel:
         -------
         ax : matplotlib.pyplot.axes
             Axes the confusion matrix has been plotted on.
+            
+        Notes
+        -----
+        Compare classification models based on true/false positive rates.
+        
+        References
+        ----------
+        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
         """
         confmat = confusion_matrix(y_true=y_true, y_pred=model.predict(X))
 
@@ -84,12 +86,7 @@ class InspectModel:
     def roc_curve(model, X, y, n_splits=10):
         """
         Select classification models based on true/false positive rates.
-
-        References
-        ----------
-        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
-        https://github.com/rasbt/python-machine-learning-book-2nd-edition.
-
+        
         Parameters
         ----------
         model : sklearn.base.BaseEstimator or sklearn.pipeline.Pipeline
@@ -109,6 +106,11 @@ class InspectModel:
         -------
         ax : matplotlib.pyplot.axes
             Axes the ROC curve has been plotted on.
+            
+        References
+        ----------
+        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition.
         """
         from scipy import interp
         from sklearn.metrics import auc, roc_curve
@@ -175,20 +177,6 @@ class InspectModel:
         """
         Diagnose bias/variance issues in a model.
 
-        Notes
-        -----
-        The validation and training accuracy curves should converge "quickly"
-        (if not, high variance) and to a "high" accuracy (if not, high bias).
-        If it doesn't converge, it probably needs more data to train on.
-
-        References
-        ----------
-        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
-        https://github.com/rasbt/python-machine-learning-book-2nd-edition
-
-        Also see scikit-learn's documentation:
-        https://scikit-learn.org/stable/modules/learning_curve.html
-
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -208,6 +196,20 @@ class InspectModel:
         -------
         ax : matplotlib.pyplot.axes
             Axes the figure is plotted on.
+
+        Notes
+        -----
+        The validation and training accuracy curves should converge "quickly"
+        (if not, high variance) and to a "high" accuracy (if not, high bias).
+        If it doesn't converge, it probably needs more data to train on.
+
+        References
+        ----------
+        See Ch. 6 of "Python Machine Learning" by Raschka & Mirjalili.
+        https://github.com/rasbt/python-machine-learning-book-2nd-edition
+
+        Also see scikit-learn's documentation:
+        https://scikit-learn.org/stable/modules/learning_curve.html
 
         Example
         -------
@@ -280,11 +282,6 @@ class InspectModel:
         """
         Plot residuals and fit to a Gaussian distribution.
 
-        Notes
-        -----
-        A good fit might indicate all predictive "information" has been
-        extracted and the remaining uncertainty is due to random noise.
-
         Parameters
         ----------
         y_true : ndarray(float, ndim=1)
@@ -298,6 +295,11 @@ class InspectModel:
         -------
         ax : matplotlib.pyplot.axes
             Axes the figure is plotted on.
+            
+        Notes
+        -----
+        A good fit might indicate all predictive "information" has been
+        extracted and the remaining uncertainty is due to random noise.
         """
         n_vars = y_true.shape[1]
         assert y_true.shape[1] == y_pred.shape[1]
@@ -312,6 +314,26 @@ class InspectModel:
         """
         Partial dependence plots for features in X.
 
+        Parameters
+        ----------
+        model : sklearn.base.BaseEstimator
+            A fitted scikit-learn estimator.
+
+        X : array_like(float, ndim=2)
+            Dense grid used to build the grid of values on which the dependence
+            will be evaluated. **This is usually the training data.**
+
+        features : list(int) or list(tuple(int, int))
+            The target features for which to create the PDPs.
+            If features[i] is an int, a one-way PDP is created; if
+            features[i] is a tuple, a two-way PDP is created. Each tuple must
+            be of size 2.
+
+        Returns
+        -------
+        display : sklearn.inspection.PartialDependenceDisplay
+            PDP display.
+            
         Notes
         -----
         Partial dependence plots (PDP) show the dependence between the target
@@ -343,26 +365,6 @@ class InspectModel:
         ... learning_rate=1.0, max_depth=1, random_state=0).fit(X, y)
         >>> features = [0, 1]
         >>> InspectModel.pdp(clf, X, features)
-
-        Parameters
-        ----------
-        model : sklearn.base.BaseEstimator
-            A fitted scikit-learn estimator.
-
-        X : array_like(float, ndim=2)
-            Dense grid used to build the grid of values on which the dependence
-            will be evaluated. **This is usually the training data.**
-
-        features : list(int) or list(tuple(int, int))
-            The target features for which to create the PDPs.
-            If features[i] is an int, a one-way PDP is created; if
-            features[i] is a tuple, a two-way PDP is created. Each tuple must
-            be of size 2.
-
-        Returns
-        -------
-        display : sklearn.inspection.PartialDependenceDisplay
-            PDP display.
         """
         from sklearn.inspection import PartialDependenceDisplay
 
@@ -439,18 +441,17 @@ class InspectModel:
          - https://christophm.github.io/interpretable-ml-book/feature-importance.html
 
         For further advantages of pfi, see https://scikit-learn.org/stable/modules/permutation_importance.html. 
-        One of particular note is that pfi
-        place too much emphasis on unrealistic inputs; this is because
-        permuting features breaks correlations between features.  If you can
-        remove those correlations (see Note below) then pfi's are more
-        meaningful.
+        One of particular note is that pfi place too much emphasis on 
+        unrealistic inputs; this is because permuting features breaks 
+        correlations between features.  If you can remove those correlations 
+        then pfi's are more meaningful.
 
         When two features are correlated and one of the features is permuted,
         the model will still have access to the feature through its correlated
         feature. This will result in a lower importance value for both
         features, where they might actually be important.  One way to solve
         this is to cluster correlated features and take only 1.
-        **See `eda.InspectData.cluster_collinear` for example.**
+        **See :py:func:`eda.data.InspectData.cluster_collinear` for example.**
         """
         import pandas as pd
         from sklearn.inspection import permutation_importance
