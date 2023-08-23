@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+=======================================
 Python-based Chemometric Authentication
-==========================
+=======================================
 .. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
@@ -12,7 +13,7 @@ Python-based Chemometric Authentication
 .. image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
    :target: https://pycqa.github.io/isort/
 .. image:: https://github.com/mahynski/pychemauth/actions/workflows/python-app.yml/badge.svg?branch=main
-   :target:
+   :target: https://github.com/mahynski/pychemauth/actions
 .. image:: https://zenodo.org/badge/331207062.svg
    :target: https://zenodo.org/badge/latestdoi/331207062
 
@@ -22,9 +23,20 @@ Within the context of anomaly detection, `scikit-learn <https://scikit-learn.org
 
 Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here] <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_.
 
-## License Information
+
+License Information
+###################
 * See LICENSE for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by `NIST <https://www.nist.gov/>`_.
+
+Core Capabilities
+#################
+
+.. image:: pychemauth.png
+
+Exploratory Data Analysis
+*************************
+
 
 .. toctree::
    :maxdepth: 2
