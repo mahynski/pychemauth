@@ -19,9 +19,11 @@ Python-based Chemometric Authentication
 
 This is a toolkit to perform chemometric authentication.  These methods are designed to follow `scikit-learn's estimator API <https://scikit-learn.org/stable/developers/develop.html>`_ so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning tools.  Authentication is typically a `one-class classification (OCC) <https://en.wikipedia.org/wiki/One-class_classification>`_, or class modeling, approach designed to detect anomalies. This contrasts with multi-class classification (discriminative) models which involve supervised learning of multiple classes to distinguish between them; the primary weakness of this is that such a model typically cannot predict if a new sample belongs to **none** of the classes trained on.
 
+.. image:: ../pychemauth.png
+   
 Within the context of anomaly detection, `scikit-learn <https://scikit-learn.org/stable/modules/outlier_detection.html>`_ differentiates between outlier detection and novelty detection.  In outlier detection, the training data is considered polluted and certain samples need to be detected and removed, whereas novelty detection methods assume the training data is "clean" and anomalies need to be detected during the testing phase of new samples only.  Both are important in the context of authentication models; this is a nice resource for a summary of `anomaly detection resources <https://github.com/yzhao062/anomaly-detection-resources>`_.
 
-Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here] <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_.
+Out-of-distribution (OOD) detection is a more general term which encompasses these and other tasks, such as open-set recognition.  A taxonomy describing how these tasks are interrelated can be found `here <https://arxiv.org/abs/2110.11334>`_ and further reading `here <https://arxiv.org/abs/2110.14051>`_.
 
 
 License Information
@@ -32,15 +34,13 @@ License Information
 Core Capabilities
 #################
 
-.. image:: ../pychemauth.png
-
 Exploratory Data Analysis
 *************************
-You should always perform [exploratory data analysis](https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm) to understand your data.  For example, understanding missing values, NaN, inf and basic [descriptive statistics](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html).  The included `eda` module contains some additional tools for this.
+You should always perform `exploratory data analysis <https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm>`_ to understand your data.  For example, understanding missing values, NaN, inf and basic `descriptive statistics <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html>`_.  The included `eda` module contains some additional tools for this.
 
 Preprocessors
 *************
-[scikit-learn](https://scikit-learn.org) provides a number of other simple [preprocessing](https://scikit-learn.org/stable/modules/preprocessing.html) steps, including data standardization and imputation approaches.  Here, these are extended to include:
+`scikit-learn <https://scikit-learn.org>`_ provides a number of other simple `preprocessing <https://scikit-learn.org/stable/modules/preprocessing.html>`_ steps, including data standardization and imputation approaches.  Here, these are extended to include:
 
 Imputing Missing Data
 =====================
