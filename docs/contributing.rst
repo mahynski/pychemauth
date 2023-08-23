@@ -65,10 +65,13 @@ Jupyter Notebooks
 
 Notebooks are a great way to illustrate the correct use of your code and facilitates its adoption.  We welcome contributed notebooks as well, subject to review. 
 
-Use `pandoc flavored markdown <https://pandoc.org/MANUAL.html#pandocs-markdown>`_ comments in your notebook with a single level-one heading in the top cell to denote the notebook's name; e.g., <h1>DD-SIMCA Example</h1>.
+Use `pandoc flavored markdown <https://pandoc.org/MANUAL.html#pandocs-markdown>`_ comments in your notebook with a single level-one heading in the top cell to denote the notebook's name; e.g., <h1>DD-SIMCA Example</h1>.  A subsequent cell can be used to describe the notebook further.
 
 .. code-block:: html
+
    <h1>DD-SIMCA Example</h1>
+
+.. code-block:: html
 
    Author: Nathan A. Mahynski
 
