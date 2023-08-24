@@ -18,7 +18,7 @@ You should run unittests to make sure your installation is working correctly.
 .. code-block:: bash
    :linenos:
 
-   python setup.py test
+   pytest
 
 Usage
 #####

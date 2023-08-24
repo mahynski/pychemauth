@@ -140,8 +140,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             numpy array automatically.
             
         y : array_like(float, ndim=1), optional(default=None)
-            Response values. Ignored - this is here for compatability with
-            scikit-learn.
+            Ignored.
 
         Returns
         -------
@@ -398,7 +397,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             numpy array automatically.
             
         y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used (unsupervised methods).
+            Ignored.
 
         Returns
         -------
@@ -428,7 +427,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             numpy array automatically.
             
         y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used (unsupervised methods).
+            Ignored.
 
         Returns
         -------
@@ -444,9 +443,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         outlier or extreme.
 
         See SHAP documentation for a discussion on the utility and impact
-        of "squashing functions": https://shap.readthedocs.io/en/latest/\
-        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
-        #Probability-space-explaination
+        of "squashing functions": https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html#Probability-space-explaination
 
         References
         ----------
@@ -519,7 +516,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         
         upper_frac : scalar(float), optional(default=0.25)
             Count the number of extremes and outliers for alpha values corresponding
-            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
+            to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
             
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
@@ -579,7 +576,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         return ax
 
     def score(self, X, y, eps=1.0e-15):
-        """
+        r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
         
         Parameters

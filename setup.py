@@ -42,5 +42,6 @@ setup(
         "tqdm==4.66.1",
         "umap-learn==0.5.3",
         "watermark==2.4.3",
+        "pytest==7.4.0"
     ],
 )
