@@ -25,12 +25,31 @@ class InspectData:
         """
         Compute cluster elbow metric.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+        
+        clusters : list(int), optional(default=range(1, 11))
+            List of the number of clusters to use.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes the result is plotted on.
+
+        Note
+        ----
         Uses kmeans++ to examine within-cluster sum squared errors (inertia or
         distortion) and plots as the number of clusters increases.  Because of
         the use of kmeans, this is best if the clusters are more spherical.
 
+        References
+        ----------
         See Ch. 11 of "Python Machine Learning" by Raschka & Mirjalili.
         https://github.com/rasbt/python-machine-learning-book-2nd-edition
+
+        See sklearn.cluster.KMeans.
         """
         from sklearn.cluster import KMeans
 
@@ -57,11 +76,29 @@ class InspectData:
         """
         Plot silhouette curves.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+        
+        clustering : sklearn.cluster
+            Clustering algorithm that implements a .fit_predict method, 
+            e.g., sklearn.cluster.KMeans.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes the result is plotted on.
+
+        Note
+        ----
         Plot silhouette curves to assess the quality of clustering into a
         meaningful number of clusters in **classification tasks**. Ideal
         silhouette coefficients are close to 1, meaning "tight" well-separated
         clusters.
 
+        References
+        ----------
         See Ch. 11 of "Python Machine Learning" by Raschka & Mirjalili.
         https://github.com/rasbt/python-machine-learning-book-2nd-edition
 
@@ -121,12 +158,44 @@ class InspectData:
         """
         Identify collinear features using the Spearman rank order correlation.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Dense feature matrix.
+
+        feature_names : list, optional(default=None)
+            Names of each column in X (in ascending order). If None, returns
+            indices of columns, otherwise all outputs are in terms of names.
+
+        figsize : tuple(int, int), optional(default=None)
+            Size of visualization to display.  Ignored if display = False.
+
+        t :  scalar(float), optional(default=None)
+            Ward clustering threshold to determine the number of clusters.
+
+        display : scalar(bool), optional(default=None)
+            Whether or not to visualize results.
+
+        figname : str, optional(default=None)
+            If display is True, can also save to this file.
+
+        Returns
+        -------
+        selected_features : ndarray(str or int, ndim=1)
+            If feature names are provided, names are returned.  Otherwise they are
+            the indices of the columns in X.
+
+        cluster_id_to_feature_ids : defaultdict(list)
+            Dictinary of {cluster id: features that belong}.
+
+        fig : matplotlib.pyplot.figure or None
+            Figure the result is plotted on if display = True, otherwise None.
+            
+        Note
+        ----
         Ward clustering is used to cluster collinear features based on "distance",
         computed from Spearman rank order correlations, and select a single feature
         from each macro-cluster.
-
-        See https://scikit-learn.org/stable/auto_examples/inspection/
-        plot_permutation_importance_multicollinear.html
 
         Note that as of sklearn v1.0.2 the distance is linkage recommendation changed
         from directly using the correlation matrix to a distance metric.  Results
@@ -134,70 +203,40 @@ class InspectData:
 
         This can be used as a preprocessing step since it is unsupervised.
 
+        References
+        ----------
+        See https://scikit-learn.org/stable/auto_examples/inspection/plot_permutation_importance_multicollinear.html
+
         Example
         -------
         >>> from sklearn.datasets import load_breast_cancer
         >>> from sklearn.ensemble import RandomForestClassifier
-
         >>> data = load_breast_cancer()
         >>> X, y = data.data, data.target
-        >>> X_train, X_test, y_train, y_test = train_test_split(X, y,
-        ... random_state=42)
-
+        >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
         >>> # Train model in first round
-        >>> clf = RandomForestClassifier(n_estimators=100,
-        ... random_state=42)
+        >>> clf = RandomForestClassifier(n_estimators=100, random_state=42)
         >>> clf.fit(X_train, y_train)
         >>> clf.score(X_test, y_test) # 97%
-
-        >>> # Look at pfi --> EVERYTHING comes out as irrelevant because many
-        ... features highly correlated
-        >>> InspectModel.pfi(clf, X_test, y_test, n_repeats=30,
+        >>> # Look at pfi --> EVERYTHING comes out as irrelevant because many features highly correlated
+        >>> pychemauth.analysis.inspect.InspectModel.pfi(clf, X_test, y_test, n_repeats=30, 
         ... feature_names=data.feature_names.tolist())
-
         >>> # Look at multicollinearity
-        >>> selected_features, cluster_id_to_feature_ids =
-        ... InspectModel.cluster_collinear(X, # Unsupervised
+        >>> selected_features, cluster_id_to_feature_ids, _ =
+        ... pychemauth.eda.data.InspectData.cluster_collinear(X, # Unsupervised
         ...                                figsize=(12, 8),
         ...                                display=True,
         ...                                t=2,
         ...                                feature_names=None) # Get indices
-
         >>> # Fit again just using these selected features
         >>> X_train, X_test = X_train[:,selected_features],
         ... X_test[:,selected_features]
         >>> clf.fit(X_train, y_train)
         >>> clf.score(X_test, y_test) # 96%, almost identical as expected
-
         >>> # Top is 'mean radius', which according to dendogram above, is
         ... highly correlated with other "size" metrics
-        >>> InspectModel.pfi(clf, X_test, y_test, n_repeats=30,
+        >>> pychemauth.analysis.inspect.InspectModel.pfi(clf, X_test, y_test, n_repeats=30,
         ... feature_names=data.feature_names[selected_features])
-
-        Notes
-        -----
-        If feature names are provided, names are returned.  Otherwise they are
-        the indices of the columns in X.
-
-        Parameters
-        ---------
-        X : array-like
-            Dense feature matrix.
-        feature_names : list or None
-            Names of each column in X (in ascending order). If None, returns
-            indices of columns, otherwise all outputs are in terms of names.
-        figsize : tuple or None
-            Size of visualization to display.  Ignored if display = False.
-        t :  float or None
-            Ward clustering threshold to determine the number of clusters.
-        display : bool
-            Whether or not to visualize results.
-        figname : str or None
-            If display is True, can also save to this file.
-
-        Returns
-        -------
-        selected_features, cluster_id_to_feature_ids, fig
         """
         from collections import defaultdict
 
@@ -205,7 +244,7 @@ class InspectData:
         from scipy.spatial.distance import squareform
         from scipy.stats import spearmanr
 
-        X = np.array(X)
+        X = np.asarray(X, dtype=np.float64)
         if feature_names is None:
 
             def naming(i):
@@ -302,6 +341,47 @@ class InspectData:
         """
         Identify a set of features that are categorically similar.
 
+        Parameters
+        ----------
+        cluster_id_to_feature_ids : defaultdict(list)
+            Dictinary of {cluster id: features that belong}.
+
+        lookup : callable
+            A function that is capable of looking up a feature and returning a
+            designation or class for it. For example lookup('mercury') =
+            'Heavy Metal'.  The final result is a set of features which all
+            belong to the same class as much as possible.
+
+        X : pandas.DataFrame
+            DataFrame of the feature matrix.
+
+        cutoff_factor : scalar(float), optional(default=0.9)
+            Fraction of times a feature must be appear in X (not be NaN) to be
+            considered as a viable feature.
+
+        n_restarts : scalar(int), optional(default=1)
+            Number of times to restart the Monte Carlo (annealing).
+
+        max_iters : scalar(int), optional(default=1000)
+            Maximum number of MC perturbations to make during a run.
+
+        seed : scalar(int), optional(default=0)
+            RNG seed to numpy.random.seed(seed).
+
+        early_stopping : scalar(int), optional(default=-1)
+            If the best (lowest entropy) solution hasn't changed in this many
+            steps, stop the MC.
+
+        T : scalar(float), optional(default=0.25)
+            Fictitious "temperature" that controls acceptance criteria.
+
+        Returns
+        -------
+        best_choices : list
+            List of features to use.
+
+        Note
+        ----
         Minimize the entropy of selected features based on hierarchical
         clustering according to some labeling scheme that categorizes them.
         For example, lookup('mercury') = 'Heavy Metal'. This routine performs
@@ -311,46 +391,16 @@ class InspectData:
         NaN values) at least 100*cutoff_factor percent of the time.
 
         This can be used to improve selections made at random by
-        cluster_collinear().
+        pychemauth.eda.data.InspectData.cluster_collinear().
 
         Example
         -------
-        >>> selected_features, cluster_id_to_feature_ids = cluster_collinear(X,
+        >>> selected_features, cluster_id_to_feature_ids = 
+        ... pychemauth.eda.data.InspectData.cluster_collinear(X,
         ... feature_names=feature_names, display=False)
         >>> better_features =
-        ... minimize_cluster_label_entropy(cluster_id_to_feature_ids,
-        ... lookup,
-        ... X)
-
-        Parameters
-        ----------
-        cluster_id_to_feature_ids : defaultdict(list)
-            Dictinary of {cluster id: features that belong}
-        lookup : callable
-            A function that is capable of looking up a feature and returning a
-            designation or class for it. For example lookup('mercury') =
-            'Heavy Metal'.
-        X : pandas.DataFrame
-            DataFrame of the features (columns).
-        cutoff_factor : float
-            Fraction of times a feature must be appear in X (not be NaN) to be
-            considered as a viable feature.
-        n_restarts : int
-            Number of times to restart the Monte Carlo (annealing).
-        max_iters : int
-            Maximum number of MC perturbations to make during a run.
-        seed : int
-            RNG seed to numpy.random.seed(seed).
-        early_stopping : int
-            If the best (lowest entropy) solution hasn't changed in this many
-            steps, stop the MC.
-        T : float
-            Fictitious "temperature" that controls acceptance criteria.
-
-        Returns
-        -------
-        best_choices
-            List of features to use.
+        ... pychemauth.eda.data.InspectData.minimize_cluster_label_entropy(
+        ... cluster_id_to_feature_ids, lookup, X)
         """
         import copy
 
@@ -495,14 +545,7 @@ class InspectData:
     @staticmethod
     def pairplot(df, figname=None, **kwargs):
         """
-        Plot features against each other to look for trends.
-
-        A pairplot of the data.  Best to use after dimensionality reduction has
-        been performed, e.g., using cluster_collinear() to select only certain
-        features.  This can be helpful to visualize how decorrelated the
-        selected dimensions truly are.
-
-        See https://seaborn.pydata.org/generated/seaborn.pairplot.html.
+        Plot pairs of features against each other to look for trends.
 
         Parameters
         ----------
@@ -510,6 +553,27 @@ class InspectData:
             DataFrame with (dense) X predictors.  It may or may not contain a
             column for the prediction target.  For classification tasks, this
             can be visualized using 'hue' as shown below.
+
+        figname : str, optional(default=None)
+            If not None the plot will be saved to this file.
+
+        kwargs : dict
+            Optional kwargs for seaborn.pairplot().
+
+        Returns
+        -------
+        None
+
+        Note
+        ----
+        A pairplot of the data.  Best to use after dimensionality reduction has
+        been performed, e.g., using pychemauth.eda.data.InspectData.cluster_collinear() 
+        to select only certain features.  This can be helpful to visualize how 
+        decorrelated the selected dimensions truly are.
+
+        References
+        ----------
+        See https://seaborn.pydata.org/generated/seaborn.pairplot.html.
 
         Example
         -------
