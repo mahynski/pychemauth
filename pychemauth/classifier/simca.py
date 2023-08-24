@@ -20,6 +20,59 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     """
     Train a SIMCA model for a target class.
 
+    Parameters
+    ----------
+    n_components : scalar(int), optional(default=1)
+        Number of components to use in the SIMCA model.
+        
+    alpha : scalar(float), optional(default=0.05)
+        Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
+        
+    gamma : scalar(float), optional(default=0.01)
+        Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
+        
+    target_class : scalar(str or int), optional(default=None)
+        The class used to fit the SIMCA model; the rest are used
+        to test specificity.
+        
+    style : str, optional(default='dd-simca')
+        Type of SIMCA to use ("simca" or "dd-simca")
+        
+    use : str, optional(default='rigorous')
+        Which methodology to use to evaluate the model ("rigorous", "compliant")
+        (default="rigorous"). See Ref. [1] for more details.
+        
+    scale_x : scalar(bool), optional(default=True)
+        Whether or not to scale X by its sample standard deviation or not.
+        This depends on the meaning of X and is up to the user to
+        determine if scaling it (by the standard deviation) makes sense.
+        Note that X is always centered.
+        
+    robust : str, optional(default='semi')
+        Whether or not to apply robust methods to estimate degrees of freedom.
+        This is only used with DD-SIMCA. 'full' is not implemented yet, but
+        involves robust PCA and robust degrees of freedom estimation; 'semi'
+        (default) is described in [3] and uses classical PCA but robust DoF
+        estimation; all other values revert to classical PCA and classical DoF
+        estimation. If the dataset is clean (no outliers) it is best practice
+        to use a classical method [3], however, to initially test for and
+        potentially remove these points, a robust variant is recommended. This
+        is why 'semi' is the default value. If `sft`=True then this value is
+        ignored and a robust method is applied to iteratively clean the dataset,
+        while the final fitting uses the classical approach.
+        
+    sft : scalar(bool), optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described
+        in Ref. [2], called "sequential focused trimming."  This is only used
+        with DD-SIMCA. If not used (default) robust estimates of parameters may
+        be attempted; if the iterative approach is used, these robust estimates
+        are only computed during the outlier removal loop(s) while the final
+        "clean" data uses classical estimates.  This option may throw away data
+        it is originally provided for training; it keeps only "regular" samples
+        (inliers and extremes) to train the model.
+            
+    Notes
+    -----
     Essentially, a SIMCA model is trained for one target class. The target is
     set when this class is instantiated and must be one of (but doesn't need
     to be the only) class found in the training set (this is checked
@@ -36,20 +89,24 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
     about the target class itself.  This is a "rigorous" approach which can
     be important to consider to avoid bias in the model.
 
+    When TEFF is used to choose a model, this is a "compliant" approach,
+    whereas when TSNS is used instead, this is a "rigorous" approach. 
     In rigorous models, alpha should be fixed as other hyperparameters are adjusted
     to match this target; in compliant approaches this can be allowed to vary
-    and the model with the best efficiency is selected.
+    and the model with the best efficiency is selected. [1]
 
+    References
+    ----------
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
+    
     [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
-
     """
-
     def __init__(
         self,
         n_components=1,
@@ -62,62 +119,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         robust="semi",
         sft=False,
     ):
-        """
-        Instantiate the classifier.
-
-        Outlier detection may be done on a per-class basis, but is not
-        part of the "overall" model.  This ultimately performs K different
-        checks for the K classes tested on, to see if the target class can be
-        differentiated from them.  This relies on the type I error (alpha) only.
-        The final metric used to rate the overall model can be set to TEFF or TSPS,
-        for example, if you wish to change how the model is evaluated.
-
-        When TEFF is used to choose a model, this is a "compliant" approach,
-        whereas when TSNS is used instead, this is a "rigorous" approach. [1]
-
-        Parameters
-        ----------
-        n_components : int
-            Number of components to use in the SIMCA model.
-        alpha : float
-            Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        gamma : float
-            Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        target_class : str or int
-            The class used to fit the SIMCA model; the rest are used
-            to test specificity.
-        style : str
-            Type of SIMCA to use ("simca" or "dd-simca")
-        use : str
-            Which methodology to use to evaluate the model ("rigorous", "compliant")
-            (default="rigorous"). See Ref. [1] for more details.
-        scale_x : bool
-            Whether or not to scale X by its sample standard deviation or not.
-            This depends on the meaning of X and is up to the user to
-            determine if scaling it (by the standard deviation) makes sense.
-            Note that X is always centered.
-        robust : str
-            Whether or not to apply robust methods to estimate degrees of freedom.
-            This is only used with DD-SIMCA. 'full' is not implemented yet, but
-            involves robust PCA and robust degrees of freedom estimation; 'semi'
-            (default) is described in [3] and uses classical PCA but robust DoF
-            estimation; all other values revert to classical PCA and classical DoF
-            estimation. If the dataset is clean (no outliers) it is best practice
-            to use a classical method [3], however, to initially test for and
-            potentially remove these points, a robust variant is recommended. This
-            is why 'semi' is the default value. If `sft`=True then this value is
-            ignored and a robust method is applied to iteratively clean the dataset,
-            while the final fitting uses the classical approach.
-        sft : bool
-            Whether or not to use the iterative outlier removal scheme described
-            in Ref. [2], called "sequential focused trimming."  This is only used
-            with DD-SIMCA. If not used (default) robust estimates of parameters may
-            be attempted; if the iterative approach is used, these robust estimates
-            are only computed during the outlier removal loop(s) while the final
-            "clean" data uses classical estimates.  This option may throw away data
-            it is originally provided for training; it keeps only "regular" samples
-            (inliers and extremes) to train the model.
-        """
+        """ Instantiate the classifier."""
         self.set_params(
             **{
                 "n_components": n_components,

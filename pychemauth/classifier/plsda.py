@@ -24,18 +24,51 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     """
     PLS-DA for classification.
 
+    Parameters
+    ----------
+    n_components : scalar(int), optional(default=1)
+        Number of dimensions to project into with PLS stage.
+        Should be in [1, min(n_samples-1, n_features)].
+        See scikit-learn documentation for more details. Sometimes
+        K-1 is used as a lower bound instead of 1, where K is
+        the number of classes.  This can assist in stability
+        issues with the soft version.
+        
+    alpha : scalar(float), optional(default=0.05)
+        Type I error rate (signficance level).
+        
+    gamma : scalar(float), optional(default=0.01)
+        Significance level for determining outliers.
+        
+    not_assigned : scalar(int) or str, optional(default='-1')
+        Category to give a point in soft version if not assigned to any
+        known class.
+        
+    style : str, optional(default='soft')
+        PLS style; can be "soft" or "hard".
+        
+    scale_x : scalar(bool), optional(default=True)
+        Whether or not to scale the X matrix during the PLS(2) stage.
+        This depends on the meaning of X and is up to the user to
+        determine if scaling it (by the standard deviation) makes sense.
+        Note that X and Y are always centered, Y is never scaled.
+        
+    score_metric : str, optional(default='TEFF')
+        Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
+        (default=TEFF). TEFF^2 = TSNS*TSPS.
+            
+    Notes
+    -----
     Implements 'hard' classification as an 'LDA-like' criterion, and a
     'soft' classification using a 'QDA-like' criterion as described in [1].
     Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard
     PLS-DA always assigns exactly one class to a point.
 
-    This relies on `sklearn.cross_decomposition.PLSRegression` which can
+    This relies on :py:func:`sklearn.cross_decomposition.PLSRegression` which can
     perform either PLS1 or PLS2; however, here we default to PLS2 and
     always one-hot-encode multiple classes, even in the instance of binary
     classification where PLS1 could be used instead.
 
-    Notes
-    -----
     * Note that alpha and gamma are only relevant for the soft version.
     * If y values are going to be passed as strings, 'not_assigned' should
     also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
@@ -46,6 +79,8 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     the total number of classes. This is not rigorous and may not hold in many
     cases. Cross-validation should be used to evalute this parameter, in general.
 
+    References
+    ----------
     [1] "Multiclass partial least squares discriminant analysis: Taking the
     right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
     Chemometrics (2018). https://doi.org/10.1002/cem.3030.
@@ -61,36 +96,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         scale_x=True,
         score_metric="TEFF",
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        n_components : int
-            Number of dimensions to project into with PLS stage.
-            Should be in [1, min(n_samples-1, n_features)].
-            See scikit-learn documentation for more details. Sometimes
-            K-1 is used as a lower bound instead of 1, where K is
-            the number of classes.  This can assist in stability
-            issues with the soft version.
-        alpha : float
-            Type I error rate (signficance level).
-        gamma : float
-            Significance level for determining outliers.
-        not_assigned : int, str
-            Category to give a point in soft version if not assigned to any
-            known class.
-        style : str
-            PLS style; can be "soft" or "hard".
-        scale_x : bool
-            Whether or not to scale the X matrix during the PLS(2) stage.
-            This depends on the meaning of X and is up to the user to
-            determine if scaling it (by the standard deviation) makes sense.
-            Note that X and Y are always centered, Y is never scaled.
-        score_metric : str
-            Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
-            (default=TEFF). TEFF^2 = TSNS*TSPS.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "alpha": alpha,
@@ -122,7 +128,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             "score_metric": self.score_metric,
         }
 
-    def check_category_type_(self, y):
+    def _check_category_type(self, y):
         """Check that categories are same type as 'not_assigned' variable."""
         t_ = None
         for t_ in [(int, np.int32, np.int64), (str,)]:
@@ -139,7 +145,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 )
             )
 
-    def column_y_(self, y):
+    def _column_y(self, y):
         """Convert y to column format."""
         y = np.array(y)
         if y.ndim != 2:
@@ -159,16 +165,17 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+            
+        y : array_like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
         Returns
         -------
-        self
+        self : PLSDA
         """
         self.n_components = int(
             self.n_components
@@ -178,7 +185,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             raise ValueError("Cannot use sparse data.")
         self.__X_ = np.array(X).copy()
         self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
-        self.__y_ = self.column_y_(
+        self.__y_ = self._column_y(
             y
         )  # scikit-learn expects 1D array, convert to columns
         # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
@@ -194,7 +201,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             )
 
         # Dummy check that not_assigned and y have same data types
-        self.check_category_type_(self.__y_.ravel())
+        self._check_category_type(self.__y_.ravel())
 
         # 1. Preprocess data (one hot encoding, centering)
         self.__ohencoder_ = OneHotEncoder(
@@ -361,12 +368,14 @@ n_features [{}])] = [{}, {}].".format(
         """
         Check if outliers exist in the training data originally fit to.
 
+        Notes
+        -----
         A point is tested for outlier status only with respect to its class.
         This also, only works for "soft" PLS-DA.
 
         Returns
         -------
-        outliers : ndarray
+        outliers : ndarray(bool, ndim=1)
             Boolean mask of X_train used in fit() of if each point is
             considered an outlier.
         """
@@ -404,13 +413,13 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        t-scores : matrix-like
+        t-scores : array_like(float, ndim=2)
             Projection of X via PLS, then by PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
@@ -432,24 +441,27 @@ n_features [{}])] = [{}, {}].".format(
     def mahalanobis(self, X):
         """
         Compute the squared Mahalanobis distance to each class center.
-
-        Notes
-        -----
-        Scipy has a built-in function that could replace this in the future.
-        Here we compute d^2 whereas scipy evalutes the square root to compute
-        d. See: https://docs.scipy.org/doc/scipy/reference/generated/
-        scipy.spatial.distance.mahalanobis.html
-
+        
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        distance : ndarray
+        distance : array_like(float, ndim=1)
             Squared distance to each class for each observation.
+            
+        Notes
+        -----
+        Scipy has a built-in function that could replace this in the future.
+        Here we compute d^2 whereas scipy evalutes the square root to compute
+        d. 
+        
+        References
+        ----------
+        See https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.mahalanobis.html.
         """
         check_is_fitted(self, "is_fitted_")
         X = check_array(X, accept_sparse=False)
@@ -494,6 +506,22 @@ n_features [{}])] = [{}, {}].".format(
         """
         Compute the decision function for each sample.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+            
+        y : array_like(str or int, ndim=1), optional(default=None)
+            Response. Ignored if it is not used (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray
+            Shifted, negative distance for each sample.
+            
+        Notes
+        -----
         Following scikit-learn's EllipticEnvelope, this returns the negative
         Mahalanobis distance shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
@@ -501,20 +529,9 @@ n_features [{}])] = [{}, {}].".format(
         This is ONLY returned for soft PLSDA; if the hard variant is used a
         NotImplementedError will be raised instead.
 
-        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
-
-        Parameters
+        References
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
-
-        Returns
-        -------
-        decision_function : ndarray
-            Shifted, negative distance for each sample.
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
         distances2 = self.mahalanobis(X)
 
@@ -528,7 +545,24 @@ n_features [{}])] = [{}, {}].".format(
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations belong each class.
+    
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+            
+        y : array_like(str or int, ndim=1), optional(default=None)
+            Response. Ignored if it is not used (unsupervised methods).
 
+        Returns
+        -------
+        prob : ndarray(float, ndim=2)
+            Probability of class membership; columns are ordered according
+            to class indices.
+            
+        Notes
+        -----
         Soft PLSDA: assumes each class is normally distributed and uses
         the Mahalanobis distance to compute the (normal) probability
         as a function of this distance from the class' center. The
@@ -545,20 +579,11 @@ n_features [{}])] = [{}, {}].".format(
         This probability can be used for inspection by SHAP to help explain
         how this makes its decisions, at least with respect to assignment of
         individual class membership.
-
-        See SHAP documentation for a discussion on the utility and impact
-        of "squashing functions": https://shap.readthedocs.io/en/latest/\
-        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
-        #Probability-space-explaination
-
-        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
-
+        
         This gives the same effective results as predict() except that function
         directly returns the class(es) a point is predicted to belong to and is sorted
         by class likelihood.  No sorting is done here.
 
-        Note
-        ----
         For a soft decision an observation may belong to 1, >1, or 0
         known classes.  The rows will NOT sum to 1 as is convention in scikit-learn.
         Each entry is a simple binary yes/no prediction that the point is an
@@ -566,20 +591,15 @@ n_features [{}])] = [{}, {}].".format(
 
         The softmax function (hard boundaries) will result in probabilities
         which sum to 1.
-
-        Parameters
+        
+        References
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+        See SHAP documentation for a discussion on the utility and impact
+        of "squashing functions": https://shap.readthedocs.io/en/latest/\
+        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
+        #Probability-space-explaination
 
-        Returns
-        -------
-        prob : ndarray
-            Probability of class membership; columns are ordered according
-            to class centers.
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
         distances2 = self.mahalanobis(X)
         p = np.exp(-np.clip(distances2 / 2.0, a_max=None, a_min=-500))
@@ -606,13 +626,9 @@ n_features [{}])] = [{}, {}].".format(
         """
         Predict the class(es) for a given set of features.
 
-        If multiple predictions are made, they are ordered according to likelihood,
-        from highest to lowest, i.e., by the (lowest) Mahalanobis distance (squared)
-        to that class' center.
-
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -622,6 +638,12 @@ n_features [{}])] = [{}, {}].".format(
             Predicted classes for each observation.  There may be multiple
             predictions for each entry, and are listed from left to right in
             order of decreasing likelihood.
+        
+        Notes
+        -----
+        If multiple predictions are made, they are ordered according to likelihood,
+        from highest to lowest, i.e., by the (lowest) Mahalanobis distance (squared)
+        to that class' center.
         """
         distances = self.mahalanobis(X)
 
@@ -649,17 +671,14 @@ n_features [{}])] = [{}, {}].".format(
         """
         Compute figures of merit for PLS-DA approaches as in [1].
 
-        When making predictions about extraneous classes (not in training set)
-        class efficiency (CEFF) is given as simply class specificity (CSPS)
-        since class sensitivity (CSNS) cannot be calculated.
-
         Parameters
         ----------
         predictions : list(list)
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
-        actual : array-like
+            
+        actual : array_like(str or int, ndim=1)
             Array of ground truth classes for the predicted points.  Should
             have only one class per point.
 
@@ -667,28 +686,41 @@ n_features [{}])] = [{}, {}].".format(
         -------
         df : pandas.DataFrame
             Inputs (index) vs. predictions (columns).
+            
         I : pandas.Series
             Number of each class asked to classify.
+            
         CSNS : pandas.Series
             Class sensitivity.
+            
         CSPS : pandas.Series
             Class specificity.
+            
         CEFF : pandas.Series
             Class efficiency.
-        TSNS : float64
+            
+        TSNS : scalar(float)
             Total sensitivity.
-        TSPS : float64
+            
+        TSPS : scalar(float)
             Total specificity.
-        TEFF : float64
+            
+        TEFF : scalar(float)
             Total efficiency.
+            
+        Notes
+        -----
+        When making predictions about extraneous classes (not in training set)
+        class efficiency (CEFF) is given as simply class specificity (CSPS)
+        since class sensitivity (CSNS) cannot be calculated.
         """
         check_is_fitted(self, "is_fitted_")
 
         trained_classes = np.unique(self.__ohencoder_.categories_)
 
         # Dummy check that not_assigned and y have same data types
-        actual = self.column_y_(actual).ravel()
-        self.check_category_type_(actual)
+        actual = self._column_y(actual).ravel()
+        self._check_category_type(actual)
         assert self.not_assigned not in set(
             actual
         ), "not_assigned value is already taken"
@@ -810,16 +842,17 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
+            
+        y : array_like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
         Returns
         -------
-        score : float
+        score : scalar(float)
             Score
         """
         check_is_fitted(self, "is_fitted_")
@@ -842,20 +875,23 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        classes : list or None
+        classes : list or None, optional(default=None)
             If None, plot coefficients for all categories; otherwise just classes
             specified.
-        ax : matplotlib.pyplot.Axes
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
-        return_coeff : bool
+            
+        return_coeff : scalar(bool), optional(default=False)
             Return PLS2 coefficients instead of the figure axis. N x D where D
             is the number of features in X (X.shape[1]) and N is the number of
             categories.
 
         Returns
         -------
-        matplotlib.pyplot.Axes or ndarray
-            Figure axes being plotted on or the PLS2 coefficients.
+        ax : matplotlib.pyplot.axes or ndarray
+            Figure axes being plotted on or the PLS2 coefficients depending on
+            the value of `return_coeff`.
         """
         if ax is None:
             fig, ax = plt.subplots(nrows=1, ncols=1)
@@ -900,16 +936,17 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        styles : list
+        styles : list, optional(default=None)
             List of styles to plot, e.g., ["hard", "soft"]. This can always
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
-        ax : matplotlib.pyplot.Axes
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
+        ax : matplotlib.pyplot.axes
             Figure axes being plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -929,6 +966,23 @@ n_features [{}])] = [{}, {}].".format(
         """
         Plot 1D training results.
 
+        Parameters
+        ----------
+        styles : list, optional(default=None)
+            List of styles to plot, e.g., ["hard", "soft"]. This can always
+            include ["hard"], but "soft" is only possible if the class was
+            instantiated to be use the "soft" style boundaries.
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot results on.  If None, a new figure is created.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Figure axes being plotted on.
+            
+        Notes
+        -----
         This can only be done when we have K=2 training classes because the
         one-hot-encoded classes are projected into K-1=1 dimensions.  This
         can still be a helpful visualization tool if you consider 2 classes
@@ -939,20 +993,6 @@ n_features [{}])] = [{}, {}].".format(
 
         You can plot test set results on the axes first, then pass that object
         to view these results on the same plot.
-
-        Parameters
-        ----------
-        styles : list
-            List of styles to plot, e.g., ["hard", "soft"]. This can always
-            include ["hard"], but "soft" is only possible if the class was
-            instantiated to be use the "soft" style boundaries.
-        ax : matplotlib.pyplot.Axes
-            Axes to plot results on.  If None, a new figure is created.
-
-        Returns
-        -------
-        matplotlib.pyplot.Axes
-            Figure axes being plotted on.
         """
         check_is_fitted(self, "is_fitted_")
         if len(self.__class_centers_) != 2:
@@ -966,20 +1006,25 @@ n_features [{}])] = [{}, {}].".format(
 
             Parameters
             ----------
-            rmax : float
+            rmax : scalar(float), optional(default=10.0)
                 Radius to go from class center to look for boundary.
                 Since these are in normalized score space (projection of OHE
                 simplex) one order of magnitude higher (i.e., 10) is usually a
                 good bound.
-            rbins : int
+                
+            rbins : scalar(int), optional(default=1000)
                 Number of points to seach from class center (r=0 to r=rmax) for
                 boundary.
 
             Returns
             -------
-            list(ndarray)
+            cutoff : list(ndarray)
                 2D array of points for each class (ordered according to
-                class_centers).
+                class_centers) delineating the extremes boundary.
+                
+            outlier : list(ndarray)
+                2D array of points for each class (ordered according to
+                class_centers) delineating the outlier boundary.
             """
 
             def estimate_boundary(rmax, rbins, style="cutoff"):
@@ -1019,8 +1064,8 @@ n_features [{}])] = [{}, {}].".format(
 
             Returns
             -------
-            float
-                t0 is the threshold sPC dividing the two classes.
+            t0 : scalar(float)
+                Threshold sPC dividing the two classes.
             """
 
             def get_v(i):
@@ -1119,6 +1164,23 @@ n_features [{}])] = [{}, {}].".format(
         """
         Plot 2D training data results.
 
+        Parameters
+        ----------
+        styles : list, optional(default=None)
+            List of styles to plot, e.g., ["hard", "soft"]. This can always
+            include ["hard"], but "soft" is only possible if the class was
+            instantiated to be use the "soft" style boundaries.
+            
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot results on.  If None, a new figure is created.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Figure axes being plotted on.
+            
+        Notes
+        -----
         This can only be done when we have K=3 training classes because the
         one-hot-encoded classes are projected into K-1=2 dimensions.  This
         can still be a helpful visualization tool if you consider 3 classes
@@ -1129,20 +1191,6 @@ n_features [{}])] = [{}, {}].".format(
 
         You can plot test set results on the axes first, then pass that object
         to view these results on the same plot.
-
-        Parameters
-        ----------
-        styles : list
-            List of styles to plot, e.g., ["hard", "soft"]. This can always
-            include ["hard"], but "soft" is only possible if the class was
-            instantiated to be use the "soft" style boundaries.
-        ax : matplotlib.pyplot.Axes
-            Axes to plot results on.  If None, a new figure is created.
-
-        Returns
-        -------
-        matplotlib.pyplot.Axes
-            Figure axes being plotted on.
         """
         check_is_fitted(self, "is_fitted_")
         if len(self.__class_centers_) != 3:
@@ -1169,9 +1217,13 @@ n_features [{}])] = [{}, {}].".format(
 
             Returns
             -------
-            list(ndarray)
+            cutoff : list(ndarray)
                 2D array of points for each class (ordered according to
-                class_centers).
+                class_centers) delineating the extremes boundary.
+                
+            outlier : list(ndarray)
+                2D array of points for each class (ordered according to
+                class_centers) delineating the outlier boundary.
             """
 
             def estimate_boundary(rmax, rbins, tbins, style="cutoff"):
@@ -1218,16 +1270,18 @@ n_features [{}])] = [{}, {}].".format(
 
             Parameters
             ----------
-            maxp : int
+            maxp : scalar(int), optional(default=1000)
                 Maximum number of points to use along a line.
-            rmax : float
+                
+            rmax : scalar(float), optional(default=2.0)
                 Maximum radius from intersection to compute lines.
-            dx : float
+                
+            dx : scalar(float), optional(default=0.05)
                 Delta x along lines.
 
             Returns
             -------
-            dict(tuple, ndarray)
+            lines : dict(tuple, ndarray)
                 Dictionary of class index pairs (e.g., (0,1) based on
                 class_center ordering) and (x,y) coordinates in sPC space
                 which define the discriminating line between classes.
