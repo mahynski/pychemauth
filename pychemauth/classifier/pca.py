@@ -593,6 +593,11 @@ class PCA(ClassifierMixin, BaseEstimator):
            
         eps : scalar(float), optional(default=1.0e-15)
             Numerical addition to enable evaluation when log(p ~ 0).
+
+        Returns
+        -------
+        score : scalar(float)
+            Negative, normalized log loss; :math:`\frac{1}{N} \sum_ \left( y_{in} {\rm ln}(p_{in}) + (1-y_{in}) {\rm ln}(1-p_{in}) \right)`
             
         References
         ----------

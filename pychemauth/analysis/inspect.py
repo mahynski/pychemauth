@@ -451,7 +451,7 @@ class InspectModel:
         feature. This will result in a lower importance value for both
         features, where they might actually be important.  One way to solve
         this is to cluster correlated features and take only 1.
-        **See :py:func:`eda.data.InspectData.cluster_collinear` for example.**
+        See :py:func:`eda.data.InspectData.cluster_collinear` for example.
         """
         import pandas as pd
         from sklearn.inspection import permutation_importance
