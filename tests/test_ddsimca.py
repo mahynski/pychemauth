@@ -46,7 +46,7 @@ class TestDDSIMCA(unittest.TestCase):
         self.assertEqual(dds._DDSIMCA_Model__Nh_, 5)
 
         # Check distances
-        h, q = dds.h_q_(raw_x)
+        h, q = dds._h_q(raw_x)
 
         h_test = np.array(
             [0.05547138082139136, 0.02909437276782147, 0.09955524352200402]
