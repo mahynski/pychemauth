@@ -57,8 +57,8 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
         (default=TEFF). TEFF^2 = TSNS*TSPS.
             
-    Notes
-    -----
+    Note
+    ----
     Implements 'hard' classification as an 'LDA-like' criterion, and a
     'soft' classification using a 'QDA-like' criterion as described in [1].
     Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard
@@ -370,8 +370,8 @@ n_features [{}])] = [{}, {}].".format(
         """
         Check if outliers exist in the training data originally fit to.
 
-        Notes
-        -----
+        Note
+        ----
         A point is tested for outlier status only with respect to its class.
         This also, only works for "soft" PLS-DA.
 
@@ -455,8 +455,8 @@ n_features [{}])] = [{}, {}].".format(
         distance : array_like(float, ndim=1)
             Squared distance to each class for each observation.
             
-        Notes
-        -----
+        Note
+        ----
         Scipy has a built-in function that could replace this in the future.
         Here we compute d^2 whereas scipy evalutes the square root to compute
         d. 
@@ -522,8 +522,8 @@ n_features [{}])] = [{}, {}].".format(
         decision_function : ndarray
             Shifted, negative distance for each sample.
             
-        Notes
-        -----
+        Note
+        ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
         Mahalanobis distance shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
@@ -563,8 +563,8 @@ n_features [{}])] = [{}, {}].".format(
             Probability of class membership; columns are ordered according
             to class indices.
             
-        Notes
-        -----
+        Note
+        ----
         Soft PLSDA: assumes each class is normally distributed and uses
         the Mahalanobis distance to compute the (normal) probability
         as a function of this distance from the class' center. The
@@ -641,8 +641,8 @@ n_features [{}])] = [{}, {}].".format(
             predictions for each entry, and are listed from left to right in
             order of decreasing likelihood.
         
-        Notes
-        -----
+        Note
+        ----
         If multiple predictions are made, they are ordered according to likelihood,
         from highest to lowest, i.e., by the (lowest) Mahalanobis distance (squared)
         to that class' center.
@@ -710,8 +710,8 @@ n_features [{}])] = [{}, {}].".format(
         TEFF : scalar(float)
             Total efficiency.
             
-        Notes
-        -----
+        Note
+        ----
         When making predictions about extraneous classes (not in training set)
         class efficiency (CEFF) is given as simply class specificity (CSPS)
         since class sensitivity (CSNS) cannot be calculated.
@@ -983,8 +983,8 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.axes
             Figure axes being plotted on.
             
-        Notes
-        -----
+        Note
+        ----
         This can only be done when we have K=2 training classes because the
         one-hot-encoded classes are projected into K-1=1 dimensions.  This
         can still be a helpful visualization tool if you consider 2 classes
@@ -1181,8 +1181,8 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.axes
             Figure axes being plotted on.
             
-        Notes
-        -----
+        Note
+        ----
         This can only be done when we have K=3 training classes because the
         one-hot-encoded classes are projected into K-1=2 dimensions.  This
         can still be a helpful visualization tool if you consider 3 classes

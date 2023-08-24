@@ -71,8 +71,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         it is originally provided for training; it keeps only "regular" samples
         (inliers and extremes) to train the model.
             
-    Notes
-    -----
+    Note
+    ----
     Essentially, a SIMCA model is trained for one target class. The target is
     set when this class is instantiated and must be one of (but doesn't need
     to be the only) class found in the training set (this is checked
@@ -174,8 +174,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         self : SIMCA_Classifier
             Fitted model.
 
-        Notes
-        -----
+        Note
+        ----
         Only data of the target class will be used for fitting, though more
         can be provided. This is important in pipelines, for example, when
         SMOTE is used to up-sampled minority classes; in that case, those
@@ -228,8 +228,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         projected : ndarray(float, ndim=2)
             X transformed into the SIMCA subspace.
 
-        Notes
-        -----
+        Note
+        ----
         This is necessary for scikit-learn compatibility.
         """
         check_is_fitted(self, "is_fitted_")
@@ -253,8 +253,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         projected : ndarray(float, ndim=2)
             X transformed into the SIMCA subspace.
 
-        Notes
-        -----
+        Note
+        ----
         This is necessary for scikit-learn compatibility.
         """
         _ = self.fit(X, y)
@@ -330,8 +330,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
             squared deviation of TSNS from (1-:math:`\alpha`); for compliant
             models this is the TEFF.
 
-        Notes
-        -----
+        Note
+        ----
         The "rigorous" approach uses only the target class to score
         the model and returns -(TSNS - (1-alpha))^2; the "compliant"
         approach returns TEFF. In both cases, a larger output is a
@@ -374,8 +374,8 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         metrics : dict(str:float)
             Dictionary of {'TSNS', 'TSPS', 'TEFF'}.
 
-        Notes
-        -----
+        Note
+        ----
         If using a set with only the target class present, then
         TSPS = np.nan and TEFF = TSNS.  If only alternatives present,
         sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF
@@ -676,8 +676,8 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
 
-        Notes
-        -----
+        Note
+        ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
         sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
@@ -707,8 +707,8 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
 
-        Notes
-        -----
+        Note
+        ----
         Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
@@ -891,8 +891,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         for training; it keeps only "regular" samples (inliers and extremes)
         to train the model.
 
-    Notes
-    -----
+    Note
+    ----
     DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared
     distribution, to determine the acceptance criteria to belong to a class.
     The degrees of freedom in this model are estimated from a data-driven
@@ -1235,8 +1235,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         sq_distance : ndarray(float, ndim=1)
             Squared distance to class.
 
-        Notes
-        -----
+        Note
+        ----
         This is computed as a sum of the OD and OD to be used with acceptance
         rule II from [1].  This is really a "squared" distance.
 
@@ -1264,8 +1264,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
 
-        Notes
-        -----
+        Note
+        ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
         sqrt(chi-squared distance) shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
@@ -1295,8 +1295,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
 
-        Notes
-        -----
+        Note
+        ----
         Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
@@ -1462,8 +1462,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax : matplotlib.pyplot.axes
             Axes results are plotted.
 
-        Notes
-        -----
+        Note
+        ----
         This modifies the alpha value (type I error rate), keeping all other parameters
         fixed, and computes the number of expected extremes (n_exp) vs. the number
         observed (n_obs).  Theoretically, :math:`n_{\rm exp} = `alpha*N_{\rm tot}`.

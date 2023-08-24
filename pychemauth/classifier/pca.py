@@ -56,8 +56,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         for training; it keeps only "regular" samples (inliers and extremes)
         to train the model.
         
-    Notes
-    -----
+    Note
+    ----
     This enables deeper inspection of data through outlier analysis, etc. as
     detailed in the references below.  PCA only creates a quantitive model
     of the X data; no responses are considered (y). The primary use case for
@@ -377,8 +377,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         distance : ndarray(float, ndim=2)
             Distance to class.
             
-        Notes
-        -----
+        Note
+        ----
         This is computed as a sum of the OD and OD to be used with acceptance
         rule II from [3].
         """
@@ -404,8 +404,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
             
-        Notes
-        -----
+        Note
+        ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
         sqrt(chi-squared distance) shifted by the cutoff distance,
         so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
@@ -435,8 +435,8 @@ class PCA(ClassifierMixin, BaseEstimator):
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
             
-        Notes
-        -----
+        Note
+        ----
         Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
@@ -526,8 +526,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         ax : matplotlib.pyplot.axes
             Axes results are plotted.
             
-        Notes
-        -----
+        Note
+        ----
         This modifies the alpha value (type I error rate), keeping all other parameters
         fixed, and computes the number of expected extremes (n_exp) vs. the number
         observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
@@ -634,8 +634,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         ax : matplotlib.pyplot.axes
             Axes results are plotted on.
           
-        Notes
-        -----
+        Note
+        ----
         This uses the top 2 eigenvectors regardless of the model dimensionality. If it
         is less than 2 a ValueError is returned.
         """

@@ -47,8 +47,8 @@ class Compare:
         ax : matplotlib.pyplot.Axes
             Axes the radial graph is plotted on.
             
-        Notes
-        -----
+        Note
+        ----
         When nested k-fold or repeated k-fold tests on different pipelines
         has been done, plot the mean and standard deviation of them from best
         (average) to worst.  These should be done on the same splits of data.
@@ -163,8 +163,8 @@ class Compare:
         scores2 : list(float)
             List of scores for pipeline2.
             
-        Notes
-        -----
+        Note
+        ----
         The random state of the CV is the same for each so each pipeline or
         algorithm is tested on exactly the same dataset.  This enables paired
         t-test hypothesis testing using these scores.
@@ -231,8 +231,8 @@ class Compare:
         p : scalar(float)
             p value
             
-        Notes
-        -----
+        Note
+        ----
         Perform 1-sided hypothesis testing to see if any difference in
         pipelines' performances are statisically significant using a
         correlated, paired t-test with the Nadeau & Bengio (2003)
@@ -288,8 +288,8 @@ class Compare:
         probs : tuple(float, float , float)
             Tuple of (prob_1, p_equiv, prob_2).
             
-        Notes
-        -----
+        Note
+        ----
         Perform Bayesian analysis to predict the probability that pipe(line)1
         outperforms pipe(line)2 based on repeated kfold cross validation
         results using a correlated t-test.

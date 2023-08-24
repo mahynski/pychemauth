@@ -53,8 +53,8 @@ class InspectModel:
         ax : matplotlib.pyplot.axes
             Axes the confusion matrix has been plotted on.
             
-        Notes
-        -----
+        Note
+        ----
         Compare classification models based on true/false positive rates.
         
         References
@@ -197,8 +197,8 @@ class InspectModel:
         ax : matplotlib.pyplot.axes
             Axes the figure is plotted on.
 
-        Notes
-        -----
+        Note
+        ----
         The validation and training accuracy curves should converge "quickly"
         (if not, high variance) and to a "high" accuracy (if not, high bias).
         If it doesn't converge, it probably needs more data to train on.
@@ -296,8 +296,8 @@ class InspectModel:
         ax : matplotlib.pyplot.axes
             Axes the figure is plotted on.
             
-        Notes
-        -----
+        Note
+        ----
         A good fit might indicate all predictive "information" has been
         extracted and the remaining uncertainty is due to random noise.
         """
@@ -334,8 +334,8 @@ class InspectModel:
         display : sklearn.inspection.PartialDependenceDisplay
             PDP display.
             
-        Notes
-        -----
+        Note
+        ----
         Partial dependence plots (PDP) show the dependence between the target
         response and a set of target features, marginalizing over the values of
         all other features (the complement features). Intuitively, we can
@@ -400,8 +400,8 @@ class InspectModel:
         df : pandas.DataFrame
             Results in a dataframe.
 
-        Notes
-        -----
+        Note
+        ----
         Permutation feature importance is a model inspection technique that can
         be used for any fitted estimator **when the data is tabular.** The
         permutation feature importance is defined to be the decrease in a model

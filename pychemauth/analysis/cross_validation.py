@@ -20,8 +20,8 @@ class NestedCV:
     k_outer : scalar(int), optional(default=5)
         K-fold for outer loop.
             
-    Notes
-    -----
+    Note
+    ----
     This differs from scikit-learn's "built in" method of doing nested CV of
     cross_val_score(GridSeachCV()) in that cross_val_score() only returns
     the score from the test fold on the outer loop, after the best model is
@@ -135,8 +135,8 @@ class NestedCV:
         scores : ndarray(float, ndim=1)
             Array of length K*R containing scores from all test folds.
             
-        Notes
-        -----
+        Note
+        ----
         For an RxK nested loop, R*K total scores are returned.  For
         classification tasks, KFolds are stratified.
         """
