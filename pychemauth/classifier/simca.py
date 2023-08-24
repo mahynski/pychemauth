@@ -1466,7 +1466,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         -----
         This modifies the alpha value (type I error rate), keeping all other parameters
         fixed, and computes the number of expected extremes (n_exp) vs. the number
-        observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
+        observed (n_obs).  Theoretically, :math:`n_{\rm exp} = `alpha*N_{\rm tot}`.
 
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
@@ -1528,8 +1528,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax : matplotlib.pyplot.axes
             Axes results are plotted on.
 
-        Notes
-        -----
+        Note
+        ----
         This uses the top 2 eigenvectors regardless of the model dimensionality. If it
         is less than 2 a ValueError is returned.
         """

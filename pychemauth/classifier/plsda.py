@@ -70,10 +70,12 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     classification where PLS1 could be used instead.
 
     * Note that alpha and gamma are only relevant for the soft version.
+
     * If y values are going to be passed as strings, 'not_assigned' should
     also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
     only relevant for the soft version.
+
     * A rule of thumb for the number of components to use is between K/2(K-1)
     and K/2(K+1) to provide sufficient complexity but avoid overfitting; K is
     the total number of classes. This is not rigorous and may not hold in many
@@ -1204,15 +1206,17 @@ n_features [{}])] = [{}, {}].".format(
 
             Parameters
             ----------
-            rmax : float
+            rmax : scalar(float), optional(default=10.0)
                 Radius to g from class center to look for boundary.
                 Since these are in normalized score space (projection of OHE
                 simplex) one order of magnitude higher (i.e., 10) is usually a
                 good bound.
-            rbins : int
+
+            rbins : scalar(int), optional(default=1000)
                 Number of points to seach from class center (r=0 to r=rmax) for
                 boundary.
-            tbins : int
+
+            tbins : scalar(int), optional(default=90)
                 Number of bins to split [0, 2*pi) into around the class center.
 
             Returns
