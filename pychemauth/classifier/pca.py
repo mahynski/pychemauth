@@ -506,7 +506,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         return extremes, outliers
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
-        """
+        r"""
         Plot an "extremes plot" [4] to evalute the quality of the model.
 
         Parameters
@@ -594,7 +594,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         Returns
         -------
         score : scalar(float)
-            Negative, normalized log loss; :math:`\frac{1}{N} \sum_ \left( y_{in} {\rm ln}(p_{in}) + (1-y_{in}) {\rm ln}(1-p_{in}) \right)`
+            Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
             
         References
         ----------
