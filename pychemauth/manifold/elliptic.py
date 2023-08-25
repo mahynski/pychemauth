@@ -15,6 +15,31 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 
+    Parameters
+    ----------
+    alpha : scalar(float)
+        Type I error rate (signficance level).
+
+    dr_model : object
+        Dimensionality reduction model, such as PCA; must support fit() and transform().
+
+    kwargs : dict
+        Keyword arguments for model; EllipticManifold.model = model(**kwargs). Must
+        contain the `ndims` keyword.
+
+    ndims : str, optioanl(default="n_components")
+        Keyword in kwargs that corresponds to the dimensionality of the final space.
+
+    robust : scalar(bool), optional(default=True)
+        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
+        Mahalanobis distances.
+
+    center : str, optional(default="score")
+        If "score", center the ellipse in the score space; otherwise go from transformation
+        of the mean in the original data space.
+
+    Note
+    ----
     This process can be summarized as follows.  For each individual class:
 
     Step 0: Outlier removal.  In principle, it may be optimal to remove outliers before any analysis
@@ -28,14 +53,14 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     Step 2: Following [1], assume each class forms a normally distributed subset
     with the known means (*see Note below) in the score/emedding space.  The covariance matrix is used to
-    compute the [Mahalanobis distance](https://en.wikipedia.org/wiki/Mahalanobis_distance)
+    compute the `Mahalanobis distance <https://en.wikipedia.org/wiki/Mahalanobis_distance>`_.
     to its class center.
 
-    Step 3: Assuming that these distances follow the chi‐squared distribution, a
+    Step 3: Assuming that these distances follow the :math:`\Chi{^2}` distribution, a
     soft discrimination rule can be constructed: sample i belongs to class k if the
     Mahalanobis distance is less than a threshold:
 
-    $c_{crit} = \Chi^{-2}(1 - \alpha; d)$
+    :math:`$c_{crit} = \Chi^{-2}(1 - \alpha; d)$`
 
     where d is the dimensionality of the score space.
 
@@ -44,7 +69,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     some predefined amount of the observations set to be "included."  The basic
     difference is that a statistical confidence limit (alpha) can be directly
     specified here. EE's "contamination" is approximately alpha (type I error
-    rate); however, this seems to lack some rigor. Here the chi-squared
+    rate); however, this seems to lack some rigor. Here the :math:`\Chi{^2}`
     distribution has some degrees of freedom associated with based on the
     dimensionality of the space, whereas EE just takes the fraction as a hyperparameter
     with no context. As a result, many of the class members and functions follow a
@@ -61,8 +86,6 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     As a result, you can select either the conventional empirical method or the
     robust method to compute the Mahalanobis distances.
 
-    Notes
-    -----
     The class center can be computed in 2 ways.  First, the mean of the
     X (and y) data can be taken and projected.  This is common in other approaches such
     as in [1] where there is justification to enforce that the class SHOULD have
@@ -76,14 +99,19 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     are determined based on distances (metrics may vary) between points in the
     training data, so this should be meaningful or at least "fair."
 
+    References
+    ----------
     [1] "Multiclass partial least squares discriminant analysis: Taking the
     right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
     Chemometrics (2018). https://doi.org/10.1002/cem.3030.
+
     [2] "A fast algorithm for the minimum covariance determinant estimator,"
     Rousseeuw, Peter J., and Katrien Van Driessen, Technometrics 41 (1999)
     212-223. https://www.tandfonline.com/doi/abs/10.1080/00401706.1999.10485670
+
     [3] "Least median of squares regression," P. J. Rousseeuw., J. Am Stat Ass.,
     79 (1984).
+
     [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
@@ -97,27 +125,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         robust=True,
         center="score",
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        alpha : float
-            Type I error rate (signficance level).
-        dr_model : object
-            Dimensionality reduction model, such as PCA; must support fit() and transform().
-        kwargs : dict
-            Keyword arguments for model; EllipticManifold.model = model(**kwargs). Must
-            contain the `ndims` keyword.
-        ndims : str
-            Keyword in kwargs that corresponds to the dimensionality of the final space.
-        robust : bool
-            Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
-            Mahalanobis distances.
-        center : str
-            If 'score', center the ellipse in the score space; otherwise go from transformation
-            of the mean in the original data space.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "alpha": alpha,
@@ -147,7 +155,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             "center": self.center,
         }
 
-    def column_y_(self, y):
+    def _column_y(self, y):
         """Convert y to column format."""
         y = np.array(y)
         if y.ndim != 2:
@@ -155,7 +163,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         return y
 
-    def sanity_(self, X, y, init=False):
+    def _sanity(self, X, y, init=False):
         """Check data format and sanity."""
         if init:
             self.n_features_in_ = X.shape[1]
@@ -166,7 +174,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             X = check_array(X, accept_sparse=False, copy=True)
         else:
             X, y = check_X_y(X, y, accept_sparse=False, copy=True)
-            y = self.column_y_(y)
+            y = self._column_y(y)
 
         return X, y
 
@@ -176,22 +184,24 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        self
+        self : EllipticManifold
+            Fitted model.
+
+        Note
+        ----
+        Only examples of a single, known class should be use to fit the model.
         """
         # Sanity checks
-        X, y = self.sanity_(X, y, init=True)
-
-        assert (
-            len(np.unique(y)) == 1
-        ), "EllipticManifold should be trained only on a single class, multiple values found in y."
+        X, y = self._sanity(np.asarray(X, dtype=np.float64), y, init=True)
 
         # Fit the model
         self.model_ = self.dr_model(**self.kwargs)
@@ -216,7 +226,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             # in the original space
             self.__class_center_ = self.transform(
                 X=np.mean(X, axis=0).reshape(1, -1),
-                y=(None if y is None else np.mean(y, axis=0).reshape(1, -1)),
+                y=(None if y is None else np.mean(y, axis=0).reshape(1, -1))
             )[0]
         else:
             # Center ellipse in the score space
@@ -240,21 +250,22 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        x_scores : ndarray
+        scores : ndarray(float, ndim=2)
             Coordinates of X in lower dimensional space.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = self.sanity_(X, y)
+        X, y = self._sanity(np.asarray(X, dtype=np.float64), y)
 
-        return self.model_.transform(X)
+        return self.model_.transform(X, y)
 
     def fit_transform(self, X, y=None):
         """
@@ -262,15 +273,16 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        x_scores : ndarray
+        scores : ndarray(float, ndim=2)
             Coordinates of X in lower dimensional space.
         """
         _ = self.fit(X, y)
@@ -283,15 +295,16 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        distances : ndarray
+        distances : ndarray(float, ndim=1)
             Mahalanobis distance for each sample.
         """
         check_is_fitted(self, "is_fitted_")
@@ -314,20 +327,21 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def predict(self, X, y=None):
         """
-        Predict if points are inliers (+1) or outliers (-1).
+        Predict if points are inliers (+1) or not (0).
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        results : ndarray
-            Array of +1 or 0 for inliers and outliers, respectively.
+        results : ndarray(int, ndim=1)
+            Array of +1 inliers else 0.
         """
         d = self.mahalanobis(X, y)
         mask = d > np.sqrt(self.__d_crit_)
@@ -341,20 +355,21 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def fit_predict(self, X, y=None):
         """
-        Fit the dimensionality reduction model and then predict outliers.
+        Fit the dimensionality reduction model and then predict inliers.
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        results : ndarray
-            Array of +1 or 0 for inliers and outliers, respectively.
+        results : ndarray(int, ndim=1)
+            Array of +1 inliers else 0.
         """
         _ = self.fit(X, y)
 
@@ -362,80 +377,93 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def score_samples(self, X, y=None):
         """
-        Score some observations.
-
-        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
-        distance.
+        Score observations.
 
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
-        scores : ndarray
+        scores : ndarray(float, ndim=1)
             Negative Mahalanobis distance for each sample.
+
+        Note
+        ----
+        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
+        distance.
         """
         return -self.mahalanobis(X, y)
 
     def decision_function(self, X, y=None):
         """
         Compute the decision function for each sample.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
 
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
+
+        Returns
+        -------
+        decision_function : ndarray(float, ndim=1)
+            Shifted, negative Mahalanobis distance for each sample.
+
+        Note
+        ----
         Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
         distance shifted by the cutoff distance, so f < 0 implies an outlier
         while f > 0 implies an inlier.
 
-        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
-
-        Parameters
+        References
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
-
-        Returns
-        -------
-        decision_function : ndarray
-            Shifted, negative Mahalanobis distance for each sample.
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
         return self.score_samples(X, y) - (-np.sqrt(self.__d_crit_))
 
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations are inliers.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
 
+        y : array_like(float, ndim=1), optional(default=None)
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
+
+        Returns
+        -------
+        probability : ndarray(float, ndim=2)
+            2D array as sigmoid function of the decision_function(). First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+
+        Note
+        ----
         Computes the sigmoid(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
-        for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
+        for inliers so predict_proba(X, y) > 0.5 means inlier, < 0.5 means
         outlier.
 
+        References
+        ----------
         See SHAP documentation for a discussion on the utility and impact
         of "squashing functions": https://shap.readthedocs.io/en/latest/\
         example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
         #Probability-space-explaination
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
-
-        Parameters
-        ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
-            Response. Ignored if it is not used (unsupervised methods).
-
-        Returns
-        -------
-        phi : ndarray
-            2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
         p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
@@ -445,18 +473,29 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         return prob
 
     def score(self, X, y, eps=1.0e-15):
-        """
+        r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
-
-        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
-
+        
         Parameters
         ----------
-        X : matrix-like
+        X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-        y : array-like
-            True labels; +1 for inlier, 0 for outlier.
+
+        y : array_like(int, ndim=1)
+            Correct labels; +1 for inlier, 0 otherwise.
+           
+        eps : scalar(float), optional(default=1.0e-15)
+            Numerical addition to enable evaluation when log(p ~ 0).
+
+        Returns
+        -------
+        score : scalar(float)
+            Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
+
+        References
+        ----------
+        See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         assert len(X) == len(y)
         assert np.all(
@@ -476,37 +515,39 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         ) / len(X)
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
-        """
-        Plot an "extremes plot" [4] to evalute the quality of the model.
+        r"""
+        Plot an "extremes plot" [4] to evaluate the quality of the model.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Data to evaluate the number of outliers + extremes in.
 
+        upper_frac : scalar(float), optional(default=0.25)
+            Count the number of extremes and outliers for alpha values corresponding
+            to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
+
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot results on.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted.
+
+        Note
+        ----
         This modifies the alpha value (type I error rate), keeping all other parameters
-        fixed, and computes the number of expected extremes (n_exp) vs. the number
-        observed (n_obs).  Theoretically, n_exp = alpha*N_tot.
+        fixed, and computes the number of expected extremes (:math:`n_{\rm exp}`) vs. the number
+        observed (:math:`n_{\rm obs}`).  Theoretically, :math:`n_{\rm exp} = \alpha*N_{\rm tot}`.
 
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
 
-        Notes
-        -----
         Both extreme points and outliers are considered "extremes" here.  In practice,
         outliers should be removed before performing this analysis anyway.
-
-        Parameters
-        ----------
-        X : ndarray
-            Data to evaluate the number of outliers + extremes in.
-        upper_frac : float
-            Count the number of extremes and outliers for alpha values corresponding
-            to n_exp = [1, X.shape[0]*upper_frac].  alpha = n_exp / N_tot.
-        ax : pyplot.axes
-            Axes to plot on.
-
-        Returns
-        -------
-        ax : pyplot.axes
-            Axes results are plotted.
         """
-        X_ = check_array(X, accept_sparse=False)
+        X_ = check_array(np.asarray(X, np.float64), accept_sparse=False)
         N_tot = X_.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
@@ -543,50 +584,54 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def visualize(self, X_mats, labels, axes=None):
+    def visualize(self, X_mats, labels, ax=None):
         """
         Plot the results automatically in 1 or 2 dimensions.
 
         Parameters
         ----------
-        X_mats : list(matrix-like)
-            List of different sets of X to plot.
-        labels : list
-            Labels for each X.
-        axes : matplotlib.pyplot.Axes
+        X_mats : list(array_like(float, ndim=2))
+            List of different feature matrices to plot.
+
+        labels : list(str)
+            Labels for each feature matrix.
+
+        ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
-            Figure axes being plotted on.
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
         n = self.kwargs[self.ndims]
         if n == 1:
-            return self.visualize_1d(X_mats, labels, axes)
+            return self._visualize_1d(X_mats, labels, ax)
         elif n == 2:
-            return self.visualize_2d(X_mats, labels, axes)
+            return self._visualize_2d(X_mats, labels, ax)
         else:
             raise Exception("Cannot visualize {} dimensions".format(n))
 
-    def visualize_2d(self, X_mats, labels, axes=None):
+    def _visualize_2d(self, X_mats, labels, axes=None):
         """
         Plot 2D results.
 
         Parameters
         ----------
-        X_mats : list(matrix-like)
-            List of different sets of X to plot.
-        labels : list
-            Labels for each X.
-        axes : matplotlib.pyplot.Axes
+        X_mats : list(array_like(float, ndim=2))
+            List of different feature matrices to plot.
+
+        labels : list(str)
+            Labels for each feature matrix.
+
+        axes : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
-            Figure axes being plotted on.
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
         if self.kwargs[self.ndims] != 2:
@@ -674,19 +719,25 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def visualize_1d(self, X_mats, labels, axes=None):
+    def _visualize_1d(self, X_mats, labels, axes=None):
         """
         Plot 1D results.
 
         Parameters
         ----------
-        axes : matplotlib.pyplot.Axes
+        X_mats : list(array_like(float, ndim=2))
+            List of different feature matrices to plot.
+
+        labels : list(str)
+            Labels for each feature matrix.
+
+        axes : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
         Returns
         -------
-        matplotlib.pyplot.Axes
-            Figure axes being plotted on.
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
         if self.kwargs[self.ndims] != 1:

@@ -431,7 +431,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        phi : ndarray
+        probabilities : ndarray(float, ndim=2)
             2D array as sigmoid function of the decision_function(). First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
             

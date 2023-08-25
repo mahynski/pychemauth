@@ -559,7 +559,7 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        prob : ndarray(float, ndim=2)
+        probabilities : ndarray(float, ndim=2)
             Probability of class membership; columns are ordered according
             to class indices.
             

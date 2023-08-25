@@ -291,7 +291,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         
         Returns
         -------
-        probabilities : ndarray(float, ndim=2)
+        probability : ndarray(float, ndim=2)
             Probability that each point is an inlier.  First column
             is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
         """
