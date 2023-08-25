@@ -45,34 +45,34 @@ class TestJensenShannonDivergence(unittest.TestCase):
         """Test making probabilities out of histograms."""
         # Make a simple distribution
         p = [1, 1, 2, 3]
-        normed_prob = self.js.make_prob_(p, ranges=(1, 3), bins=3)
+        normed_prob = self.js._make_prob(p, ranges=(1, 3), bins=3)
         self.assertTrue(np.allclose(normed_prob, [0.5, 0.25, 0.25]))
 
         # Leave a hole in the middle - epsilon should not affect
         p = [1, 1, 2, 4]
-        normed_prob = self.js.make_prob_(p, ranges=(1, 4), bins=4)
+        normed_prob = self.js._make_prob(p, ranges=(1, 4), bins=4)
         self.assertTrue(np.allclose(normed_prob, [0.5, 0.25, 0.0, 0.25]))
 
         # Leave holes on the edges - epsilon should not affect
         p = [1, 1, 2, 3]
-        normed_prob = self.js.make_prob_(p, ranges=(0, 5), bins=5)
+        normed_prob = self.js._make_prob(p, ranges=(0, 5), bins=5)
         self.assertTrue(np.allclose(normed_prob, [0.0, 0.5, 0.25, 0.25, 0.0]))
 
-    def test_jensen_shannon_(self):
+    def test_jensen_shannon(self):
         """Test computation of Jensen-Shannon divergence."""
         # Same distribution has div = 0
         p = np.array([1, 2, 3])
-        normed_p = self.js.make_prob_(p, ranges=(0, 5), bins=6)
-        self.assertAlmostEqual(self.js.jensen_shannon_(normed_p, normed_p), 0.0)
+        normed_p = self.js._make_prob(p, ranges=(0, 5), bins=6)
+        self.assertAlmostEqual(self.js._jensen_shannon(normed_p, normed_p), 0.0)
 
         # Disjoint have div = 1
         q = np.array([0, 4, 5])
-        normed_q = self.js.make_prob_(q, ranges=(0, 5), bins=6)
-        self.assertAlmostEqual(self.js.jensen_shannon_(normed_p, normed_q), 1.0)
+        normed_q = self.js._make_prob(q, ranges=(0, 5), bins=6)
+        self.assertAlmostEqual(self.js._jensen_shannon(normed_p, normed_q), 1.0)
 
         # A manual calculation for some intermediate
         r = np.array([0, 2, 5])
-        normed_r = self.js.make_prob_(r, ranges=(0, 5), bins=6)
+        normed_r = self.js._make_prob(r, ranges=(0, 5), bins=6)
         a = np.array([0, 1 / 3.0, 1 / 3.0, 1 / 3.0, 0, 0]) + 1.0e-12
         b = np.array([1 / 3.0, 0, 1 / 3.0, 0, 0, 1 / 3.0]) + 1.0e-12
         c = 0.5 * a + 0.5 * b
@@ -81,7 +81,7 @@ class TestJensenShannonDivergence(unittest.TestCase):
             return np.sum(p * np.log2(p / q))
 
         div = 0.5 * kl_div(a, c) + 0.5 * kl_div(b, c)
-        self.assertAlmostEqual(div, self.js.jensen_shannon_(normed_p, normed_r))
+        self.assertAlmostEqual(div, self.js._jensen_shannon(normed_p, normed_r))
 
     def test_fit_per_class(self):
         """Test fitting on a per_class basis."""

@@ -54,7 +54,7 @@ class MSC:
         """Instantiate the class."""
         self.set_params(
             **{
-                "Xref": np.asarray(Xref, dtype=np.float64),
+                "Xref": Xref,
             }
         )
         self.is_fitted_ = False
@@ -94,6 +94,9 @@ class MSC:
 
         if self.Xref is None:  # Use the mean from the training set
             self.Xref = np.mean(X, axis=0)
+        else:
+            self.Xref = np.asarray(self.Xref, dtype=np.float64)
+            
         self.n_features_in_ = len(self.Xref)
 
         assert X.shape[1] == self.n_features_in_

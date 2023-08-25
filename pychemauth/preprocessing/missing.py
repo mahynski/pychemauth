@@ -18,14 +18,27 @@ class LOD:
     """
     Fill in "missing" measurement values and those that are below LOD randomly.
 
-    Notes
-    -----
+    Parameters
+    ----------
+    lod : array_like(float, ndim=1)
+        Numerical limit of detection for each feature.
+
+    missing_values : scalar(float), optional(default=numpy.nan)
+        The value in the X matrix that indicates a missing value.
+
+    seed : scalar(int), optional(default=0)
+        Random number generator seed.
+
+    ignore : scalar(float), optional(default=None)
+        Anything in X with this value is ignored. You can use this to
+        mask certain values as needed; e.g., for future processing.
+
+    Note
+    ----
     Data in the feature matrix (X) is assumed "missing" because it is
     below the limit of detection (LOD).  Also, any values explicitly less than
     the LODs provided are selected for imputation. In these cases, random values
     are chosen between 0 and the LOD (which must be provided by the user).
-
-    See examples/imputing_examples.ipynb for an example.
 
     Example
     -------
@@ -34,21 +47,7 @@ class LOD:
     """
 
     def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        lod : ndarray
-            Numerical limit of detection for each feature.
-        missing_values : object
-            The value in the X matrix that indicates a missing value.
-        seed : int
-            Random number generator seed.
-        ignore : int, float, None
-            Anything in X with this value is ignored. You can use this to
-            mask certain values as needed; e.g., for future processing.
-        """
+        """Instantiate the class. """
         self.set_params(
             **{
                 "lod": lod,
@@ -80,15 +79,16 @@ class LOD:
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
 
         Returns
         -------
-        self
+        self : LOD
+            Fitted model.
         """
         X, self.lod = check_X_y(
             X.T,
@@ -114,20 +114,21 @@ class LOD:
 
     def fit_transform(self, X, y=None):
         """
-        Fill in values of X below LOD with a random value (between 0 and LOD).
+        Fill in values of X below LOD with a random value between 0 and LOD.
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
 
         Returns
         -------
-        X : matrix-like
-            Matrix with missing data filled in.
+        X : array_like(float, ndim=2)
+            Feature matrix with data below LOD replaced. If X was supplied as a
+            pandas.DataFrame a new DataFrame is returned.
         """
         _ = self.fit(X, y)
 
@@ -135,18 +136,18 @@ class LOD:
 
     def transform(self, X):
         """
-        Fill in values of X below LOD with a random value (between 0 and LOD).
+        Fill in values of X below LOD with a random value between 0 and LOD.
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+        X : array_like(float, ndim=2)
+            Feature matrix.
 
         Returns
         -------
-        X : matrix-like
-            Matrix with missing data filled in.
+        X : array_like(float, ndim=2)
+            Feature matrix with data below LOD replaced. If X was supplied as a
+            pandas.DataFrame a new DataFrame is returned.
         """
         X_checked = check_array(
             X,
@@ -200,8 +201,27 @@ class PCA_IA:
     """
     Use iterative PCA to estimate any missing data values.
 
-    Notes
-    -----
+    Parameters
+    ----------
+    n_components : scalar(int), optional(default=1)
+        Number of dimensions to project into. Should be in the range
+        [1, num_features].
+
+    scale_x : scalar(bool), optional(default=True)
+        Whether or not to scale X columns by the standard deviation.
+
+    missing_values : scalar(float) or NaN, optional(default=numpy.nan)
+        The value in the X matrix that indicates a missing value.
+
+    max_iters : scalar(int), optional(default=5000)
+        Maximum number of iterations of PCA to perform. If convergence is not
+        achieved in this limit an Exception is thrown.
+
+    tol : scalar(float), optional(default=1.0e-6)
+        Maximum amount any imputed X value is allowed to change between iterations.
+
+    Note
+    ----
     If no data is missing during training, the model is still trained so it
     can handle missing data during a test phase.
 
@@ -226,14 +246,6 @@ class PCA_IA:
     throughout and is subsequently split (repeatedly) so test folds will have some
     elements missing.
 
-    Example
-    -------
-    >>> itim = PCA_IA(n_components=1, missing_values=np.nan, tol=1.0e-6,
-    ... max_iters=1000)
-    >>> X_filled = itim.fit_transform(X_missing)
-
-    Notes
-    -----
     Univariate imputation imputes values in the i-th feature dimension using
     only non-missing values in that dimension (i.e., the average of observed
     values in a column).
@@ -246,12 +258,19 @@ class PCA_IA:
     As pointed out in [1], this corresponds to finding the maximum likelihood
     estimates of the PCA model parameters.
 
-    This implementation follows:
-
+    References
+    ----------
     [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
+
     [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
+
+    Example
+    -------
+    >>> itim = PCA_IA(n_components=1, missing_values=np.nan, tol=1.0e-6,
+    ... max_iters=1000)
+    >>> X_filled = itim.fit_transform(X_missing)    
     """
 
     def __init__(
@@ -262,24 +281,7 @@ class PCA_IA:
         max_iters=5000,
         tol=1.0e-6,
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        n_components : int
-            Number of dimensions to project into. Should be in the range
-            [1, num_features].
-        scale_x : bool
-            Whether or not to scale X columns by the standard deviation.
-        missing_values : object
-            The value in the X matrix that indicates a missing value.
-        max_iters : int
-            Maximum number of iterations of PCA to perform. If convergence is not
-            achieved in this limit an Exception is thrown.
-        tol : float
-            Maximum amount any imputed X value is allowed to change between iterations.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "n_components": n_components,
@@ -313,15 +315,16 @@ class PCA_IA:
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
 
         Returns
         -------
-        self
+        self : PCA_IA
+            Fitted model.
         """
         self.__Xtrain_ = check_array(
             X,
@@ -358,13 +361,13 @@ n_features [{}])] = [{}, {}].".format(
             _,
             _,
             _,
-        ) = self.em_(self.__Xtrain_, train=True)
+        ) = self._em(self.__Xtrain_, train=True)
 
         self.is_fitted_ = True
 
         return self
 
-    def em_(self, X, train=True):
+    def _em(self, X, train=True):
         """Expectation-maximization iteration."""
         X = check_array(
             X,
@@ -441,15 +444,15 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
 
         Returns
         -------
-        X_filled : matrix-like
+        X_filled : array_like(float, ndim=2)
             Matrix with missing data filled in.
         """
         _ = self.fit(X, y)
@@ -462,15 +465,15 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
 
         Returns
         -------
-        X_filled : matrix-like
+        X_filled : array_like(float, ndim=2)
             Matrix with missing data filled in.
         """
         X = check_array(
@@ -482,7 +485,7 @@ n_features [{}])] = [{}, {}].".format(
         )
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
-        _, _, mask, imputed_vals, _ = self.em_(X, train=False)
+        _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
         X_filled[mask] = imputed_vals
@@ -493,27 +496,28 @@ n_features [{}])] = [{}, {}].".format(
         """
         Score the imputation approach.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
+
+        Returns
+        -------
+        neg_sse : scalar(float)
+            Negative sum of square errors.
+
+        Note
+        ----
         This computes the sum squared error on the observed parts of the data (pp. 17
         in [1]). A value of zero implies the PCA model perfectly reconstructs the
         observations. This actually returns the NEGATIVE sum of square error (SSE) on
         the observed data.
-
-        Parameters
-        ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored
-
-        Notes
-        -----
+        
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
-
-        Returns
-        -------
-        sse : np.float
         """
         X = check_array(
             X,
@@ -523,7 +527,7 @@ n_features [{}])] = [{}, {}].".format(
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
-        _, _, _, _, sse = self.em_(X, train=False)
+        _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
 
@@ -532,8 +536,27 @@ class PLS_IA:
     """
     Use iterative PLS to estimate missing data values.
 
-    Notes
-    -----
+    Parameters
+    ----------
+    n_components : scalar(int), optional(default=1)
+        Number of dimensions to project into. Should be in the range
+        [1, num_features].
+
+    scale_x : scalar(bool), optional(default=True)
+        Whether or not to scale X columns by the standard deviation.
+
+    missing_values : scalar(float) or NaN, optional(default=numpy.nan)
+        The value in the X matrix that indicates a missing value.
+
+    max_iters : scalar(int), optional(default=5000)
+        maximum number of iterations of PLS to perform. If convergence is not
+        achieved in this limit an Exception is thrown.
+
+    tol : scalar(float), optional(default=1.0e-6)
+        Maximum amount any imputed X value is allowed to change between iterations.
+
+    Note
+    ----
     If no data is missing during training, the model is still trained so it
     can handle missing data during a test phase.
 
@@ -556,14 +579,6 @@ class PLS_IA:
     throughout and is subsequently split (repeatedly) so test folds will have some
     elements missing.
 
-    Example
-    -------
-    >>> itim = PLS_IA(n_components=1, missing_values=np.nan, tol=1.0e-6,
-    ... max_iters=1000)
-    >>> X_filled = itim.fit_transform(X_missing, y)
-
-    Notes
-    -----
     Univariate imputation imputes values in the i-th feature dimension using
     only non-missing values in that dimension (i.e., the average of observed
     values in a column).
@@ -576,12 +591,19 @@ class PLS_IA:
     As pointed out in [1], this corresponds to finding the maximum likelihood
     estimates of the PLS model parameters.
 
-    This implementation follows:
-
+    References
+    ----------
     [1] Walczak, B. and Massart, D. L., "Dealing with missing data: Part I,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 15-27.
+
     [2] Walczak, B. and Massart, D. L., "Dealing with missing data: Part II,"
     Chemometrics and Intelligent Laboratory Systems 58 (2001) 29-42.
+
+    Example
+    -------
+    >>> itim = PLS_IA(n_components=1, missing_values=np.nan, tol=1.0e-6,
+    ... max_iters=1000)
+    >>> X_filled = itim.fit_transform(X_missing, y)
     """
 
     def __init__(
@@ -592,24 +614,7 @@ class PLS_IA:
         max_iters=5000,
         tol=1.0e-6,
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        n_components : int
-            Number of dimensions to project into. Should be in the range
-            [1, num_features].
-        scale_x : bool
-            Whether or not to scale X columns by the standard deviation.
-        missing_values : object
-            The value in the X matrix that indicates a missing value.
-        max_iters : int
-            Maximum number of iterations of PLS to perform. If convergence is not
-            achieved in this limit an Exception is thrown.
-        tol : float
-            Maximum amount any imputed X value is allowed to change between iterations.
-        """
+        """ Instantiate the class."""
         self.set_params(
             **{
                 "n_components": n_components,
@@ -637,7 +642,7 @@ class PLS_IA:
             "tol": self.tol,
         }
 
-    def column_y_(self, y):
+    def _column_y(self, y):
         """Convert y to column format."""
         y = np.array(y)
         if y.ndim != 2:
@@ -651,16 +656,17 @@ class PLS_IA:
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically. [n_samples, n_features]
-        y : array-like
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
-            observation. [n_samples, 1]
+            observation.
 
         Returns
         -------
-        self
+        self : PLS_IA
+            Fitted model.
         """
         self.__Xtrain_ = check_array(
             X,
@@ -674,7 +680,7 @@ class PLS_IA:
         self.__ytrain_ = check_array(
             y, accept_sparse=False, force_all_finite=True, copy=True
         )
-        self.__ytrain_ = self.column_y_(
+        self.__ytrain_ = self._column_y(
             self.__ytrain_
         )  # scikit-learn expects 1D array, convert to columns
         assert self.__ytrain_.shape[1] == 1
@@ -706,7 +712,7 @@ n_features [{}])] = [{}, {}].".format(
                 )
             )
 
-        self.__x_scaler_, self.__y_scaler_, self.__pls_, _, _, _ = self.em_(
+        self.__x_scaler_, self.__y_scaler_, self.__pls_, _, _, _ = self._em(
             self.__Xtrain_, self.__ytrain_, train=True
         )
 
@@ -714,7 +720,7 @@ n_features [{}])] = [{}, {}].".format(
 
         return self
 
-    def em_(self, X, y=None, train=True):
+    def _em(self, X, y=None, train=True):
         """Expectation-maximization iteration."""
         X = check_array(
             X,
@@ -729,7 +735,7 @@ n_features [{}])] = [{}, {}].".format(
             y = check_array(
                 y, accept_sparse=False, force_all_finite=True, copy=True
             )
-            y = self.column_y_(
+            y = self._column_y(
                 y
             )  # scikit-learn expects 1D array, convert to columns
 
@@ -812,21 +818,21 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically. [n_samples, n_features]
-        y : array-like
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
-            observation. [n_samples, 1]
+            observation.
 
         Returns
         -------
-        X_filled : matrix-like
+        X_filled : array_like(float, ndim=2)
             Matrix with missing data filled in.
         """
         _ = self.fit(X, y)
 
-        return self.transform(X)
+        return self.transform(X, y)
 
     def transform(self, X, y=None):
         """
@@ -834,15 +840,15 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : array-like
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
             Ignored.
 
         Returns
         -------
-        X_filled : matrix-like
+        X_filled : array_like(float, ndim=2)
             Matrix with missing data filled in.
         """
         X = check_array(
@@ -854,7 +860,7 @@ n_features [{}])] = [{}, {}].".format(
         )
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
-        _, _, _, mask, imputed_vals, _ = self.em_(X, train=False)
+        _, _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
         X_filled[mask] = imputed_vals
@@ -865,27 +871,28 @@ n_features [{}])] = [{}, {}].".format(
         """
         Score the imputation approach.
 
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1)
+            Ignored.
+
+        Returns
+        -------
+        neg_sse : scalar(float)
+            Negative sum of squared errors.
+
+        Note
+        ----
         This computes the sum squared error on the observed parts of the data (pp. 17
         in [1]). A value of zero implies the PLS model perfectly reconstructs the
         observations. This actually returns the NEGATIVE sum of square error (SSE) on
         the observed data.
 
-        Parameters
-        ----------
-        X : matrix-like
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
-        y : np.array
-            Ignored.
-
-        Notes
-        -----
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
-
-        Returns
-        -------
-        sse : np.float
         """
         X = check_array(
             X,
@@ -895,6 +902,6 @@ n_features [{}])] = [{}, {}].".format(
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
-        _, _, _, _, _, sse = self.em_(X, train=False)
+        _, _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
