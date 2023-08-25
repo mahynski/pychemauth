@@ -169,7 +169,19 @@ Diagnostics
    :includehidden:
    :caption: Tutorial
 
-   examples
+   toy_examples
+..   real_world
+
+..
+   .. toctree::
+      :includehidden:
+      :caption: Learn
+
+      eda
+      cross_validation
+      statistial_methods
+      machine_learning
+      deep_learning
 
 Indices and tables
 ==================
