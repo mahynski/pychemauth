@@ -40,11 +40,11 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
         
-    not_assigned : scalar(int) or str, optional(default='-1')
+    not_assigned : scalar(int) or str, optional(default="-1")
         Category to give a point in soft version if not assigned to any
         known class.
         
-    style : str, optional(default='soft')
+    style : str, optional(default="soft")
         PLS style; can be "soft" or "hard".
         
     scale_x : scalar(bool), optional(default=True)
@@ -53,14 +53,14 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         determine if scaling it (by the standard deviation) makes sense.
         Note that X and Y are always centered, Y is never scaled.
         
-    score_metric : str, optional(default='TEFF')
+    score_metric : str, optional(default="TEFF")
         Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
         (default=TEFF). TEFF^2 = TSNS*TSPS.
             
     Note
     ----
-    Implements 'hard' classification as an 'LDA-like' criterion, and a
-    'soft' classification using a 'QDA-like' criterion as described in [1].
+    Implements "hard" classification as an "LDA-like" criterion, and a
+    "soft" classification using a "QDA-like" criterion as described in [1].
     Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard
     PLS-DA always assigns exactly one class to a point.
 
@@ -71,7 +71,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
     * Note that alpha and gamma are only relevant for the soft version.
 
-    * If y values are going to be passed as strings, 'not_assigned' should
+    * If y values are going to be passed as strings, "not_assigned" should
     also be a string (e.g., "NOT_ASSIGNED"); if classes are encoded as
     integers passing -1 (default) will signify an unassigned point. This is
     only relevant for the soft version.
@@ -131,7 +131,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         }
 
     def _check_category_type(self, y):
-        """Check that categories are same type as 'not_assigned' variable."""
+        """Check that categories are same type as "not_assigned" variable."""
         t_ = None
         for t_ in [(int, np.int32, np.int64), (str,)]:
             if isinstance(self.not_assigned, t_):

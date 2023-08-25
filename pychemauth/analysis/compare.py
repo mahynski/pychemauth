@@ -32,7 +32,7 @@ class Compare:
         ----------
         results : dict(list(float))
             Dictionary of results for different pipelines evaluated on the same
-            folds of data.  For example {'pipe1':[0.7, 0.5, 0.8], 'pipe2':[0.5,
+            folds of data.  For example {"pipe1":[0.7, 0.5, 0.8], "pipe2":[0.5,
             0.6, 0.35]}.
 
         n_repeats : scalar(int)

@@ -35,15 +35,15 @@ class PCA(ClassifierMixin, BaseEstimator):
     scale_x : scalar(bool), optional(default=False)
         Whether or not to scale X columns by the standard deviation.
         
-    robust : str, optional(default='semi')
+    robust : str, optional(default="semi")
         Whether or not to apply robust methods to estimate degrees of freedom.
-        'full' is not implemented yet, but involves robust PCA and robust
-        degrees of freedom estimation; 'semi' (default) is described in [4] and
+        "full" is not implemented yet, but involves robust PCA and robust
+        degrees of freedom estimation; "semi" (default) is described in [4] and
         uses classical PCA but robust DoF estimation; all other values
         revert to classical PCA and classical DoF estimation.
         If the dataset is clean (no outliers) it is best practice to use a classical
         method [2], however, to initially test for and potentially remove these
-        points, a robust variant is recommended. This is why 'semi' is the
+        points, a robust variant is recommended. This is why "semi" is the
         default value.
         
     sft : scalar(bool), optional(default=False)
@@ -158,8 +158,8 @@ class PCA(ClassifierMixin, BaseEstimator):
             X : ndarray(float, ndim=2)
                 Data to train on.
             robust : str
-                'full' = robust PCA + robust parameter estimation in [4] (not yet implemented);
-                'semi' = classical PCA + robust parameter estimation in [4];
+                "full" = robust PCA + robust parameter estimation in [4] (not yet implemented);
+                "semi" = classical PCA + robust parameter estimation in [4];
                 otherwise = classical PCA + classical parameter estimation in [4];
             """
             self.__X_ = np.array(X).copy()

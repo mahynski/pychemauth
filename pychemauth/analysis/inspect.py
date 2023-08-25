@@ -214,7 +214,7 @@ class InspectModel:
         Example
         -------
         >>> pipe_lr = make_pipeline(StandardScaler(),
-        ... LogisticRegression(penalty='l2', random_state=1))
+        ... LogisticRegression(penalty="l2", random_state=1))
         >>> learning_curve(pipe_lr, X_train, y_train)
         """
         from sklearn.model_selection import learning_curve
@@ -372,7 +372,7 @@ class InspectModel:
 
     @staticmethod
     def pfi(model, X, y, n_repeats=30, feature_names=None, visualize=False):
-        """
+        r"""
         Compute permutation feature importances.
 
         Parameters
@@ -424,10 +424,10 @@ class InspectModel:
         The sums of the pfi should roughly add up to the model's accuracy (or
         whatever score metric is used), if the features are independent,
         however, unlike Shapley values, this will not be exact. In other
-        words: results[results['95% CI > 0']]['Mean'].sum() /
+        words: results[results["95% CI > 0"]]["Mean"].sum() /
         model.score(X_val, y_val) ~ 1.
 
-        ``The importance measure automatically takes into account all
+        "The importance measure automatically takes into account all
         interactions with other features. By permuting the feature you also
         destroy the interaction effects with other features. This means that
         the permutation feature importance takes into account both the main
@@ -437,7 +437,7 @@ class InspectModel:
         features. This means that the feature importances do not add up to the
         total drop in performance, but the sum is larger. Only if there is no
         interaction between the features, as in a linear model, the importances
-        add up approximately.''
+        add up approximately."
          - https://christophm.github.io/interpretable-ml-book/feature-importance.html
 
         For further advantages of pfi, see https://scikit-learn.org/stable/modules/permutation_importance.html. 

@@ -17,7 +17,7 @@ from pychemauth.utils import estimate_dof
 
 
 class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
-    """
+    r"""
     Train a SIMCA model for a target class.
 
     Parameters
@@ -35,10 +35,10 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         The class used to fit the SIMCA model; the rest are used
         to test specificity.
         
-    style : str, optional(default='dd-simca')
+    style : str, optional(default="dd-simca")
         Type of SIMCA to use ("simca" or "dd-simca")
         
-    use : str, optional(default='rigorous')
+    use : str, optional(default="rigorous")
         Which methodology to use to evaluate the model ("rigorous", "compliant")
         (default="rigorous"). See Ref. [1] for more details.
         
@@ -48,16 +48,16 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         determine if scaling it (by the standard deviation) makes sense.
         Note that X is always centered.
         
-    robust : str, optional(default='semi')
+    robust : str, optional(default="semi")
         Whether or not to apply robust methods to estimate degrees of freedom.
-        This is only used with DD-SIMCA. 'full' is not implemented yet, but
-        involves robust PCA and robust degrees of freedom estimation; 'semi'
+        This is only used with DD-SIMCA. "full" is not implemented yet, but
+        involves robust PCA and robust degrees of freedom estimation; "semi"
         (default) is described in [3] and uses classical PCA but robust DoF
         estimation; all other values revert to classical PCA and classical DoF
         estimation. If the dataset is clean (no outliers) it is best practice
         to use a classical method [3], however, to initially test for and
         potentially remove these points, a robust variant is recommended. This
-        is why 'semi' is the default value. If `sft`=True then this value is
+        is why "semi: is the default value. If :py:var:`sft`=True then this value is
         ignored and a robust method is applied to iteratively clean the dataset,
         while the final fitting uses the classical approach.
         
@@ -167,7 +167,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
-            'target_class'.
+            "target_class".
         
         Returns
         -------
@@ -246,7 +246,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
-            'target_class'.
+            "target_class".
 
         Returns
         -------
@@ -372,7 +372,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         Returns
         -------
         metrics : dict(str:float)
-            Dictionary of {'TSNS', 'TSPS', 'TEFF'}.
+            Dictionary of {"TSNS", "TSPS", "TEFF"}.
 
         Note
         ----
@@ -868,15 +868,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         determine if scaling it (by the standard deviation) makes sense.
         Note that X is always centered.
 
-    robust : str, optional(default='semi')
+    robust : str, optional(default="semi")
         Whether or not to apply robust methods to estimate degrees of freedom.
-        'full' is not implemented yet, but involves robust PCA and robust
-        degrees of freedom estimation; 'semi' (default) is described in [2] and
+        "full" is not implemented yet, but involves robust PCA and robust
+        degrees of freedom estimation; "semi" (default) is described in [2] and
         uses classical PCA but robust DoF estimation; all other values
         revert to classical PCA and classical DoF estimation.
         If the dataset is clean (no outliers) it is best practice to use a classical
         method [2], however, to initially test for and potentially remove these
-        points, a robust variant is recommended. This is why 'semi' is the
+        points, a robust variant is recommended. This is why "semi" is the
         default value. If `sft`=True then this value is ignored and a robust
         method is applied to iteratively clean the dataset, while the final
         fitting uses the classical approach.
@@ -1009,8 +1009,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             X : ndarray(float, ndim=2)
                 Data to train on.
             robust : str
-                'full' = robust PCA + robust parameter estimation in [2] (not yet implemented);
-                'semi' = classical PCA + robust parameter estimation in [2] ("RDD-SIMCA");
+                "full" = robust PCA + robust parameter estimation in [2] (not yet implemented);
+                "semi" = classical PCA + robust parameter estimation in [2] ("RDD-SIMCA");
                 otherwise = classical PCA + classical parameter estimation in [2] ("CDD-SIMCA");
             """
             self.__X_ = np.array(

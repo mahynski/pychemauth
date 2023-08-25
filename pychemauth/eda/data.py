@@ -105,7 +105,7 @@ class InspectData:
         Example
         -------
         >>> km = KMeans(n_clusters=10,
-                        init='k-means++',
+                        init="k-means++",
                         n_init=10,
                         random_state=0)
         >>> cluster_silhouette(X, clustering=km)
@@ -233,7 +233,7 @@ class InspectData:
         ... X_test[:,selected_features]
         >>> clf.fit(X_train, y_train)
         >>> clf.score(X_test, y_test) # 96%, almost identical as expected
-        >>> # Top is 'mean radius', which according to dendogram above, is
+        >>> # Top is "mean radius", which according to dendogram above, is
         ... highly correlated with other "size" metrics
         >>> pychemauth.analysis.inspect.InspectModel.pfi(clf, X_test, y_test, n_repeats=30,
         ... feature_names=data.feature_names[selected_features])
@@ -348,8 +348,8 @@ class InspectData:
 
         lookup : callable
             A function that is capable of looking up a feature and returning a
-            designation or class for it. For example lookup('mercury') =
-            'Heavy Metal'.  The final result is a set of features which all
+            designation or class for it. For example lookup("mercury") =
+            "Heavy Metal".  The final result is a set of features which all
             belong to the same class as much as possible.
 
         X : pandas.DataFrame
@@ -384,7 +384,7 @@ class InspectData:
         ----
         Minimize the entropy of selected features based on hierarchical
         clustering according to some labeling scheme that categorizes them.
-        For example, lookup('mercury') = 'Heavy Metal'. This routine performs
+        For example, lookup("mercury") = "Heavy Metal". This routine performs
         Metropolis Monte Carlo to minimize the entropy of the system defined by
         the categories of all features selected from each cluster.  Features
         are only considered viable if they appear in the input X DataFrame (not
@@ -552,7 +552,7 @@ class InspectData:
         df : DataFrame
             DataFrame with (dense) X predictors.  It may or may not contain a
             column for the prediction target.  For classification tasks, this
-            can be visualized using 'hue' as shown below.
+            can be visualized using "hue" as shown below.
 
         figname : str, optional(default=None)
             If not None the plot will be saved to this file.
@@ -580,11 +580,11 @@ class InspectData:
         >>> from sklearn.datasets import load_breast_cancer
         >>> data = load_breast_cancer()
         >>> df = pd.DataFrame(data=data.data, columns=data.feature_names)
-        >>> df['target'] = data.target
-        >>> InspectData.pairplot(df, vars=df.columns[0:5], hue='target',
-        ... diag_kind='kde')
-        >>> InspectData.pairplot(df, vars=df.columns[0:5], hue='target',
-        ... diag_kind='auto')
+        >>> df["target"] = data.target
+        >>> InspectData.pairplot(df, vars=df.columns[0:5], hue="target",
+        ... diag_kind="kde")
+        >>> InspectData.pairplot(df, vars=df.columns[0:5], hue="target",
+        ... diag_kind="auto")
         """
         sns.pairplot(df, **kwargs)
         if figname is not None:
