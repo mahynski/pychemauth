@@ -12,6 +12,22 @@ class RobustScaler:
     """
     Perform "robust" autoscaling on the data.
 
+    Parameters
+    ----------
+    with_median : scalar(bool), optional(default=True)
+        Center the data using the median.
+
+    with_iqr : scalar(bool), optional(default=True)
+        Scale the data using the interquantile range (IQR).
+
+    pareto : scalar(bool), optional(default=False)
+        Scale by the square root of the IQR instead.
+
+    rng : tuple(float, float), optional(default=(25.0, 75.0))
+        Quantiles to use; default is (25.0, 75.0) corresponding the interquartile range.
+
+    Note
+    ----
     Akin to scikit-learn's RobustScaler: this centers the data using the median
     instead of the mean, and scales by the interquantile range (IQR)
     instead of the standard deviation. The quantile can also be changed.
@@ -23,20 +39,7 @@ class RobustScaler:
     def __init__(
         self, with_median=True, with_iqr=True, pareto=False, rng=(25.0, 75.0)
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        with_median : bool
-            Center the data using the median.
-        with_iqr : bool
-            Scale the data using the interquantile range (IQR).
-        pareto : bool
-            Scale by the square root of the IQR instead.
-        rng : tuple(float, float)
-            Quantiles to use; default is (25, 75) corresponding the interquartile range.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "with_median": with_median,
@@ -64,8 +67,23 @@ class RobustScaler:
         }
 
     def fit(self, X, y=None):
-        """Fit the scaler using some training data."""
-        X = check_array(X, accept_sparse=False)
+        """
+        Fit the scaler using some training data.
+
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+        
+        Returns
+        -------
+        self : RobustScaler
+            Fitted model.
+        """
+        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
 
         self.n_features_in_ = X.shape[1]
         self.__median_ = np.median(X, axis=0)
@@ -75,8 +93,20 @@ class RobustScaler:
         return self
 
     def transform(self, X):
-        """Transform (center and possibly scale) the data after fitting."""
-        X = check_array(X, accept_sparse=False)
+        """
+        Transform (center and possibly scale) the data after fitting.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Unscaled feature matrix.
+        
+        Returns
+        -------
+        X_scaled : array_like(float, ndim=2)
+            Scaled feature matrix.
+        """
+        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
@@ -89,12 +119,24 @@ class RobustScaler:
         return result
 
     def inverse_transform(self, X):
-        """Invert the transformation."""
-        X = check_array(X, accept_sparse=False)
+        """
+        Invert the transformation.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Scaled feature matrix.
+          
+        Returns
+        -------
+        X_unscaled : array_like(float, ndim=2)
+            Unscaled feature matrix.
+        """
+        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
-        result = np.array(X, dtype=float)
+        result = X.copy()
         if self.with_iqr:
             result *= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
         if self.with_median:
@@ -103,7 +145,22 @@ class RobustScaler:
         return result
 
     def fit_transform(self, X, y=None):
-        """Fit and then transform some data."""
+        """
+        Fit and then transform some data.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+
+        Returns
+        -------
+        X_scaled : array_like(float, ndim=2)
+            Scaled feature matrix.
+        """
         self.fit(X)
 
         return self.transform(X)
@@ -113,6 +170,25 @@ class CorrectedScaler:
     """
     Perform variations of autoscaling on the data.
 
+    Parameters
+    ----------
+    with_mean : scalar(bool), optional(default=True)
+        Center the data using the mean.
+
+    with_std : scalar(bool), optional(default=True)
+        Scale the data using the (corrected) sample standard deviation
+        which uses N-1 degrees of freedom instead of N.
+
+    pareto : scalar(bool), optional(default=False)
+        Scale by the square root of the standard deviation instead.
+
+    biased : scalar(bool), optional(default=False)
+        If set to True, computes the uncorrected standard deviation with N
+        degrees of freedom (like StandardScaler). This can be used in
+        conjunction with pareto as well.
+
+    Note
+    ----
     This is a "StandardScaler" which by default reduces the degrees of freedom
     by one in the standard deviation, unlike scikit-learn's default StandardScaler.
 
@@ -123,23 +199,7 @@ class CorrectedScaler:
     def __init__(
         self, with_mean=True, with_std=True, pareto=False, biased=False
     ):
-        """
-        Instantiate the class.
-
-        Parameters
-        ----------
-        with_mean : bool
-            Center the data using the mean.
-        with_std : bool
-            Scale the data using the (corrected) sample standard deviation
-            which uses N-1 degrees of freedom instead of N.
-        pareto : bool
-            Scale by the square root of the standard deviation instead.
-        biased : bool
-            If set to True, computes the uncorrected standard deviation with N
-            degrees of freedom (like StandardScaler). This can be used in
-            conjunction with pareto as well.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "with_mean": with_mean,
@@ -167,8 +227,23 @@ class CorrectedScaler:
         }
 
     def fit(self, X, y=None):
-        """Fit the scaler using some training data."""
-        X = check_array(X, accept_sparse=False)
+        """
+        Fit the scaler using some training data.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+        
+        Returns
+        -------
+        self : CorrectedScaler
+            Fitted model.
+        """
+        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
 
         self.n_features_in_ = X.shape[1]
         self.__mean_ = np.mean(X, axis=0)
@@ -178,7 +253,19 @@ class CorrectedScaler:
         return self
 
     def transform(self, X):
-        """Transform (center and possibly scale) the data after fitting."""
+        """
+        Transform (center and possibly scale) the data after fitting.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Unscaled feature matrix.
+        
+        Returns
+        -------
+        X_scaled : array_like(float, ndim=2)
+            Scaled feature matrix.
+        """
         X = check_array(X, accept_sparse=False)
         assert X.shape[1] == self.n_features_in_
         check_is_fitted(self, "is_fitted_")
@@ -199,7 +286,19 @@ class CorrectedScaler:
         return result
 
     def inverse_transform(self, X):
-        """Invert the transformation."""
+        """
+        Invert the transformation.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Scaled feature matrix.
+          
+        Returns
+        -------
+        X_unscaled : array_like(float, ndim=2)
+            Unscaled feature matrix.
+        """
         X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
@@ -213,7 +312,22 @@ class CorrectedScaler:
         return result
 
     def fit_transform(self, X, y=None):
-        """Fit and then transform some data."""
+        """
+        Fit and then transform some data.
+        
+        Parameter
+        ---------
+        X : array_like(float, ndim=2)
+            Feature matrix.
+
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+
+        Returns
+        -------
+        X_scaled : array_like(float, ndim=2)
+            Scaled feature matrix.
+        """
         self.fit(X)
 
         return self.transform(X)
