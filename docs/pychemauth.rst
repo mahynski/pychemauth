@@ -17,6 +17,14 @@ Subpackages
 Submodules
 ----------
 
+pychemauth.datasets module
+-----------------------
+
+.. automodule:: pychemauth.datasets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   
 pychemauth.utils module
 -----------------------
 
