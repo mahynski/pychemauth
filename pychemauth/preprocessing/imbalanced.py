@@ -13,20 +13,46 @@ class ScaledSMOTEENN:
     """
     Balance a dataset.
 
+    Parameters
+    ----------
+    sampling_strategy_smoteenn : str, optional(default="not majority")
+        Sampling strategy for SMOTEENN.
+
+    sampling_strategy_smote : str, optional(default="not majority")
+        Sampling strategy for SMOTE.
+
+    sampling_strategy_enn : str, optional(default="all")
+        Sampling strategy for ENN.
+
+    k_smote : scalar(int), optional(default=5)
+        Number of nearest neighbors to use for SMOTE over-sampling.
+
+    k_enn : scalar(int), optional(default=3)
+        Number of nearest neighbors to use for ENN under-sampling.
+
+    kind_sel_enn : str, optional(default="all")
+        ENN's strategy to exclude samples.
+
+    random_state : scalar(int), optional(default=0)
+        Sets the random state of the resamplers.
+
+    scaler : sklearn.preprocessing object, optional(default=StandardScaler)
+        Scaler, such as StandardScaler, to perform before SMOTE.
+
+    Note
+    ----
+    See imblearn's documentation for details on these parameters.
+
+    This uses the imblearn library to perform SMOTE-ENN,
+    that is, SMOTE followed by edited nearest neighbors (ENN).
     This is done in a way that is compatible with
-    scikit-learn's estimator API.  This class performs
+    imblearn's estimator API.  This class performs
     (1) Scaling, then (2) SMOTE-ENN, then
     (3) de-Scales to return a dataset in the
     original "units" provided.  The scaler can be chosen.
 
-    This uses the imblearn library to perform SMOTE-ENN,
-    that is, SMOTE followed by edited nearest neighbors (ENN).
-
-    https://imbalanced-learn.org/stable/generated/imblearn.\
-    combine.SMOTEENN.html#imblearn.combine.SMOTEENN
-
-    Notes
-    -----
+    Warning
+    -------
     This is designed to work with **imblearn.pipeline** not sklearn.pipeline;
     they are often interchangeable, but not in this case.  Be sure to
     instantiate imblearn's version as in the example below.
@@ -34,6 +60,10 @@ class ScaledSMOTEENN:
     This is because imblearn's pipelines intermediates allow fit,
     transform, and resample methods; however, samplers are only
     applied during the fitting stage (training).
+
+    References
+    ---------
+    https://imbalanced-learn.org/stable/generated/imblearn.combine.SMOTEENN.html#imblearn.combine.SMOTEENN
 
     Example
     -------
@@ -66,30 +96,7 @@ class ScaledSMOTEENN:
         random_state=0,
         scaler=StandardScaler(with_mean=True, with_std=True),
     ):
-        """
-        Instantiate the class.
-
-        See imblearn's documentation for details on these parameters.
-
-        Parameters
-        ----------
-        sampling_strategy_smoteenn : str
-            Sampling strategy for SMOTEENN.
-        sampling_strategy_smote : str
-            Sampling strategy for SMOTE.
-        sampling_strategy_enn : str
-            Sampling strategy for ENN.
-        k_smote : int
-            Number of nearest neighbors to use for SMOTE over-sampling.
-        k_enn : int
-            Number of nearest neighbors to use for ENN under-sampling.
-        kind_sel_enn : str
-            ENN's strategy to exclude samples.
-        random_state : int
-            Sets the random state of the resamplers.
-        scaler : sklearn.preprocessing object
-            Scaler, such as StandardScaler, to perform before SMOTE.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "sampling_strategy_smoteenn": sampling_strategy_smoteenn,
@@ -127,21 +134,27 @@ class ScaledSMOTEENN:
     def fit_resample(self, X, y):
         """
         Resample the dataset.
-
-        First standardize X, then perform SMOTEENN, then de-standardize
-        to return results in the same "units" as input.
-
+        
         Parameters
         ----------
-        X : ndarray
-            Dense, feature matrix where rows are observations.
-        y : ndarray
-            1-D array of responses.
+        X : ndarray(float, ndim=2)
+            Feature matrix.
+
+        y : ndarray(str or int, ndim=1)
+            1-D array of classes.
 
         Returns
         -------
-        X_resample, y_resampled : ndarray, ndarray
+        X_resampled : ndarray(float, ndim=2) 
             Resampled X and y in the original "units" of X.
+        
+        y_resampled : ndarray(str or int, ndim=1)
+            Classes associated with each row in X.
+
+        Note
+        ----
+        First standardize X, then perform SMOTEENN, then de-standardize
+        to return results in the same "units" as input.
         """
         X_std = self.scaler.fit_transform(X)
 
