@@ -3,4 +3,4 @@ Load all modules.
 
 author: nam
 """
-__all__ = ["data", "screen"]
+__all__ = ["explore", "screen"]

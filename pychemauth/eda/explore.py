@@ -223,7 +223,7 @@ class InspectData:
         ... feature_names=data.feature_names.tolist())
         >>> # Look at multicollinearity
         >>> selected_features, cluster_id_to_feature_ids, _ =
-        ... pychemauth.eda.data.InspectData.cluster_collinear(X, # Unsupervised
+        ... pychemauth.eda.explore.InspectData.cluster_collinear(X, # Unsupervised
         ...                                figsize=(12, 8),
         ...                                display=True,
         ...                                t=2,
@@ -391,15 +391,15 @@ class InspectData:
         NaN values) at least 100*cutoff_factor percent of the time.
 
         This can be used to improve selections made at random by
-        pychemauth.eda.data.InspectData.cluster_collinear().
+        pychemauth.eda.explore.InspectData.cluster_collinear().
 
         Example
         -------
         >>> selected_features, cluster_id_to_feature_ids = 
-        ... pychemauth.eda.data.InspectData.cluster_collinear(X,
+        ... pychemauth.eda.explore.InspectData.cluster_collinear(X,
         ... feature_names=feature_names, display=False)
         >>> better_features =
-        ... pychemauth.eda.data.InspectData.minimize_cluster_label_entropy(
+        ... pychemauth.eda.explore.InspectData.minimize_cluster_label_entropy(
         ... cluster_id_to_feature_ids, lookup, X)
         """
         import copy
@@ -567,7 +567,7 @@ class InspectData:
         Note
         ----
         A pairplot of the data.  Best to use after dimensionality reduction has
-        been performed, e.g., using pychemauth.eda.data.InspectData.cluster_collinear() 
+        been performed, e.g., using pychemauth.eda.explore.InspectData.cluster_collinear() 
         to select only certain features.  This can be helpful to visualize how 
         decorrelated the selected dimensions truly are.
 
@@ -589,3 +589,162 @@ class InspectData:
         sns.pairplot(df, **kwargs)
         if figname is not None:
             plt.savefig(figname, dpi=300, bbox_inches="tight")
+
+class JSBinary:
+    """
+    Look at pairwise "separability" according to the Jensen-Shannon divergence.
+
+    Parameters
+    ----------
+    js_bins : scalar(int), optional(default=25)
+        Number of bins to use when computing the Jensen-Shannon divergence.
+        
+    robust : scalar(bool), optional(default=False)
+        Whether to robust option for JensenShannonDivergence.
+            
+    Note
+    ----
+    For a classification problem, look at the maximum JSD that can exists
+    across all features between pairs of classes.  This creates a binary
+    comparison between individual classes instead of a one-vs-all comparison 
+    done in JSScreen.
+
+    It can be helpful to look for the "elbow" as you plot number of bins vs.
+    max JSD to get a sense for the optimal value.
+    """
+
+    def __init__(self, js_bins=25, robust=False):
+        """Instantiate the class. """
+        self.set_params(**{"js_bins": js_bins, "robust": robust})
+        return
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {"js_bins": self.js_bins, "robust": self.robust}
+
+    def fit(self, X, y):
+        """
+        Fit the screen to data.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Features matrix.
+            
+        y : array_like(str or int, ndim=1)
+            Ground truth classes.
+            
+        Returns
+        -------
+        self : JSBinary
+            Fitted model.
+        """
+        js = JensenShannonDivergence(
+            **{
+                "per_class": True,  # Sorts by max automatically
+                "feature_names": None,  # Index
+                "bins": self.js_bins,
+                "robust": self.robust,
+            }
+        )
+
+        self.__enc_ = LabelEncoder()
+        self.__enc_.fit(y)
+        self.__matrix_ = np.zeros(
+            (len(self.__enc_.classes_), len(self.__enc_.classes_))
+        )
+        self.__top_feature_ = np.empty(
+            (len(self.__enc_.classes_), len(self.__enc_.classes_)), dtype=object
+        )
+        for pairs in itertools.combinations(np.unique(y), r=2):
+            # 2. Compute (max) JS divergence
+            mask = (y == pairs[0]) | (y == pairs[1])
+
+            # Binary so divergences are the same, just take the first
+            div = js.fit(X[mask], y[mask]).divergence
+            x = div[pairs[0]][0][1][pairs[0]]
+            feature = div[pairs[0]][0][0]
+            assert div[pairs[1]][0][1][pairs[1]] == x
+
+            i, j = self.__enc_.transform(pairs)
+            self.__matrix_[i][j] = x
+            self.__matrix_[j][i] = x
+            self.__top_feature_[i][j] = feature
+            self.__top_feature_[j][i] = feature
+
+        return self
+
+    @property
+    def matrix(self):
+        """Return the matrix of maximum JS divergence values."""
+        return self.__matrix_.copy()
+
+    def top_features(self, feature_names=None):
+        """
+        Return which feature was responsible for the max JS divergence.
+
+        Parameters
+        ----------
+        feature_names : array_like(str, ndim=1), optional(default=None)
+            List of feature names. Results are internally stored as
+            indices so if this is provided, converts indices to names
+            based on this array; otherwise a matrix of indices is
+            returned.
+            
+        Returns
+        -------
+        top_features : ndarray(object, ndim=2)
+            Matrix of top feature names (if provided) or indices indicating
+            the feature responsible for the maximum JSD between features i and
+            j.  Diagonals are set to "NONE".
+            
+        Example
+        -------
+        >>> jsb.top_features(feature_names=X.columns)
+        """
+        if feature_names is None:
+            return self.__top_feature_.copy()
+        else:
+            names = np.empty_like(self.__top_feature_)
+            for i in range(names.shape[0]):
+                for j in range(names.shape[1]):
+                    if i != j:
+                        names[i, j] = feature_names[self.__top_feature_[i, j]]
+                    else:
+                        names[i, j] = "NONE"
+            return names
+
+    def visualize(self, ax=None):
+        """
+        Visualize the results with a heatmap.
+        
+        Parameters
+        ----------
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot the result on.
+            
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            Axes results are plotted on.
+        """
+        if ax is None:
+            ax = plt.figure().gca()
+
+        ax = sns.heatmap(
+            self.matrix,
+            ax=ax,
+            annot=True,
+            xticklabels=self.__enc_.classes_,
+            yticklabels=self.__enc_.classes_,
+        )
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+        ax.set_title(r"Maximum Pairwise $\nabla \cdot JS$")
+
+        return ax

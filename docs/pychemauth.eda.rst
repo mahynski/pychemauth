@@ -4,10 +4,10 @@ pychemauth.eda package
 Submodules
 ----------
 
-pychemauth.eda.data module
+pychemauth.eda.explore module
 --------------------------
 
-.. automodule:: pychemauth.eda.data
+.. automodule:: pychemauth.eda.explore
    :members:
    :undoc-members:
    :show-inheritance:
