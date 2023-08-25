@@ -878,10 +878,10 @@ class JSScreen:
         Note
         ----
         We define "interesting merges" as those which cause a
-        positive change of at least :py:var:`min_delta` and raise the JS divergence to
-        above some :py:var:`threshold` where it was initially below. Moreover, all the
+        positive change of at least `min_delta` and raise the JS divergence to
+        above some `threshold` where it was initially below. Moreover, all the
         individual classes must have divergences less than the net of all of
-        them less :py:var:`min_delta` (i.e., merging is exclusively increasing the
+        them less `min_delta` (i.e., merging is exclusively increasing the
         distinguishibility of the macroclass rather than one simply "bringing
         up the average").
 

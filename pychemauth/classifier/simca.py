@@ -57,7 +57,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         estimation. If the dataset is clean (no outliers) it is best practice
         to use a classical method [3], however, to initially test for and
         potentially remove these points, a robust variant is recommended. This
-        is why "semi: is the default value. If :py:var:`sft`=True then this value is
+        is why "semi: is the default value. If `sft`=True then this value is
         ignored and a robust method is applied to iteratively clean the dataset,
         while the final fitting uses the classical approach.
         
