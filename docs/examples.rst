@@ -1,5 +1,5 @@
-Toy Examples
-============
+Examples
+========
 
 .. nbgallery::
    :hidden:
