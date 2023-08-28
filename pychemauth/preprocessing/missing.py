@@ -32,18 +32,21 @@ class LOD:
     ignore : scalar(float), optional(default=None)
         Anything in X with this value is ignored. You can use this to
         mask certain values as needed; e.g., for future processing.
+        If this is set to `np.nan` it overrides `missing_values` and the imputer
+        will only operate on values explicitly below the LOD.
 
     Note
     ----
-    Data in the feature matrix (X) is assumed "missing" because it is
-    below the limit of detection (LOD).  Also, any values explicitly less than
-    the LODs provided are selected for imputation. In these cases, random values
-    are chosen between 0 and the LOD (which must be provided by the user).
+    By default, all data in the feature matrix (X) is assumed "missing" because it is
+    below the limit of detection (LOD).  However, all values explicitly less than
+    the LODs provided are also selected for imputation. In both cases, random values
+    are chosen between 0 and the LOD (which must be provided by the user). You may wish
+    to change this if you are handling both missing data and data below LOD.
 
     Example
     -------
-    >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), missing_values=-1, seed=0)
-    >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's for missing
+    >>> itim = LOD(lod=np.array([0.1, 0.2, 0.1]), ignore=np.nan, seed=42)
+    >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's left representing missing values.
     """
 
     def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None):
@@ -171,9 +174,10 @@ class LOD:
         lod_dict = dict(zip(columns_, self.lod))
 
         def impute_(x, lod):
-            if x == self.ignore:
-                return x
-
+            if self.ignore is not None:
+                if (np.isnan(self.ignore) and np.isnan(x)) or (x == self.ignore):
+                    return x
+            
             if np.isnan(self.missing_values):
                 compare = lambda x: np.isnan(x)
             else:
