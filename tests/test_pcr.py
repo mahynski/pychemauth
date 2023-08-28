@@ -62,7 +62,7 @@ class TestPCR_scaling(unittest.TestCase):
 
     def test_h_q(self):
         """Check some h and q values."""
-        h, q = self.model.h_q_(self.X)
+        h, q = self.model._h_q(self.X)
         ans_h = np.array([0.06977, 0.274621, 0.132318])
         ans_q = np.array([4.187058, 5.961213, 4.029075])
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
@@ -70,19 +70,19 @@ class TestPCR_scaling(unittest.TestCase):
 
     def test_f(self):
         """Check some f values."""
-        res = self.model.f_(*self.model.h_q_(self.X))[:3]
+        res = self.model._f(*self.model._h_q(self.X))[:3]
         ans = np.array([7.86561, 16.566766, 9.565037])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
         """Check some z values."""
-        res = self.model.z_(self.X, self.y)[:3]
+        res = self.model._z(self.X, self.y)[:3]
         ans = np.array([8.908229e-03, 9.360893e-05, 1.642156e-01])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_g(self):
         """Check some g values."""
-        res = self.model.g_(self.X, self.y)[:3]
+        res = self.model._g(self.X, self.y)[:3]
         ans = np.array([7.980034, 16.567968, 11.674349])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
@@ -165,7 +165,7 @@ class TestPCR_center(unittest.TestCase):
 
     def test_h_q(self):
         """Check some h and q values."""
-        h, q = self.model.h_q_(self.X)
+        h, q = self.model._h_q(self.X)
         ans_h = np.array([0.05916447, 0.15571287, 0.10156415])
         ans_q = np.array([0.00018677, 0.0003949, 0.0001755])
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
@@ -173,19 +173,19 @@ class TestPCR_center(unittest.TestCase):
 
     def test_f(self):
         """Check some f values."""
-        res = self.model.f_(*self.model.h_q_(self.X))[:3]
+        res = self.model._f(*self.model._h_q(self.X))[:3]
         ans = np.array([6.41737275, 15.00138088, 8.18149178])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_z(self):
         """Check some z values."""
-        res = self.model.z_(self.X, self.y)[:3]
+        res = self.model._z(self.X, self.y)[:3]
         ans = np.array([0.01304151, 0.02088698, 0.01414838])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
     def test_g(self):
         """Check some g values."""
-        res = self.model.g_(self.X, self.y)[:3]
+        res = self.model._g(self.X, self.y)[:3]
         ans = np.array([6.61326169, 15.3151121, 8.39400634])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
