@@ -169,8 +169,8 @@ Diagnostics
    :includehidden:
    :caption: Tutorial
 
-   toy_examples
-..   real_world
+   examples
+..   applications
 
 ..
    .. toctree::
