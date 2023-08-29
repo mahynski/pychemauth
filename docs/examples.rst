@@ -4,6 +4,7 @@ Examples
 .. nbgallery::
    :hidden:
 
+   jupyter/gallery/eda
    jupyter/gallery/imputing_examples
    jupyter/gallery/pca_example
    jupyter/gallery/pls_example
