@@ -7,11 +7,15 @@ original sources is made available when appropriate.
 
 author: nam
 """
+import itertools
+import tqdm
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import tqdm
 
+from sklearn.preprocessing import LabelEncoder
+from pychemauth.preprocessing.feature_selection import JensenShannonDivergence
 
 class InspectData:
     """Class containing tools used to inspect raw data."""
@@ -518,29 +522,12 @@ class InspectData:
                     break
 
             # 3. Compare across restarts
-            if best[0] < best_overall[0]:
+            # <= ensures the first one is not kept by default
+            if best[0] <= best_overall[0]:
                 best_overall = best
 
-        # 4. Go over list and perform final optimization, choosing alternatives
-        # of the same class that were the MOST often measured, not just AT
-        # LEAST some minimum.
-        # NOTE: THIS MIGHT CREATE SOME BIASED BASED ON LEXICOGRAPHIC ORDERING
-        # I.E., IF TWO FEATURES HAVE THE SAME NUMBER OF OBSERVATIONS BUT DIFFERENT
-        # NAMES THEN THE ONE WITH THE FIRST "NAME" WILL ALWAYS BE SELECTED.
-        final = {}
-        for cid, feat in convert(best_overall[1], safe_features).items():
-            best_idx = sorted(
-                [
-                    (i, counts(f))
-                    for i, f in enumerate(safe_features[cid])
-                    if lookup(feat) == lookup(f)
-                ],
-                key=lambda x: x[1],
-                reverse=True,
-            )[0][0]
-            final[cid] = safe_features[cid][best_idx]
-
-        return list(final.values())
+        converted = convert(best_overall[1], safe_features)
+        return [converted[k] for k in sorted(converted.keys())]
 
     @staticmethod
     def pairplot(df, figname=None, **kwargs):
