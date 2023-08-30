@@ -158,7 +158,7 @@ Diagnostics
 
 .. toctree::
    :maxdepth: 3
-   :caption: Contents
+   :caption: Introduction
 
    quickstart 
    citation
@@ -166,7 +166,7 @@ Diagnostics
    
 .. toctree::
    :maxdepth: 3
-   :caption: API
+   :caption: API Reference
    
    modules
 
