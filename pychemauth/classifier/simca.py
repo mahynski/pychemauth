@@ -1471,8 +1471,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
 
-        Both extreme points and outliers are considered "extremes" here.  In practice,
-        outliers should be removed before performing this analysis anyway.
+        Warning
+        -------
+        Both extreme points and outliers are considered "extremes" here.  
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
