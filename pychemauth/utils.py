@@ -167,10 +167,14 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
     """
     Estimate the degrees of freedom for projection-based modeling.
 
+    References
+    ----------
     [1] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+
     [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A.,
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+
     [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
