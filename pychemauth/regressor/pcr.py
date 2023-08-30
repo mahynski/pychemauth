@@ -685,7 +685,7 @@ class PCR(RegressorMixin, BaseEstimator):
             (
                 "g",
                 in_mask,
-                "Regular =" + " ({})".format(np.sum(in_mask)),
+                "Inlier =" + " ({})".format(np.sum(in_mask)),
             ),
             (
                 "orange",
@@ -754,7 +754,7 @@ class PCR(RegressorMixin, BaseEstimator):
             (
                 "g",
                 in_mask,
-                "Regular =" + " ({})".format(np.sum(in_mask)),
+                "Inlier =" + " ({})".format(np.sum(in_mask)),
             ),
             (
                 "orange",

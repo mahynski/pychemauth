@@ -462,7 +462,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         """
-        Predict if the data are "regular" (NOT extremes or outliers).
+        Predict if the data are "inliers" (NOT extremes or outliers).
 
         Parameters
         ----------
@@ -512,7 +512,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Data to evaluate the number of outliers + extremes in.
+            Data to evaluate the number of non-inliers (outliers + extremes) in.
         
         upper_frac : scalar(float), optional(default=0.25)
             Count the number of extremes and outliers for alpha values corresponding
@@ -655,16 +655,16 @@ class PCA(ClassifierMixin, BaseEstimator):
         ax.plot(a[:, 0], a[:, 1], "o")
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
-        for i, label in zip(range(len(a), feature_names)):
+        for i, label in zip(range(len(a)), feature_names):
             ax.text(a[i, 0], a[i, 1], label)
         ax.set_xlabel(
             "PC 1 ({}%)".format(
-                "%.4f" % self.__pca_.explained_variance_ratio_[0] * 100.0
+                "%.4f" % (self.__pca_.explained_variance_ratio_[0] * 100.0)
             )
         )
         ax.set_ylabel(
             "PC 2 ({}%)".format(
-                "%.4f" % self.__pca_.explained_variance_ratio_[1] * 100.0
+                "%.4f" % (self.__pca_.explained_variance_ratio_[1] * 100.0)
             )
         )
 
@@ -733,7 +733,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             (
                 "g",
                 in_mask,
-                "Regular =" + " ({})".format(np.sum(in_mask)),
+                "Inlier =" + " ({})".format(np.sum(in_mask)),
             ),
             (
                 "orange",

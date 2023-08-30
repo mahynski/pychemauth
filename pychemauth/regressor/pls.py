@@ -648,7 +648,7 @@ class PLS(RegressorMixin, BaseEstimator):
             (
                 "g",
                 in_mask,
-                "Regular =" + " ({})".format(np.sum(in_mask)),
+                "Inlier =" + " ({})".format(np.sum(in_mask)),
             ),
             (
                 "orange",
@@ -717,7 +717,7 @@ class PLS(RegressorMixin, BaseEstimator):
             (
                 "g",
                 in_mask,
-                "Regular =" + " ({})".format(np.sum(in_mask)),
+                "Inlier =" + " ({})".format(np.sum(in_mask)),
             ),
             (
                 "orange",
