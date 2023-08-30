@@ -158,11 +158,16 @@ Diagnostics
 
 .. toctree::
    :maxdepth: 3
-   :caption: Contents:
+   :caption: Contents
 
    quickstart 
    citation
    contributing
+   
+.. toctree::
+   :maxdepth: 3
+   :caption: API
+   
    modules
 
 .. toctree::
