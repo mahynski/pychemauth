@@ -125,8 +125,10 @@ In ML/AI, the problem of detecting novelties (a previously unknown class) when o
 * `Dietterich, T., and A. Guyer. "The familiarity hypothesis: Explaining the behavior of deep open set methods." Pattern Recognition 132 (2022): 108931 <https://www.sciencedirect.com/science/article/pii/S0031320322004125>`_
 
 These routines offer the most flexible approaches and include alternative boundary construction methods besides ellipses.  Detecting "new or unusual" objects with AI/ML is often formulated as an outlier detection problem.  This is a fairly mature field when it comes to feature-vector data for conventional ML/statistical algorithms, but deep learning approaches currently struggle to outperform their other ML counterparts (see the `"Familiarity Hypothesis" <https://www.sciencedirect.com/science/article/pii/S0031320322004125>`_ by Dietterich and Guyer).
-* Outlier detection with `PyOD <https://pyod.readthedocs.io/en/latest/>`_ - This encompasses many different approaches including isolation forests and autoencoders.
-* Semi-supervised `Positive-Unlabeled (PU) learning <https://pulearn.github.io/pulearn/>`_
+
+* Outlier detection with `PyOD <https://pyod.readthedocs.io/en/latest/>`_ - This encompasses many different approaches including isolation forests and autoencoders.  It's API is largely simlar to sklearn and therefore compatible with this ecosystem.
+
+* Semi-supervised `Positive-Unlabeled (PU) learning <https://pulearn.github.io/pulearn/>`_.
 
 Explanations and Interpretations
 ################################
@@ -154,7 +156,7 @@ Diagnostics
 :py:mod:`pychemauth.analysis.inspect` also provides a number of tools to understand model performance.  For example:
 
 * `Learning curves <https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve>`_ can be used to tell if your model will benefit from more data, or if you need a more powerful model to achieve better performance.
-* `Confusion matrices` help identify which classes a model tends to confuse and which it can easily distinguish between.
+* `Confusion matrices <https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html>`_ help identify which classes a model tends to confuse and which it can easily distinguish between.
 
 .. toctree::
    :maxdepth: 3
