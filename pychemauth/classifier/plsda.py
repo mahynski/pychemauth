@@ -1117,7 +1117,7 @@ n_features [{}])] = [{}, {}].".format(
                 "o",
                 alpha=0.5,
                 color="C{}".format(i),
-                label=c_ + " (Training)",
+                label=str(c_) + " (Training)",
             )
             ax.plot(
                 self.__class_centers_[i],
@@ -1346,7 +1346,7 @@ n_features [{}])] = [{}, {}].".format(
                 mid = (
                     self.__class_centers_[i] + self.__class_centers_[j]
                 ) / 2.0
-                sign.append(np.sign(mid[0] - t0[0]))
+                sign.append(np.sign(mid[0] - np.mean([p_[0] for p_ in self.__class_centers_])))
 
             lines = {}
             for sign, (i, j) in list(zip(sign, pairs)):
@@ -1392,7 +1392,7 @@ n_features [{}])] = [{}, {}].".format(
                 "o",
                 alpha=0.5,
                 color="C{}".format(i),
-                label=c_ + " (Training)",
+                label=str(c_) + " (Training)",
             )
         ax.plot(
             self.__class_centers_[:, 0],
