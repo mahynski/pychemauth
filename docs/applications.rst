@@ -1,5 +1,5 @@
-Real World Applications
-=======================
+Real Applications
+=================
 
 ..
     .. nbgallery::

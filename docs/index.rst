@@ -175,18 +175,20 @@ Diagnostics
    :caption: Tutorial
 
    examples
-..   applications
+   applications
 
-..
-   .. toctree::
-      :includehidden:
-      :caption: Learn
 
-      eda
-      cross_validation
-      statistial_methods
-      machine_learning
-      deep_learning
+.. toctree::
+   :includehidden:
+   :caption: Learn
+
+..      
+   pca
+   pls
+   pls-da
+   simca
+   shallow_learning
+   deep_learning
 
 Indices and tables
 ==================
