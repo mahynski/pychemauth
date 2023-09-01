@@ -16,7 +16,7 @@ from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
 
-class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
+class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     r"""
     Train a SIMCA model for a target class.
 
@@ -158,7 +158,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y):
         """
-        Fit the SIMCA model.
+        Fit the SIMCA authenticator model.
         
         Parameters
         ----------
@@ -171,7 +171,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         
         Returns
         -------
-        self : SIMCA_Classifier
+        self : SIMCA_Authenticator
             Fitted model.
 
         Note

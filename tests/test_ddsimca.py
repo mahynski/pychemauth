@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pychemauth.classifier.simca import DDSIMCA_Model, SIMCA_Classifier
+from pychemauth.classifier.simca import DDSIMCA_Model, SIMCA_Authenticator
 
 
 class TestDDSIMCA(unittest.TestCase):
@@ -139,8 +139,8 @@ class TestDDSIMCA(unittest.TestCase):
         ext, out = dds.check_outliers(raw_x_a)
         self.assertTrue(np.where(~(ext | out))[0] == np.array([9]))
 
-    def test_ddsimca_classifier_semi(self):
-        """Test SIMCA_Classifier using the DDSIMCA_Model."""
+    def test_ddsimca_auth_semi(self):
+        """Test SIMCA_Authenticator using the DDSIMCA_Model."""
         df = pd.read_csv(
             os.path.dirname(os.path.realpath(__file__))
             + "/data/simca_train.csv"
@@ -156,7 +156,7 @@ class TestDDSIMCA(unittest.TestCase):
         raw_x_a = np.array(df.values[:, 3:], dtype=float)
         raw_y_a = np.array(df.values[:, 1], dtype=str)
 
-        sc = SIMCA_Classifier(
+        sc = SIMCA_Authenticator(
             n_components=7,
             alpha=0.05,
             scale_x=False,
@@ -184,8 +184,8 @@ class TestDDSIMCA(unittest.TestCase):
         self.assertTrue(np.abs(metrics["tsns"] - 0.8472222222222222) < 1.0e-12)
         self.assertTrue(np.abs(metrics["tsps"] - 0.9444444444444444) < 1.0e-12)
 
-    def test_ddsimca_classifier_classical(self):
-        """Test SIMCA_Classifier using the DDSIMCA_Model."""
+    def test_ddsimca_auth_classical(self):
+        """Test SIMCA_Authenticator using the DDSIMCA_Model."""
         df = pd.read_csv(
             os.path.dirname(os.path.realpath(__file__))
             + "/data/simca_train.csv"
@@ -201,7 +201,7 @@ class TestDDSIMCA(unittest.TestCase):
         raw_x_a = np.array(df.values[:, 3:], dtype=float)
         raw_y_a = np.array(df.values[:, 1], dtype=str)
 
-        sc = SIMCA_Classifier(
+        sc = SIMCA_Authenticator(
             n_components=7,
             alpha=0.05,
             scale_x=False,
