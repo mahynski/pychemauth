@@ -344,6 +344,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         -------
         results : ndarray(int, ndim=1)
             Array of +1 inliers else 0.
+
+        Note
+        ----
         """
         d = self.mahalanobis(X)
         mask = d > np.sqrt(self.__d_crit_)
@@ -514,10 +517,10 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Data to evaluate the number of outliers + extremes in.
+            Data to evaluate the number of outliers (not inliers) in.
 
         upper_frac : scalar(float), optional(default=0.25)
-            Count the number of extremes and outliers for alpha values corresponding
+            Count the number of outliers (not inliers) for alpha values corresponding
             to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
 
         ax : matplotlib.pyplot.axes, optional(default=None)
@@ -531,15 +534,11 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Note
         ----
         This modifies the alpha value (type I error rate), keeping all other parameters
-        fixed, and computes the number of expected extremes (:math:`n_{\rm exp}`) vs. the number
+        fixed, and computes the number of expected non-inliers (:math:`n_{\rm exp}`) vs. the number
         observed (:math:`n_{\rm obs}`).  Theoretically, :math:`n_{\rm exp} = \alpha*N_{\rm tot}`.
 
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
-
-        Warning
-        -------
-        Both extreme points and outliers are considered "extremes" here.  
         """
         X_ = check_array(np.asarray(X, np.float64), accept_sparse=False)
         N_tot = X_.shape[0]
@@ -552,8 +551,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             params["alpha"] = a
             model_ = EllipticManifold(**params)
             model_.fit(X)
-            extremes, outliers = model_.check_outliers(X)
-            n_observed.append(np.sum(extremes) + np.sum(outliers))
+            n_observed.append(N_tot - np.sum(model_.predict(X)))
         n_observed = np.array(n_observed)
 
         if ax is None:
