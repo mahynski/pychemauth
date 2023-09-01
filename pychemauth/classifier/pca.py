@@ -576,7 +576,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def score(self, X, y, eps=1.0e-15):
+    def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
         
@@ -594,7 +594,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : scalar(float)
+        loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
             
         References

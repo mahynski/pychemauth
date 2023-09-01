@@ -333,7 +333,7 @@ class SIMCA_Classifier(ClassifierMixin, BaseEstimator):
         Note
         ----
         The "rigorous" approach uses only the target class to score
-        the model and returns -(TSNS - (1-alpha))^2; the "compliant"
+        the model and returns -(TSNS - (1-:math:`\alpha`))^2; the "compliant"
         approach returns TEFF. In both cases, a larger output is a
         "better" model.
         """
@@ -754,7 +754,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         # If f < f_crit, it belongs to the class
         return F < self.__f_crit_
 
-    def score(self, X, y, eps=1.0e-15):
+    def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
@@ -772,7 +772,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : scalar(float)
+        loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
             
         References
@@ -796,6 +796,26 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
+    def score(self, X, y):
+        """
+        Return the accuracy of the model.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        y : array_like(bool, ndim=1), optional(default=None)
+            Correct labels; True for inlier, False for outlier.
+
+        Returns
+        -------
+        accuracy : scalar(float)
+            Accuracy of predictions.
+        """
+        return self.accuracy(X, y)
+    
     def accuracy(self, X, y):
         """
         Get the fraction of correct predictions.
@@ -1343,7 +1363,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         # If c < c_crit, it belongs to the class
         return self.distance(X) < self.__c_crit_
 
-    def score(self, X, y, eps=1.0e-15):
+    def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
@@ -1361,7 +1381,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : scalar(float)
+        loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
             
         References
@@ -1385,6 +1405,26 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
+    def score(self, X, y):
+        """
+        Return the accuracy of the model.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        y : array_like(bool, ndim=1), optional(default=None)
+            Correct labels; True for inlier, False for outlier.
+
+        Returns
+        -------
+        accuracy : scalar(float)
+            Accuracy of predictions.
+        """
+        return self.accuracy(X, y)
+    
     def accuracy(self, X, y):
         """
         Get the fraction of correct predictions.
