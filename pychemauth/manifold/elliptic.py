@@ -27,7 +27,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Keyword arguments for model; EllipticManifold.model = model(**kwargs). Must
         contain the `ndims` keyword.
 
-    ndims : str, optioanl(default="n_components")
+    ndims : str, optional(default="n_components")
         Keyword in kwargs that corresponds to the dimensionality of the final space.
 
     robust : scalar(bool), optional(default=True)
@@ -46,13 +46,14 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     so that they do not impact the development of the manifold / dimensionality reduction.  For high
     dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction
     step is robust against outliers (e.g., ROBPCA) then this might be not be necessary; however, in
-    general, consider adding this to the pipeline before training.
+    general, consider adding this to the pipeline before training since this is not handled 
+    internally by this model.
 
     Step 1: Perform a dimensionality reduction (DR) step using some model to obtain
     a projection ("scores" or "embedding").
 
     Step 2: Following [1], assume each class forms a normally distributed subset
-    with the known means (*see Note below) in the score/emedding space.  The covariance matrix is used to
+    with the known means (*see Note below) in the score/embedding space.  The covariance matrix is used to
     compute the `Mahalanobis distance <https://en.wikipedia.org/wiki/Mahalanobis_distance>`_.
     to its class center.
 
@@ -67,8 +68,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
     This is similar to using scikit-learn's EllipticEnvelope (EE) after some dimensionality
     reduction step; EE essentially learns an ellipse around a known class, with
     some predefined amount of the observations set to be "included."  The basic
-    difference is that a statistical confidence limit (alpha) can be directly
-    specified here. EE's "contamination" is approximately alpha (type I error
+    difference is that a statistical confidence limit (:math:`\alpha`) can be directly
+    specified here. EE's "contamination" is approximately :math:`\alpha` (type I error
     rate); however, this seems to lack some rigor. Here the :math:`\Chi{^2}`
     distribution has some degrees of freedom associated with based on the
     dimensionality of the space, whereas EE just takes the fraction as a hyperparameter
@@ -220,13 +221,12 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         )
 
         # Compute scatter matrix
-        t_train = self.transform(X, y)
+        t_train = self.transform(X)
         if self.center != "score":
             # Put center of ellipse on projection of the empiricial data mean
             # in the original space
             self.__class_center_ = self.transform(
-                X=np.mean(X, axis=0).reshape(1, -1),
-                y=(None if y is None else np.mean(y, axis=0).reshape(1, -1))
+                X=np.mean(X, axis=0).reshape(1, -1)
             )[0]
         else:
             # Center ellipse in the score space
@@ -244,7 +244,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         return self
 
-    def transform(self, X, y=None):
+    def transform(self, X):
         """
         Perform dimensionality reduction on X into the score space.
 
@@ -254,18 +254,15 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
-
         Returns
         -------
         scores : ndarray(float, ndim=2)
             Coordinates of X in lower dimensional space.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = self._sanity(np.asarray(X, dtype=np.float64), y)
+        X, _ = self._sanity(np.asarray(X, dtype=np.float64), y=None)
 
-        return self.model_.transform(X, y)
+        return self.model_.transform(X)
 
     def fit_transform(self, X, y=None):
         """
@@ -287,9 +284,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         _ = self.fit(X, y)
 
-        return self.transform(X, y)
+        return self.transform(X)
 
-    def mahalanobis(self, X, y=None):
+    def mahalanobis(self, X):
         """
         Compute the Mahalanobis distance for each sample.
 
@@ -299,16 +296,13 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
-
         Returns
         -------
         distances : ndarray(float, ndim=1)
             Mahalanobis distance for each sample.
         """
         check_is_fitted(self, "is_fitted_")
-        t_test = self.transform(X, y)
+        t_test = self.transform(X)
         S_inv = np.linalg.inv(self.__S_)
 
         # Compute distances
@@ -325,7 +319,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         return np.sqrt(distances2)
 
-    def predict(self, X, y=None):
+    def predict(self, X):
         """
         Predict if points are inliers (+1) or not (0).
 
@@ -335,15 +329,12 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
-
         Returns
         -------
         results : ndarray(int, ndim=1)
             Array of +1 inliers else 0.
         """
-        d = self.mahalanobis(X, y)
+        d = self.mahalanobis(X)
         mask = d > np.sqrt(self.__d_crit_)
 
         # +1/-1 follows scikit-learn's EllipticEnvelope API - this is different
@@ -373,9 +364,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         _ = self.fit(X, y)
 
-        return self.predict(X, y)
+        return self.predict(X)
 
-    def score_samples(self, X, y=None):
+    def score_samples(self, X):
         """
         Score observations.
 
@@ -384,9 +375,6 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
@@ -398,9 +386,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
         distance.
         """
-        return -self.mahalanobis(X, y)
+        return -self.mahalanobis(X)
 
-    def decision_function(self, X, y=None):
+    def decision_function(self, X):
         """
         Compute the decision function for each sample.
         
@@ -409,9 +397,6 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
@@ -428,9 +413,9 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
-        return self.score_samples(X, y) - (-np.sqrt(self.__d_crit_))
+        return self.score_samples(X) - (-np.sqrt(self.__d_crit_))
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(self, X):
         """
         Predict the probability that observations are inliers.
         
@@ -439,9 +424,6 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(float, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
         -------
@@ -465,14 +447,14 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X, y)))
+        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 0] = p_inlier
         prob[:, 1] = 1.0 - p_inlier
 
         return prob
 
-    def score(self, X, y, eps=1.0e-15):
+    def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
         
@@ -490,7 +472,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        score : scalar(float)
+        loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
 
         References
@@ -504,7 +486,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         # Inlier = +1 (positive class), p[:,0]
         # Not inlier = 0 (negative class), p[:,1]
-        prob = self.predict_proba(X, y)
+        prob = self.predict_proba(X)
 
         y_in = np.array([1.0 if y_ == +1 else 0.0 for y_ in y])
         p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
