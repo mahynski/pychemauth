@@ -546,13 +546,23 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             automatically.
 
         y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
+            Ignored. If passed, it is checked that they are all identical and this 
+            label is used; otherwise the name "Training Class" is assigned.
 
         Returns
         -------
         self : SIMCA_Model
             Fitted model.
         """
+        if y is None:
+            self.__label_ = "Training Class"
+        else:
+            label = np.unique(y)
+            if len(label) > 1:
+                raise Exception("More than one class passed during training.")
+            else:
+                self.__label_ = str(label[0])
+
         self.__X_ = np.array(X).copy()
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]

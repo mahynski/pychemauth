@@ -191,6 +191,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         y : array_like(float, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
+            If passed, it is checked that they are all identical and this 
+            label is used; otherwise the name "Training Class" is assigned.
 
         Returns
         -------
@@ -204,6 +206,15 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         # Sanity checks
         X, y = self._sanity(np.asarray(X, dtype=np.float64), y, init=True)
 
+        if y is None:
+            self.__label_ = "Training Class"
+        else:
+            label = np.unique(y)
+            if len(label) > 1:
+                raise Exception("More than one class passed during training.")
+            else:
+                self.__label_ = str(label[0])
+                
         # Fit the model
         self.model_ = self.dr_model(**self.kwargs)
         self.model_.fit(X, y)
