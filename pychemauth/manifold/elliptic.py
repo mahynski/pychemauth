@@ -332,7 +332,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         """
-        Predict if points are inliers (+1) or not (0).
+        Predict if points are inliers or not.
 
         Parameters
         ----------
@@ -342,19 +342,16 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        results : ndarray(int, ndim=1)
-            Array of +1 inliers else 0.
-
-        Note
-        ----
+        results : ndarray(bool, ndim=1)
+            Whether or not each point is an inlier.
         """
         d = self.mahalanobis(X)
         mask = d > np.sqrt(self.__d_crit_)
 
         # +1/-1 follows scikit-learn's EllipticEnvelope API - this is different
         # to be more consistent with other APIs such as how SIMCA works.
-        results = np.ones(len(X))  # Inliers
-        results[mask] = 0  # Outliers
+        results = np.array([True] * len(X)) # Inliers
+        results[mask] = False  # Outliers
 
         return results
 
@@ -373,8 +370,8 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        results : ndarray(int, ndim=1)
-            Array of +1 inliers else 0.
+        results : ndarray(bool, ndim=1)
+            Whether or not each point is an inlier.
         """
         _ = self.fit(X, y)
 
@@ -495,20 +492,68 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         """
         assert len(X) == len(y)
         assert np.all(
-            [a in [0, 1] for a in y]
-        ), "y should contain only 0 or 1 labels"
+            [a in [True, False] for a in y]
+        ), "y should contain only True or False labels"
 
         # Inlier = +1 (positive class), p[:,0]
         # Not inlier = 0 (negative class), p[:,1]
         prob = self.predict_proba(X)
 
-        y_in = np.array([1.0 if y_ == +1 else 0.0 for y_ in y])
+        y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
         p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
 
         # Return the negative, normalized log-loss
         return -np.sum(
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
+
+    def score(self, X, y):
+        """
+        Return the accuracy of the model.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        y : array_like(bool, ndim=1), optional(default=None)
+            Correct labels; True for inlier, False for outlier.
+
+        Returns
+        -------
+        accuracy : scalar(float)
+            Accuracy of predictions.
+        """
+        return self.accuracy(X, y)
+    
+    def accuracy(self, X, y):
+        """
+        Get the fraction of correct predictions.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        y : array_like(bool, ndim=1), optional(default=None)
+            Correct labels; True for inlier, False for outlier.
+
+        Returns
+        -------
+        accuracy : scalar(float)
+            Accuracy of predictions.
+        """
+        y = self._column_y(y)
+        if not isinstance(y[0][0], (np.bool_, bool)):
+            raise ValueError("y must be provided as a Boolean array")
+        X_pred = self.predict(X)
+        assert (
+            y.shape[0] == X_pred.shape[0]
+        ), "X and y do not have the same dimensions."
+
+        return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
         r"""
