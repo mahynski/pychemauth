@@ -567,11 +567,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
         self.n_features_in_ = self.__X_.shape[1]
 
-        if (
-            self.n_components
-            > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
-        ):
-            raise Exception("Reduce the number of PCA components")
+        max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+        if ( self.n_components > max_components):
+            warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(max_components))
+            set_params(**{"n_components": max_components})
 
         # 1. Standardize X
         self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
@@ -1049,17 +1048,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
             self.n_features_in_ = self.__X_.shape[1]
 
-            if (
-                self.n_components
-                > np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
-            ):
-                raise Exception(
-                    "Reduce the number of PCA components {} {} {}".format(
-                        self.n_components,
-                        self.n_features_in_,
-                        self.__X_.shape[0],
-                    )
-                )
+            max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+            if (self.n_components > max_components):
+                warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(max_components))
+                set_params(**{"n_components": max_components})
 
             if robust == "full":
                 raise NotImplementedError
