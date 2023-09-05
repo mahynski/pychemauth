@@ -4,10 +4,12 @@ Soft independent modeling of class analogies.
 author: nam
 """
 import copy
+import warnings
+import scipy
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
+
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
@@ -237,7 +239,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
     def fit_transform(self, X, y):
         """
-        Fit and transform.
+        Fit then transform.
 
         Parameters
         ----------
@@ -568,9 +570,9 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.n_features_in_ = self.__X_.shape[1]
 
         max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
-        if ( self.n_components > max_components):
-            warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(max_components))
-            set_params(**{"n_components": max_components})
+        if (self.n_components > max_components):
+            warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(np.max([1, max_components])))
+            self.set_params(**{"n_components": np.max([1, max_components])})
 
         # 1. Standardize X
         self.__ss_ = CorrectedScaler(with_mean=True, with_std=self.scale_x)
@@ -1048,10 +1050,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
             self.n_features_in_ = self.__X_.shape[1]
 
-            max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+            max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1 
             if (self.n_components > max_components):
-                warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(max_components))
-                set_params(**{"n_components": max_components})
+                warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(np.max([1, max_components])))
+                self.set_params(**{"n_components": np.max([1, max_components])})
 
             if robust == "full":
                 raise NotImplementedError

@@ -13,6 +13,193 @@ from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_X_y
 
+from pychemauth.eda.explore import InspectData
+
+class CollinearFeatureSelector:
+    """
+    Select features from different clusters determined by their collinearity.
+    
+    Parameters
+    ----------
+    t : scalar(float), optional(default=0.0)
+        See `InspectData.cluster_collinear; Ward clustering threshold to 
+        determine the number of clusters.
+    
+    seed : scalar(int), optional(default=42)
+        Random number generator seed.  Set this value for reproducible 
+        calculations.
+        
+    minimize_label_entropy : scalar(bool)
+        Whether or not to refine choices based on a lookup function which
+        defines the similarity of features.
+        
+    kwargs : dict()
+        A dictionary of keyword arguments to `InspectData.minimize_cluster_label_entropy`.
+        If `minimize_label_entropy` is true, this should at least contain a `lookup` function, but may also 
+        include: {cutoff_factor, n_restarts, max_iters, early_stopping, T}.
+        
+    Note
+    ----
+    This is intended for use with `sklearn.feature_selection.SelectFromModel`.
+    
+    Warning
+    -------
+    If you are using `minimize_label_entropy` the lookup function has an important restriction.
+    The `lookup` function may take multiple default arguments, but the first should be an
+    integer corresponding to the column index (starting from 0).  Data column names are not present if 
+    data is a numpy array, and not stored if it is provided as as pandas.DataFrame so that operations 
+    are consistent with `sklearn.feature_selection.SelectFromModel`. Fortunately, name information
+    can be encoded in the default parameters when it is defined at the scope of the SelectFromModel
+    object. This is important if you want to categorize features based on their name.  
+    See the example below for illustration.
+    
+    Example
+    -------
+    >>> from sklearn.feature_selection import SelectFromModel
+    >>> column_names = ['ash', 'malic acid', ...]
+    >>> def lookup(feature_idx, column_names=column_names):
+    ...    if 'l' in column_names[feature_idx].lower():
+    ...        return 'Contains letter L'
+    ...    else:
+    ...        return 'No letter L'
+    >>> se = SelectFromModel(
+    ...    estimator=ClusterSelector(t=0.9, seed=42, minimize_label_entropy=True, 
+    ...    kwargs={"lookup":lookup, "n_restarts":5, "max_iters":100, "T":1.0}),
+    ...    threshold=0.5,
+    ...    prefit=False)
+    >>> se.fit(X_train)
+    """
+    def __init__(self, t=0.0, seed=42, minimize_label_entropy=False, kwargs={}):
+        """ Instantiate the selector."""
+        self.set_params(
+            **{
+                "t": t,
+                "seed": seed,
+                "minimize_label_entropy": minimize_label_entropy,
+                "kwargs": kwargs
+            }
+        )
+        self.is_fitted_ = False
+        
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "t": self.t,
+            "seed": self.seed,
+            "minimize_label_entropy": self.minimize_label_entropy,
+            "kwargs": self.kwargs
+        }
+    
+    def _matrix_X(self, X, train=False):
+        """Check that observations are rows of X."""
+        X = np.array(X, dtype=np.float64).copy()
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        elif X.ndim > 2:
+            raise ValueError("Incorrect feature matrix shape")
+        
+        if train is True:
+            self.n_features_in_ = X.shape[1]
+        else:
+            assert (
+                X.shape[1] == self.n_features_in_
+            ), "Incorrect number of features given in X."
+
+        return X
+    
+    def fit(self, X, y=None):
+        """
+        Fit the selector
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2) or pandas.DataFrame
+            Input feature matrix.
+            
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+            
+        Returns
+        -------
+        self : CollinearFeatureSelector
+            Fitted selector.
+        """           
+        X = self._matrix_X(X, train=True)
+        selected_features, cluster_id_to_feature_ids, _ = InspectData.cluster_collinear(
+            X=X,
+            feature_names=None, # We use indices here not names to be consistent with sklearn.feature_selection.SelectFromModel
+            t=self.t,
+            display=False # We can change this to False so we don't have these plots 
+        )
+        self.is_fitted_ = True
+        
+        self.feature_importances_ = np.zeros(X.shape[1])
+        if self.minimize_label_entropy is True:
+            # Optimize choices in the cluster
+            best_choices = InspectData.minimize_cluster_label_entropy(
+                 cluster_id_to_feature_ids=cluster_id_to_feature_ids, 
+                 X=pd.DataFrame(data=X, columns=np.arange(X.shape[1])), 
+                 seed=self.seed,
+                 **self.kwargs)
+            
+            for idx in best_choices:
+                self.feature_importances_[idx] = 1
+        else:
+            # Select a random feature from each cluster
+            np.random.seed(self.seed)
+            for cluster in cluster_id_to_feature_ids.keys():
+                feature_idx = cluster_id_to_feature_ids[cluster][np.random.randint(0, high=len(cluster_id_to_feature_ids[cluster]))]
+                self.feature_importances_[feature_idx] = 1
+        
+        return self
+    
+    def transform(self, X):
+        """
+        Transform X by removing features not selected.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2) or pandas.DataFrame
+            Input feature matrix.
+            
+        Returns
+        -------
+        X_selected : array_like(float, ndim=2) or pandas.DataFrame
+            X with all features not selected removed. If X is provided as a DataFrame
+            a DataFrame is returned.
+        """
+        mask = np.asarray(self.feature_importances_, dtype=bool)
+        X_ = self._matrix_X(X, train=False)[:,mask]
+        if isinstance(X, pd.DataFrame):
+            return pd.DataFrame(data=X_, columns=X.columns[mask])
+        else:
+            return X_
+        
+    def fit_transform(self, X, y=None):
+        """
+        Fit then transform.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+            
+        y : array_like(float, ndim=1), optional(default=None)
+            Ignored.
+            
+        Returns
+        -------
+        X_selected : array_like(float, ndim=2)
+            X with all features not selected removed.
+        """
+        self.fit(X, y)
+        return self.transform(X)
 
 class JensenShannonDivergence:
     r"""

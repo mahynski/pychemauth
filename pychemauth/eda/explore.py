@@ -443,7 +443,7 @@ class InspectData:
         for cid, features in cluster_id_to_feature_ids.items():
             safe_features[cid] = [f for f in features if counts(f) > cutoff]
             assert (
-                len(safe_features) > 0
+                len(safe_features[cid]) > 0
             ), "Cutoff is too severe, no features allowed in \
                 cluster {}".format(
                 cid
