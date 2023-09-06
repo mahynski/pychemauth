@@ -759,10 +759,13 @@ class BorutaSHAPFeatureSelector:
         is consistent with this choice.
     
     percentile : scalar(int), optional(default=100)
-        BorutaSHAP percentile to use.
+        BorutaSHAP percentile to use.  This sets the percentile of the shadow features' 
+        importances which the algorithm uses as the threshold to determine if a feature
+        gets a "hit".  The original Boruta implementation uses the max importance feature
+        of all the shadow features, equivalent to the default value of 100 here.
     
     pvalue : scalar(float), optional(default=0.05)
-        P-value to use in BorutaSHAP.
+        P-value to use in BorutaSHAP. 
 
     seed : scalar(int), optional(default=42)
         Seed for BorutaSHAP calculation.
