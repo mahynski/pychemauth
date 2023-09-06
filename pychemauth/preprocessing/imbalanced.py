@@ -21,7 +21,7 @@ class ScaledSMOTEENN:
     sampling_strategy_smote : str, optional(default="not majority")
         Sampling strategy for SMOTE.
 
-    sampling_strategy_enn : str, optional(default="all")
+    sampling_strategy_enn : str, optional(default="not majority")
         Sampling strategy for ENN.
 
     k_smote : scalar(int), optional(default=5)
@@ -89,7 +89,7 @@ class ScaledSMOTEENN:
         self,
         sampling_strategy_smoteenn="not majority",
         sampling_strategy_smote="not majority",
-        sampling_strategy_enn="all",
+        sampling_strategy_enn="not majority",
         k_smote=5,
         k_enn=3,
         kind_sel_enn="all",
