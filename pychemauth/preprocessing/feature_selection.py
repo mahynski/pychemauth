@@ -112,6 +112,39 @@ class CollinearFeatureSelector:
             ), "Incorrect number of features given in X."
 
         return X
+
+    def get_feature_names_out(self, input_features=None):
+        """
+        Return the selected features.
+        
+        Parameters
+        ----------
+        input_features : array_like(str, ndim=1), optional(default=None)
+            List of input features to mask.
+
+        Returns
+        -------
+        features_out : ndarray(str or bool, ndim=1)
+            Array of features if `input_features` is provided, otherwise boolean mask.
+
+        """
+        mask = np.asarray(self.feature_importances_, dtype=bool)
+        if input_features is not None:
+            assert len(input_features) == self.n_features_in_, "input_features has the wrong size."
+            return np.array(input_features, dtype=str)[mask]
+        else:
+            return mask
+        
+    def get_support(self):
+        """
+        Return the selected features.
+
+        Returns
+        -------
+        support : ndarray(bool, ndim=1)
+            Boolean array of columns that were selected.
+        """
+        return np.asarray(self.feature_importances_, dtype=bool)
     
     def fit(self, X, y=None):
         """
@@ -519,6 +552,9 @@ class JensenShannonDivergence:
             else:
                 self.__divergence_ = top_class_div
 
+        # So this is compatible with sklearn.feature_selection.SelectFromModel
+        self.feature_importances_ = np.asarray(self.__mask_, dtype=int)
+
         return self
 
     def transform(self, X):
@@ -636,8 +672,7 @@ class JensenShannonDivergence:
             _ = ax.set_xticklabels(xv, rotation=90)
             plt.tight_layout()
 
-    @property
-    def accepted(self):
+    def get_feature_names_out(self):
         """
         Return the selected features.
 

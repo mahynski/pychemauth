@@ -147,11 +147,11 @@ class TestJensenShannonDivergence(unittest.TestCase):
         self.assertAlmostEqual(div[1][1]["A"], 2 / 3.0)
         self.assertAlmostEqual(div[1][1]["B"], 2 / 3.0)
 
-    def test_accepted(self):
-        """Test accepted returns the correct feature."""
+    def test_get_feature_names_out(self):
+        """Test get_feature_names_out returns the correct feature."""
         # Without names
         self.js.fit(self.X, self.y)
-        self.assertTrue(np.all(self.js.accepted == np.array([True, False])))
+        self.assertTrue(np.all(self.js.get_feature_names_out() == np.array([True, False])))
 
         # With names
         for per_class in [True, False]:
@@ -159,7 +159,7 @@ class TestJensenShannonDivergence(unittest.TestCase):
                 top_k=1, per_class=per_class, feature_names=["FEAT_A", "FEAT_B"]
             )
             js.fit(self.X, self.y)
-            self.assertTrue(np.all(js.accepted == np.array(["FEAT_A"])))
+            self.assertTrue(np.all(js.get_feature_names_out() == np.array(["FEAT_A"])))
 
     def test_transform(self):
         """Test transformation selects right column."""
