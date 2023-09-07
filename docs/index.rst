@@ -184,11 +184,9 @@ Diagnostics
    :includehidden:
    :caption: Learn
 
-..      
-   pca
-   pls
-   pls-da
-   simca
+   cross_validation
+
+..   chemometric_tools
    shallow_learning
    deep_learning
 
