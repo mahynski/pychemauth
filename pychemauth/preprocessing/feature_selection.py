@@ -354,7 +354,7 @@ class JensenShannonDivergence:
     ...    'smote__kind_sel_enn':['all', 'mode'],
     ...    'tree__max_depth':np.arange(1,4+1),
     ... }]
-    >>> ncv = NestedCV(k_inner=2, k_outer=5)
+    >>> ncv = BiasedNestedCV(k_inner=2, k_outer=5)
     >>> results = ncv.grid_search(pipeline, param_grid, X.values, y.values)
     """
 
@@ -820,7 +820,7 @@ class BorutaSHAPFeatureSelector:
     ...     )
     >>> gs.fit(X.values, y.values)
     >>> # OR, ...
-    >>> NestedCV().grid_search(pipeline, param_grid, X.values, y.values)
+    >>> BiasedNestedCV().grid_search(pipeline, param_grid, X.values, y.values)
     """
 
     def __init__(
