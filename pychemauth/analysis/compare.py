@@ -176,10 +176,12 @@ class Compare:
             rkf = RepeatedStratifiedKFold(
                 n_splits=k, n_repeats=n_repeats, random_state=random_state
             )
+            split = rkf.split(X, y)
         else:
             rkf = RepeatedKFold(
                 n_splits=k, n_repeats=n_repeats, random_state=random_state
             )
+            split = rkf.split(X)
 
         X = np.asarray(X)
         y = np.asarray(y)
@@ -198,7 +200,7 @@ class Compare:
 
         scores1 = []
         scores2 = []
-        for train_index, test_index in rkf.split(X):
+        for train_index, test_index in split:
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
