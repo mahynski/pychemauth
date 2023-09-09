@@ -264,8 +264,8 @@ class Compare:
 
     @staticmethod
     def repeated_kfold(
-        pipe1,
-        pipe2,
+        estimator1,
+        estimator2,
         X,
         y,
         n_repeats=5,
@@ -280,11 +280,11 @@ class Compare:
 
         Parameters
         ----------
-        pipe1 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
+        estimator1 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
             Any pipeline or estimator that implements the fit() and score()
             methods. Can also be a GridSearchCV object.
 
-        pipe2 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
+        estimator2 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
             Pipeline to compare against. Can also be a GridSearchCV object.
         
         X : array_like(float, ndim=2)
@@ -306,19 +306,19 @@ class Compare:
             If True, use RepeatedStratifiedKFold - this is only valid for
             classification tasks.
         
-        pipe1_mask : array_like(bool, ndim=1), optional(default=None)
-            Which columns of X to use in pipe1; default of None uses all columns.
+        estimator1_mask : array_like(bool, ndim=1), optional(default=None)
+            Which columns of X to use in estimator1; default of None uses all columns.
         
-        pipe2_mask : array_like(bool, ndim=1), optional(default=None)
-            Which columns of X to use in pipe2; default of None uses all columns.
+        estimator2_mask : array_like(bool, ndim=1), optional(default=None)
+            Which columns of X to use in estimator2; default of None uses all columns.
 
         Returns
         -------
         scores1 : list(float)
-            List of scores for pipeline1.
+            List of scores for estimator1.
 
         scores2 : list(float)
-            List of scores for pipeline2.
+            List of scores for estimator2.
             
         Note
         ----
@@ -327,7 +327,7 @@ class Compare:
         t-test hypothesis testing using these scores.
 
         When comparing 2 pipelines that use different columns of X, use the
-        pipeX_mask variables to specify which columns to use.
+        estimatorX_mask variables to specify which columns to use.
         """
         if stratify:
             rkf = RepeatedStratifiedKFold(
@@ -343,17 +343,17 @@ class Compare:
         X = np.asarray(X)
         y = np.asarray(y)
 
-        if pipe1_mask:
-            pipe1_mask = np.asarray(pipe1_mask, dtype=bool)
-            assert len(pipe1_mask) == X.shape[1]
+        if estimator1_mask:
+            estimator1_mask = np.asarray(estimator1_mask, dtype=bool)
+            assert len(estimator1_mask) == X.shape[1]
         else:
-            pipe1_mask = np.array([True] * X.shape[1])
+            estimator1_mask = np.array([True] * X.shape[1])
 
-        if pipe2_mask:
-            pipe2_mask = np.asarray(pipe2_mask, dtype=bool)
-            assert len(pipe2_mask) == X.shape[1]
+        if estimator2_mask:
+            estimator2_mask = np.asarray(estimator2_mask, dtype=bool)
+            assert len(estimator2_mask) == X.shape[1]
         else:
-            pipe2_mask = np.array([True] * X.shape[1])
+            estimator2_mask = np.array([True] * X.shape[1])
 
         scores1 = []
         scores2 = []
@@ -361,11 +361,11 @@ class Compare:
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            pipe1.fit(X_train[:, pipe1_mask], y_train)
-            scores1.append(pipe1.score(X_test[:, pipe1_mask], y_test))
+            estimator1.fit(X_train[:, estimator1_mask], y_train)
+            scores1.append(estimator1.score(X_test[:, estimator1_mask], y_test))
 
-            pipe2.fit(X_train[:, pipe2_mask], y_train)
-            scores2.append(pipe2.score(X_test[:, pipe2_mask], y_test))
+            estimator2.fit(X_train[:, estimator2_mask], y_train)
+            scores2.append(estimator2.score(X_test[:, estimator2_mask], y_test))
 
         return scores1, scores2
 
