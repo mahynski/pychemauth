@@ -23,56 +23,55 @@ class BiasedNestedCV:
 
     Parameters
     ----------
-    k_inner : scalar(int), optional(default=2)
+    k_inner : scalar(int), optional(default=10)
         K-fold for inner loop.
 
-    k_outer : scalar(int), optional(default=5)
+    k_outer : scalar(int), optional(default=10)
         K-fold for outer loop.
             
     Note
     ----
+    This performs a version of repeated "flat CV" as defined in [1] to statistically
+    compare the performance of two pipelines or models.  This is done by 
+    nesting flat CV inside an outer loop, akin to nested CV.
     This differs from scikit-learn's "built in" method of doing nested CV of
-    cross_val_score(GridSeachCV()) in that cross_val_score() only returns
-    the score from the test fold on the outer loop, after the best model is
-    (usually) retrained on the entire training set using the best
-    hyperparameters determined via the inner loop.  For doing statistical
-    tests we want to have the validation scores from all the inner loops
-    and are not interested in re-training/scoring on the outer loop.  The
-    outer loop is just a way to "shift" or decorrelate the data chunks
-    relative to simple repeated CV.
+    cross_val_score(GridSeachCV()) in that cross_val_score() returns
+    the scores from each test fold on the outer loop, obtained by training the best
+    model on the entire inner set of training folds using the best
+    hyperparameters determined by that the inner loop.  This is conventional "Nested CV" 
+    which uses the performance on the held-out test fold for an unbiased esimate of 
+    the generalization error [2].
+    
+    Here, we instead extract the performance estimates from the best model's validation 
+    fold (held out part of the inner training folds) used to select the hyperparameters 
+    for a given iteration of the outer loop.  These performance estimates are positively 
+    biased, but extensive real-world testing suggests that using the scores from the 
+    "flat CV" to **rank** different models does not make practical difference [2] to 
+    their relative ordering. Therefore, we can use the inner scores directly in concert 
+    with paired t-tests to compare different pipelines when it is too computationally
+    expensive to do repeated nested CV.
 
-    This is used to assess the generalization error of an entire pipeline,
-    which includes the model fitting, and hyperparameter search, for example.
-    It may also include resampling, etc. of whatever else is part of the
-    pipeline.  Thus, these estimates can be uses to asses the relative
-    performances of different pipelines using corrected paired t-tested, etc.
-
-    Typically, it is sufficient to perform relatively coarse grid searching
-    when comparing different pipelines.  After pipelines are evaluated, the
-    chosen one may be further optimized with more care, but these estimates
-    of performance and uncertainty are expected to hold.
-
-    "Nested CV" typically uses the held-out test fold for an unbiased esimate
-    of the generalization error, as described above [1].  However, extensive
-    real-world tests suggest that using the scores from the "flat CV" (the
-    validation set) which is also used to identify optimal hyperparameters,
-    does NOT make practical difference [2].  Therefore, we use the inner
-    scores directly in concert with the statistical tests developed for cases
-    where hyperparameter optimization was not assumed to be occuring
-    simultaneously.
+    Unlike simple repetition of any CV procedure, framing this as a nested CV uses 
+    the outer loop as way to "shift" or decorrelate the data chunks more relative to 
+    simply reshuffling and reusing the data.  Thus, the Nadeau and Bengio's correction 
+    factor [3] for the t-test is less necessary, but further aids in making conservative
+    inference.
 
     References
     ----------
-    [1] Cawley, G.C.; Talbot, N.L.C. On over-fitting in model selection and
-    subsequent selection bias in performance evaluation. J. Mach. Learn. Res
-    2010, 11, 2079-2107.
-    
-    [2] Wainer, Jacques, and Gavin Cawley. "Nested cross-validation when
+    [1] Wainer, J. and Cawley G., "Nested cross-validation when
     selecting classifiers is overzealous for most practical applications."
-    Expert Systems with Applications 182 (2021): 115222.
+    Expert Systems with Applications 182, 115222 (2021).
+    
+    [2] Cawley, G.C. and Talbot, N.L.C., "On over-fitting in model selection and
+    subsequent selection bias in performance evaluation," J. Mach. Learn. Res
+    11, 2079-2107 (2010).
+
+    [3] Nadeau, C. and Bengio Y., "Inference for the Generalization Error," Machine
+    Learning 52, 239-281 (2003).
     """
 
-    def __init__(self, k_inner=2, k_outer=5):
+    def __init__(self, k_inner=10, k_outer=10):
         """Instantiate the class."""
         self.__k_inner = k_inner
         self.__k_outer = k_outer
@@ -117,6 +116,9 @@ class BiasedNestedCV:
             scores = np.concatenate((scores, self._get_test_scores(pipeline)))
 
         return scores
+
+    def random_search(self, *args, **kwargs):
+        raise NotImplementedError
 
     def grid_search(self, pipeline, param_grid, X, y, classification=True):
         """
