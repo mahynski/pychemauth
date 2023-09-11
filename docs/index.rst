@@ -185,9 +185,9 @@ Diagnostics
    :caption: Learn
 
    cross_validation
+   chemometrics
 
-..   chemometric_tools
-   shallow_learning
+..   shallow_learning
    deep_learning
 
 Indices and tables
