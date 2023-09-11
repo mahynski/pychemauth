@@ -3,15 +3,417 @@ Non-linear manifold-based dimensionality reduction methods classified with an el
 
 author: nam
 """
+import scipy
+import copy 
+
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
+
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
+class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
+    r"""
+    Train an EllipticManifold model for a target class.
 
-class EllipticManifold(ClassifierMixin, BaseEstimator):
+    Parameters
+    ----------
+    alpha : scalar(float)
+        Type I error rate (signficance level).
+
+    dr_model : object
+        Dimensionality reduction model, such as PCA; must support fit() and transform().
+
+    kwargs : dict
+        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs). Must
+        contain the `ndims` keyword.
+
+    ndims : str, optional(default="n_components")
+        Keyword in kwargs that corresponds to the dimensionality of the final space.
+
+    robust : scalar(bool), optional(default=True)
+        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
+        Mahalanobis distances.
+
+    center : str, optional(default="score")
+        If "score", center the ellipse in the score space; otherwise go from transformation
+        of the mean in the original data space.
+
+    target_class : scalar(str or int), optional(default=None)
+        The class used to fit the SIMCA model; the rest are used
+        to test specificity.
+        
+    use : str, optional(default="rigorous")
+        Which methodology to use to evaluate the model ("rigorous", "compliant")
+        (default="rigorous"). See Ref. [1] for more details.
+            
+    Note
+    ----
+    Essentially, an EllipticManifold model is trained for one target class. The target is
+    set when this class is instantiated and must be one of (but doesn't need
+    to be the only) class found in the training set (this is checked
+    automatically).  During testing (.score()), points are broken up by
+    class and based on the method, may be used to see how well the target class
+    can be distinguished from each alternative.  This allows you to pass points
+    that belong to other classes during training - they are just ignored.  This
+    is important for integration with other scikit-learn, etc. workflows.
+
+    Note that when you are optimizing the model using TEFF, TSPS is
+    computed by using the alternative classes.  In that case, the model choice
+    is influenced by these alternatives.  This is a "compliant" approach,
+    however, if you use TSNS instead of TEFF the model only uses information
+    about the target class itself.  This is a "rigorous" approach which can
+    be important to consider to avoid bias in the model.
+
+    When TEFF is used to choose a model, this is a "compliant" approach,
+    whereas when TSNS is used instead, this is a "rigorous" approach. 
+    In rigorous models, alpha should be fixed as other hyperparameters are adjusted
+    to match this target; in compliant approaches this can be allowed to vary
+    and the model with the best efficiency is selected. [1]
+
+    References
+    ----------
+    [1] "Rigorous and compliant approaches to one-class classification,"
+    Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
+    Lab. Sys. (2016) 89-96.
+    
+    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
+    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
+    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    """
+    def __init__(
+        self,
+        alpha=0.05,
+        dr_model=None,
+        kwargs=None,
+        ndims="n_components",
+        robust=True,
+        center='score',
+        target_class=None,
+        use="rigorous",
+    ):
+        """ Instantiate the classifier."""
+        self.set_params(
+            **{
+                "alpha": alpha,
+                "dr_model": dr_model,
+                "kwargs": kwargs,
+                "ndims": ndims,
+                "robust": robust,
+                "center": center,
+                "target_class": target_class,
+                "use": use,
+            }
+        )
+        self.is_fitted_ = False
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "alpha": self.alpha,
+            "dr_model": copy.deepcopy(self.dr_model) if deep else self.dr_model,
+            "kwargs": self.kwargs,
+            "ndims": self.ndims,
+            "robust": self.robust,
+            "center": self.center,
+            "target_class": self.target_class,
+            "use": self.use,
+        }
+
+    def fit(self, X, y):
+        """
+        Fit the EllipticManifold authenticator model.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+
+        y : array_like(str or int, ndim=1)
+            Class labels or indices. Should include some examples of
+            "target_class".
+        
+        Returns
+        -------
+        self : EllipticManifold_Authenticator
+            Fitted model.
+
+        Note
+        ----
+        Only data of the target class will be used for fitting, though more
+        can be provided. This is important in pipelines, for example, when
+        SMOTE is used to up-sampled minority classes; in that case, those
+        must be part of the pipeline for those steps to work automatically.
+        However, a user may manually provide only the data of interest.
+        """
+        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
+            raise ValueError("Cannot use sparse data.")
+        X, y = check_X_y(X, y, accept_sparse=False)
+        self.n_features_in_ = X.shape[1]
+
+        # Fit model to target data
+        self.__model_ = EllipticManifold_Model(
+            alpha=self.alpha,
+            dr_model=self.dr_model,
+            kwargs=self.kwargs,
+            ndims=self.ndims,
+            robust=self.robust,
+            center=self.center,
+        )
+
+        assert self.target_class in np.unique(
+            y
+        ), "target_class not in training set"
+        self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
+        self.is_fitted_ = True
+
+        return self
+
+    def transform(self, X):
+        """
+        Transform into the `dr_model` subspace.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+        
+        Returns
+        -------
+        projected : ndarray(float, ndim=2)
+            X transformed into the `dr_model` subspace.
+
+        Note
+        ----
+        This is necessary for scikit-learn compatibility.
+        """
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.transform(X)
+
+    def fit_transform(self, X, y):
+        """
+        Fit then transform.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+        
+        y : array_like(str or int, ndim=1)
+            Class labels or indices. Should include some examples of
+            "target_class".
+
+        Returns
+        -------
+        projected : ndarray(float, ndim=2)
+            X transformed into the `dr_model` subspace.
+
+        Note
+        ----
+        This is necessary for scikit-learn compatibility.
+        """
+        _ = self.fit(X, y)
+        return self.transform(X)
+
+    def predict(self, X):
+        """
+        Make a prediction.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+        
+        Returns
+        -------
+        predictions : ndarray(bool, ndim=1)
+            Whether or not each point is an inlier.   
+        """
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.predict(X)
+
+    def predict_proba(self, X, y=None):
+        """
+        Predict the probability that observations are inliers.
+        
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+
+        y : array_like(str or int, ndim=1), optional(default=None)
+            Class labels or indices.
+        
+        Returns
+        -------
+        probability : ndarray(float, ndim=2)
+            Probability that each point is an inlier.  First column
+            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+        """
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.predict_proba(X, y)
+
+    @property
+    def model(self):
+        """
+        Return the trained undelying EllipticManifold_Model.
+        
+        Returns
+        -------
+        model : EllipticManifold_Model
+            The trained EllipticManifold_Model being used.
+        """
+        check_is_fitted(self, "is_fitted_")
+        return copy.deepcopy(self.__model_)
+
+    def score(self, X, y):
+        r"""
+        Score the model.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+
+        y : array_like(str or int, ndim=1)
+            Class labels or indices.
+
+        Returns
+        -------
+        score : scalar(float)
+            The model's score. For rigorous models this is the negative
+            squared deviation of TSNS from (1-:math:`\alpha`); for compliant
+            models this is the TEFF.
+
+        Note
+        ----
+        The "rigorous" approach uses only the target class to score
+        the model and returns -(TSNS - (1-:math:`\alpha`))^2; the "compliant"
+        approach returns TEFF. In both cases, a larger output is a
+        "better" model.
+        """
+        if self.use == "rigorous":
+            # Make sure we have the target class to test on
+            assert self.target_class in set(np.unique(y))
+
+            m = self.metrics(X, y)
+            return -((m["tsns"] - (1 - self.alpha)) ** 2)
+        elif self.use == "compliant":
+            # Make sure we have alternatives to test on
+            a = set(np.unique(y))
+            a.discard(self.target_class)
+            assert len(a) > 0
+
+            # Make sure we have the target class to test on
+            assert self.target_class in set(np.unique(y))
+
+            m = self.metrics(X, y)
+            return m["teff"]
+        else:
+            raise ValueError("Unrecognized setting use=" + str(self.use))
+
+    def metrics(self, X, y):
+        """
+        Compute figures of merit for the model.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Input feature matrix.
+
+        y : array_like(str or int, ndim=1)
+            Class labels or indices.
+
+        Returns
+        -------
+        metrics : dict(str:float)
+            Dictionary of {"TSNS", "TSPS", "TEFF"}.
+
+        Note
+        ----
+        If using a set with only the target class present, then
+        TSPS = np.nan and TEFF = TSNS.  If only alternatives present,
+        sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF
+        as a geometric mean of TSNS and TSPS.
+        """
+        check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False)
+
+        self.__alternatives_ = [
+            c for c in sorted(np.unique(y)) if c != self.target_class
+        ]
+
+        CSPS_ = {}
+        for class_ in self.__alternatives_:
+            mask = y == class_
+            CSPS_[class_] = 1.0 - np.sum(
+                self.__model_.predict(X[mask])
+            ) / np.sum(mask)
+
+        mask = y != self.target_class
+        if np.sum(mask) == 0:
+            # Testing on nothing but the target class, can't evaluate TSPS
+            TSPS_ = np.nan
+        else:
+            TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(mask)
+
+        mask = y == self.target_class
+        if np.sum(mask) == 0:
+            # Testing on nothing but alternative classes, can't evaluate TSNS
+            TSNS_ = np.nan
+        else:
+            TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
+                mask
+            )  # TSNS = CSNS for SIMCA
+
+        if np.isnan(TSNS_):
+            TEFF_ = TSPS_
+        elif np.isnan(TSPS_):
+            TEFF_ = TSNS_
+        else:
+            TEFF_ = np.sqrt(TSNS_ * TSPS_)
+
+        metrics = {
+            "teff": TEFF_,
+            "tsns": TSNS_,
+            "tsps": TSPS_,
+            "csps": CSPS_,
+        }
+        return metrics
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "poor_score": False,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": True,
+            "requires_positive_y": False,
+            "_skip_test": True,  # Skip since get_tags is unstable anyway
+            "_xfail_checks": {},
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
+
+class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 
@@ -24,7 +426,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         Dimensionality reduction model, such as PCA; must support fit() and transform().
 
     kwargs : dict
-        Keyword arguments for model; EllipticManifold.model = model(**kwargs). Must
+        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs). Must
         contain the `ndims` keyword.
 
     ndims : str, optional(default="n_components")
@@ -196,7 +598,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        self : EllipticManifold
+        self : EllipticManifold_Model
             Fitted model.
 
         Note
@@ -594,7 +996,7 @@ class EllipticManifold(ClassifierMixin, BaseEstimator):
         for a in alpha_values:
             params = self.get_params()
             params["alpha"] = a
-            model_ = EllipticManifold(**params)
+            model_ = EllipticManifold_Model(**params)
             model_.fit(X)
             n_observed.append(N_tot - np.sum(model_.predict(X)))
         n_observed = np.array(n_observed)

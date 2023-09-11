@@ -14,6 +14,7 @@ from sklearn.model_selection import (
     RepeatedStratifiedKFold,
     StratifiedKFold,
 )
+from sklearn.base import clone
 
 from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 
@@ -266,28 +267,23 @@ class Compare:
 
     @staticmethod
     def repeated_kfold(
-        estimator1,
-        estimator2,
+        estimators,
         X,
         y,
         n_repeats=5,
         k=2,
         random_state=0,
         stratify=True,
-        pipe1_mask=None,
-        pipe2_mask=None,
+        estimators_mask=None,
     ):
         """
-        Perform repeated (stratified) k-fold cross validation to get scores.
+        Perform repeated (stratified) k-fold cross validation to get scores for multiple estimators.
 
         Parameters
         ----------
-        estimator1 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
-            Any pipeline or estimator that implements the fit() and score()
-            methods. Can also be a GridSearchCV object.
-
-        estimator2 : sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator
-            Pipeline to compare against. Can also be a GridSearchCV object.
+        estimators : array_like(sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator, ndim=1)
+            A list of pipelines or estimators that implements the fit() and score()
+            methods. These can also be a GridSearchCV object.
         
         X : array_like(float, ndim=2)
             Matrix of features.
@@ -308,19 +304,16 @@ class Compare:
             If True, use RepeatedStratifiedKFold - this is only valid for
             classification tasks.
         
-        estimator1_mask : array_like(bool, ndim=1), optional(default=None)
-            Which columns of X to use in estimator1; default of None uses all columns.
+        estimators_mask : list(array_like(bool, ndim=1)), optional(default=None)
+            Which columns of X to use in each estimator; default of None uses all columns for
+            all estimators.  If specified, a mask must be given for each estimator.
         
-        estimator2_mask : array_like(bool, ndim=1), optional(default=None)
-            Which columns of X to use in estimator2; default of None uses all columns.
-
         Returns
         -------
-        scores1 : list(float)
-            List of scores for estimator1.
-
-        scores2 : list(float)
-            List of scores for estimator2.
+        scores : ndarray(float, ndim=2)
+            List of scores for estimator.  Each row is a different estimator, in order
+            of how they were provided, and each column is the result from a different
+            test fold.
             
         Note
         ----
@@ -329,8 +322,13 @@ class Compare:
         t-test hypothesis testing using these scores.
 
         When comparing 2 pipelines that use different columns of X, use the
-        estimatorX_mask variables to specify which columns to use.
+        estimators_mask variables to specify which columns to use.
         """
+        if not hasattr(estimators, '__iter__'):
+            raise TypeError('estimators is not iterable')
+        else:
+            estimators = [clone(est) for est in estimators]
+
         if stratify:
             rkf = RepeatedStratifiedKFold(
                 n_splits=k, n_repeats=n_repeats, random_state=random_state
@@ -345,31 +343,28 @@ class Compare:
         X = np.asarray(X)
         y = np.asarray(y)
 
-        if estimator1_mask:
-            estimator1_mask = np.asarray(estimator1_mask, dtype=bool)
-            assert len(estimator1_mask) == X.shape[1]
+        if estimators_mask is not None:
+            if len(estimators_mask) != len(estimators):
+                raise Exception("A mask must be provided for each estimator.")
+            estimators_mask = [np.asarray(mask, dtype=bool) for mask in estimators_mask]
+            for i,mask in enumerate(estimators_mask):
+                if len(mask) != X.shape[1]:
+                    raise ValueError(f"Mask index {i} has the wrong size")
         else:
-            estimator1_mask = np.array([True] * X.shape[1])
+            estimators_mask = [np.array([True] * X.shape[1]) for est in estimators]
 
-        if estimator2_mask:
-            estimator2_mask = np.asarray(estimator2_mask, dtype=bool)
-            assert len(estimator2_mask) == X.shape[1]
-        else:
-            estimator2_mask = np.array([True] * X.shape[1])
-
-        scores1 = []
-        scores2 = []
+        scores = []
         for train_index, test_index in split:
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            estimator1.fit(X_train[:, estimator1_mask], y_train)
-            scores1.append(estimator1.score(X_test[:, estimator1_mask], y_test))
+            fold_scores = []
+            for i,est in enumerate(estimators):
+                est.fit(X_train[:, estimators_mask[i]], y_train)
+                fold_scores.append(est.score(X_test[:, estimators_mask[i]], y_test))
+            scores.append(fold_scores)
 
-            estimator2.fit(X_train[:, estimator2_mask], y_train)
-            scores2.append(estimator2.score(X_test[:, estimator2_mask], y_test))
-
-        return scores1, scores2
+        return np.array(scores, dtype=np.float64).T
 
     @staticmethod
     def corrected_t(scores1, scores2, n_repeats):

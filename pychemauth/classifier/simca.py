@@ -313,7 +313,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__model_)
 
-    def score(self, X, y=None):
+    def score(self, X, y):
         r"""
         Score the model.
 
@@ -322,7 +322,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array_like(str or int, ndim=1)
             Class labels or indices.
 
         Returns
@@ -817,7 +817,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array_like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         Returns
