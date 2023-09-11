@@ -15,6 +15,4 @@ API Examples
    jupyter/gallery/elliptic_manifold_example
    jupyter/gallery/feature_selection
    jupyter/gallery/comparing_pipelines
-   jupyter/gallery/model_calibration
    jupyter/gallery/model_inspection
-   jupyter/gallery/shap_example
