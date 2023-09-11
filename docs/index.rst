@@ -184,8 +184,8 @@ Diagnostics
    :includehidden:
    :caption: Learn
 
-   cross_validation
    chemometrics
+   cross_validation
 
 ..   shallow_learning
    deep_learning
