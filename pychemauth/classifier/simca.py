@@ -214,6 +214,8 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
         self.is_fitted_ = True
 
+        self.classes_ = [True, False] # For sklearn compatibility - not used
+
         return self
 
     def transform(self, X):
@@ -295,10 +297,41 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         -------
         probability : ndarray(float, ndim=2)
             Probability that each point is an inlier.  First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
         """
         check_is_fitted(self, "is_fitted_")
         return self.__model_.predict_proba(X, y)
+
+    def decision_function(self, X, y=None):
+        """
+        Compute the decision function for each sample.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Columns of features; observations are rows - will be converted to
+            numpy array automatically.
+
+        y : array_like(str or int, ndim=1), optional(default=None)
+            Ignored.
+
+        Returns
+        -------
+        decision_function : ndarray(float, ndim=1)
+            Shifted, negative distance for each sample.
+
+        Note
+        ----
+        Following scikit-learn's EllipticEnvelope, this returns the negative
+        sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
+        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+
+        References
+        ----------
+        See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
+        """
+        check_is_fitted(self, "is_fitted_")
+        return self.__model_.decision_function(X, y)
 
     @property
     def model(self):
@@ -715,9 +748,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
-
+            2D array as sigmoid function of the decision_function(). 
+            Probability that each point is an inlier.  First column
+            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
+            
         Note
         ----
         Computes the sigmoid(decision_function(X, y)) as the
@@ -741,8 +775,8 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             )
         )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 0] = p_inlier
-        prob[:, 1] = 1.0 - p_inlier
+        prob[:, 1] = p_inlier
+        prob[:, 0] = 1.0 - p_inlier
         return prob
 
     def predict(self, X):
@@ -800,7 +834,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         prob = self.predict_proba(X, y)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
-        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+        p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
 
         # Return the negative, normalized log-loss
         return -np.sum(
@@ -1316,8 +1350,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            2D array as sigmoid function of the decision_function(). 
+            First column is NOT inlier, 1-p(x), second column is inlier 
+            probability, p(x).
 
         Note
         ----
@@ -1342,8 +1377,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             )
         )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 0] = p_inlier
-        prob[:, 1] = 1.0 - p_inlier
+        prob[:, 1] = p_inlier
+        prob[:, 0] = 1.0 - p_inlier
 
         return prob
 
@@ -1402,7 +1437,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         prob = self.predict_proba(X, y)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
-        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+        p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
 
         # Return the negative, normalized log-loss
         return -np.sum(

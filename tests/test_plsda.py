@@ -111,9 +111,9 @@ class TestPLSDA(unittest.TestCase):
 
         # Check a few predictions manually
         pred = plsda.predict([raw_x[1], raw_x[125], raw_x[150]])
-        self.assertEqual(pred[0][0], "JPN1")
-        self.assertEqual(pred[1][0], "PHI")
-        self.assertEqual(pred[2][0], "THA1")
+        self.assertEqual(pred[0], "JPN1")
+        self.assertEqual(pred[1], "PHI")
+        self.assertEqual(pred[2], "THA1")
 
         # Check some distances from projection to class centers
         distances = np.array(
@@ -470,9 +470,9 @@ class TestPLSDA(unittest.TestCase):
 
         # Check a few predictions manually
         pred = plsda.predict([raw_x[0], raw_x[10], raw_x[50]])
-        self.assertEqual(pred[0][0], "Fakes")
-        self.assertEqual(pred[1][0], "Fakes")
-        self.assertEqual(pred[2][0], "Oregano")
+        self.assertEqual(pred[0], "Fakes")
+        self.assertEqual(pred[1], "Fakes")
+        self.assertEqual(pred[2], "Oregano")
 
         # Check some distances from projection to class centers
         distances = np.array(

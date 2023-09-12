@@ -220,6 +220,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         assert self.not_assigned not in set(
             self.__ohencoder_.categories_[0]
         ), "not_assigned value is already taken"
+        self.classes_ = np.concatenate((self.__ohencoder_.categories_[0], [self.not_assigned]))# For sklearn compatibility - not used
 
         self.__class_mask_ = {}
         for i in range(len(self.__ohencoder_.categories_[0])):
@@ -636,10 +637,11 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        predictions : list(list)
+        predictions : list() or list(list)
             Predicted classes for each observation.  There may be multiple
-            predictions for each entry, and are listed from left to right in
-            order of decreasing likelihood.
+            predictions for each entry if `style=soft`, and are listed from left to right in
+            order of decreasing likelihood. For Hard PLS-DA only a simple list is
+            returned.
         
         Note
         ----
@@ -661,9 +663,7 @@ n_features [{}])] = [{}, {}].".format(
                 if len(belongs_to) == 0:
                     belongs_to = [self.not_assigned]
             else:
-                belongs_to = [
-                    d[0][0]
-                ]  # Take the closest class (smallest distance)
+                belongs_to = d[0][0] # Take the closest class (smallest distance)
 
             predictions.append(belongs_to)
 
@@ -675,7 +675,7 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        predictions : list(list)
+        predictions : list(list) or list
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
@@ -717,6 +717,10 @@ n_features [{}])] = [{}, {}].".format(
         since class sensitivity (CSNS) cannot be calculated.
         """
         check_is_fitted(self, "is_fitted_")
+
+        # For Hard PLS-DA, internally convert to list(list) so Soft PLS-DA is processed the same way.
+        if self.style.lower() == 'hard':
+            predictions = [[p] for p in predictions]
 
         trained_classes = np.unique(self.__ohencoder_.categories_)
 
