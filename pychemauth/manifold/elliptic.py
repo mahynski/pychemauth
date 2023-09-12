@@ -258,7 +258,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         -------
         probability : ndarray(float, ndim=2)
             Probability that each point is an inlier.  First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
         """
         check_is_fitted(self, "is_fitted_")
         return self.__model_.predict_proba(X, y)
@@ -842,7 +842,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
         -------
         probability : ndarray(float, ndim=2)
             2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
 
         Note
         ----
@@ -862,8 +862,8 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
         """
         p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 0] = p_inlier
-        prob[:, 1] = 1.0 - p_inlier
+        prob[:, 1] = p_inlier
+        prob[:, 0] = 1.0 - p_inlier
 
         return prob
 
@@ -902,7 +902,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
         prob = self.predict_proba(X)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
-        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+        p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
 
         # Return the negative, normalized log-loss
         return -np.sum(

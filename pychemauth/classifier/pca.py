@@ -433,7 +433,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         probabilities : ndarray(float, ndim=2)
             2D array as sigmoid function of the decision_function(). First column
-            is for inliers, p(x), second columns is NOT an inlier, 1-p(x).
+            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
             
         Note
         ----
@@ -456,8 +456,8 @@ class PCA(ClassifierMixin, BaseEstimator):
             )
         )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 0] = p_inlier
-        prob[:, 1] = 1.0 - p_inlier
+        prob[:, 1] = p_inlier
+        prob[:, 0] = 1.0 - p_inlier
         return prob
 
     def predict(self, X):
@@ -611,7 +611,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         prob = self.predict_proba(X, y)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
-        p_in = np.clip(prob[:, 0], a_min=eps, a_max=1.0 - eps)
+        p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
 
         # Return the negative, normalized log-loss
         return -np.sum(
