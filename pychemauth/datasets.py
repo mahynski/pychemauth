@@ -12,7 +12,7 @@ from sklearn.utils import Bunch
 
 def load_pgaa(return_X_y=False, as_frame=False):
     """
-    Load prompt gamma activation analysis dataset.
+    Load prompt gamma ray activation analysis dataset.
 
     Parameters
     ----------
