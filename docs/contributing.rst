@@ -34,7 +34,7 @@ Code Standards
 Linting
 *******
 
-Please note, style and code linting is enforce with `pre-commit <https://pre-commit.com/>`_.  Refer to the .pre-commit-config.yaml file in the `GitHub repo <https://github.com/mahynski/pychemauth>`_ for specific details.  
+Please note, style and code linting is enforce with `pre-commit <https://pre-commit.com/>`_.  Refer to the .pre-commit-config.yaml file in the `GitHub repo <https://github.com/mahynski/pychemauth>`_ for specific details.
 Here is some pseudocode illustrating how to use this after you (USERNAME) have created your own fork of PyChemAuth.
 
 .. code-block:: bash
@@ -63,7 +63,7 @@ This uses reStructuredText for python:
 Jupyter Notebooks
 #################
 
-Notebooks are a great way to illustrate the correct use of your code and facilitates its adoption.  We welcome contributed notebooks as well, subject to review. 
+Notebooks are a great way to illustrate the correct use of your code and facilitates its adoption.  We welcome contributed notebooks as well, subject to review.
 
 Use `pandoc flavored markdown <https://pandoc.org/MANUAL.html#pandocs-markdown>`_ comments in your notebook with a single level-one heading in the top cell to denote the notebook's name. A subsequent cell can be used to describe the notebook further.
 
@@ -83,5 +83,3 @@ Use `pandoc flavored markdown <https://pandoc.org/MANUAL.html#pandocs-markdown>`
    Description: ...
 
 * Some good suggestions to improve readability are given `here <https://www.kaggle.com/code/alejopaullier/make-your-notebooks-look-better>`_.
-
-

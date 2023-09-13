@@ -25,16 +25,16 @@ class PCA(ClassifierMixin, BaseEstimator):
     n_components : scalar(int), optional(default=1)
         Number of dimensions to project into. Should be in the range
         [1, num_features].
-        
+
     alpha : scalar(float), optional(default=0.05)
         Type I error rate (significance level).
-        
+
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
-        
+
     scale_x : scalar(bool), optional(default=False)
         Whether or not to scale X columns by the standard deviation.
-        
+
     robust : str, optional(default="semi")
         Whether or not to apply robust methods to estimate degrees of freedom.
         "full" is not implemented yet, but involves robust PCA and robust
@@ -45,7 +45,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         method [2], however, to initially test for and potentially remove these
         points, a robust variant is recommended. This is why "semi" is the
         default value.
-        
+
     sft : scalar(bool), optional(default=False)
         Whether or not to use the iterative outlier removal scheme described
         in [2], called "sequential focused trimming."  If not used (default)
@@ -55,7 +55,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         estimates.  This option may throw away data it is originally provided
         for training; it keeps only "regular" samples (inliers and extremes)
         to train the model.
-        
+
     Note
     ----
     This enables deeper inspection of data through outlier analysis, etc. as
@@ -68,13 +68,13 @@ class PCA(ClassifierMixin, BaseEstimator):
     See references such as:
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
-    
+
     [2] "Detection of Outliers in Projection-Based Modeling", Rodionova OY., Pomerantsev AL.,
     Anal. Chem. 2020, 92, 2656−2664.
-    
+
     [3] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
-    
+
     [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
@@ -138,7 +138,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
 
@@ -376,7 +376,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         distance : ndarray(float, ndim=2)
             Distance to class.
-            
+
         Note
         ----
         This is computed as a sum of the OD and OD to be used with acceptance
@@ -389,13 +389,13 @@ class PCA(ClassifierMixin, BaseEstimator):
     def decision_function(self, X, y=None):
         """
         Compute the decision function for each sample.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
 
@@ -403,7 +403,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
-            
+
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
@@ -425,7 +425,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
 
@@ -434,7 +434,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         probabilities : ndarray(float, ndim=2)
             2D array as sigmoid function of the decision_function(). First column
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
-            
+
         Note
         ----
         Computes the sigmoid(decision_function(X, y)) as the
@@ -495,7 +495,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         extremes : ndarray(bool, ndim=1)
              Boolean mask of X if each point falls between acceptance threshold
             (belongs to class) and the outlier threshold.
-            
+
         outliers : ndarray(bool, ndim=1)
             Boolean mask of X if each point falls beyond the outlier threshold.
         """
@@ -513,11 +513,11 @@ class PCA(ClassifierMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Data to evaluate the number of non-inliers (outliers + extremes) in.
-        
+
         upper_frac : scalar(float), optional(default=0.25)
             Count the number of extremes and outliers for alpha values corresponding
             to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
 
@@ -525,7 +525,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         ax : matplotlib.pyplot.axes
             Axes results are plotted.
-            
+
         Note
         ----
         This modifies the alpha value (type I error rate), keeping all other parameters
@@ -537,7 +537,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         Warning
         -------
-        Both extreme points and outliers are considered "extremes" here.  
+        Both extreme points and outliers are considered "extremes" here.
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
@@ -579,16 +579,16 @@ class PCA(ClassifierMixin, BaseEstimator):
     def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(bools, ndim=1)
             Correct labels; True for inlier, False for outlier.
-           
+
         eps : scalar(float), optional(default=1.0e-15)
             Numerical addition to enable evaluation when log(p ~ 0).
 
@@ -596,7 +596,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
-            
+
         References
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
@@ -626,15 +626,15 @@ class PCA(ClassifierMixin, BaseEstimator):
         ----------
         feature_names : array_like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
-        
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
-            
+
         Returns
         -------
         ax : matplotlib.pyplot.axes
             Axes results are plotted on.
-          
+
         Note
         ----
         This uses the top 2 eigenvectors regardless of the model dimensionality. If it
@@ -680,10 +680,10 @@ class PCA(ClassifierMixin, BaseEstimator):
         X : array_like(str, ndim=1)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
-            
+
         Returns
         -------
         ax : matplotlib.pyplot.axes

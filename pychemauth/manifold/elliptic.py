@@ -3,15 +3,15 @@ Non-linear manifold-based dimensionality reduction methods classified with an el
 
 author: nam
 """
-import scipy
-import copy 
+import copy
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import scipy
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+
 
 class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     r"""
@@ -43,11 +43,11 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     target_class : scalar(str or int), optional(default=None)
         The class used to fit the SIMCA model; the rest are used
         to test specificity.
-        
+
     use : str, optional(default="rigorous")
         Which methodology to use to evaluate the model ("rigorous", "compliant")
         (default="rigorous"). See Ref. [1] for more details.
-            
+
     Note
     ----
     Essentially, an EllipticManifold model is trained for one target class. The target is
@@ -67,7 +67,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     be important to consider to avoid bias in the model.
 
     When TEFF is used to choose a model, this is a "compliant" approach,
-    whereas when TSNS is used instead, this is a "rigorous" approach. 
+    whereas when TSNS is used instead, this is a "rigorous" approach.
     In rigorous models, alpha should be fixed as other hyperparameters are adjusted
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected. [1]
@@ -77,13 +77,14 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
-    
+
     [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
-    
+
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
+
     def __init__(
         self,
         alpha=0.05,
@@ -91,11 +92,11 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         kwargs=None,
         ndims="n_components",
         robust=True,
-        center='score',
+        center="score",
         target_class=None,
         use="rigorous",
     ):
-        """ Instantiate the classifier."""
+        """Instantiate the classifier."""
         self.set_params(
             **{
                 "alpha": alpha,
@@ -133,7 +134,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         """
         Fit the EllipticManifold authenticator model.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -142,7 +143,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
             "target_class".
-        
+
         Returns
         -------
         self : EllipticManifold_Authenticator
@@ -187,7 +188,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         Returns
         -------
         projected : ndarray(float, ndim=2)
@@ -208,7 +209,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
             "target_class".
@@ -228,16 +229,16 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     def predict(self, X):
         """
         Make a prediction.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         Returns
         -------
         predictions : ndarray(bool, ndim=1)
-            Whether or not each point is an inlier.   
+            Whether or not each point is an inlier.
         """
         check_is_fitted(self, "is_fitted_")
         return self.__model_.predict(X)
@@ -245,7 +246,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations are inliers.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -253,7 +254,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         y : array_like(str or int, ndim=1), optional(default=None)
             Class labels or indices.
-        
+
         Returns
         -------
         probability : ndarray(float, ndim=2)
@@ -267,7 +268,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     def model(self):
         """
         Return the trained undelying EllipticManifold_Model.
-        
+
         Returns
         -------
         model : EllipticManifold_Model
@@ -413,6 +414,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             "X_types": ["2darray"],
         }
 
+
 class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
@@ -448,7 +450,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     so that they do not impact the development of the manifold / dimensionality reduction.  For high
     dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction
     step is robust against outliers (e.g., ROBPCA) then this might be not be necessary; however, in
-    general, consider adding this to the pipeline before training since this is not handled 
+    general, consider adding this to the pipeline before training since this is not handled
     internally by this model.
 
     Step 1: Perform a dimensionality reduction (DR) step using some model to obtain
@@ -593,7 +595,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         y : array_like(float, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
-            If passed, it is checked that they are all identical and this 
+            If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
         Returns
@@ -616,7 +618,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
                 raise Exception("More than one class passed during training.")
             else:
                 self.__label_ = str(label[0])
-                
+
         # Fit the model
         self.model_ = self.dr_model(**self.kwargs)
         self.model_.fit(X, y)
@@ -752,7 +754,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         # +1/-1 follows scikit-learn's EllipticEnvelope API - this is different
         # to be more consistent with other APIs such as how SIMCA works.
-        results = np.array([True] * len(X)) # Inliers
+        results = np.array([True] * len(X))  # Inliers
         results[mask] = False  # Outliers
 
         return results
@@ -804,7 +806,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     def decision_function(self, X):
         """
         Compute the decision function for each sample.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -831,7 +833,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X):
         """
         Predict the probability that observations are inliers.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -870,7 +872,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -879,7 +881,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         y : array_like(int, ndim=1)
             Correct labels; +1 for inlier, 0 otherwise.
-           
+
         eps : scalar(float), optional(default=1.0e-15)
             Numerical addition to enable evaluation when log(p ~ 0).
 
@@ -928,7 +930,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         return self.accuracy(X, y)
-    
+
     def accuracy(self, X, y):
         """
         Get the fraction of correct predictions.
@@ -960,7 +962,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
         r"""
         Plot an "extremes plot" [4] to evaluate the quality of the model.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)

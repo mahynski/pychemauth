@@ -16,6 +16,7 @@ build:
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
+  fail_on_warning: false
   configuration: docs/conf.py
   # You can configure Sphinx to use a different builder, for instance use the dirhtml builder for simpler URLs
   # builder: "dirhtml"
@@ -37,6 +38,3 @@ python:
    - requirements: docs/requirements.txt
    - method: pip
      path: .
-
-sphinx:
-  fail_on_warning: false

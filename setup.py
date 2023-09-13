@@ -20,9 +20,9 @@ setup(
     test_suite="tests",
     tests_require=["pytest"],
     classifiers=[
-        'Intended Audience :: Science/Research',
-        'Operating System :: POSIX :: Linux'
-        ],
+        "Intended Audience :: Science/Research",
+        "Operating System :: POSIX :: Linux",
+    ],
     install_requires=[
         "baycomp==1.0.3",
         "bokeh==3.2.2",
@@ -43,6 +43,6 @@ setup(
         "umap-learn==0.5.3",
         "watermark==2.4.3",
         "pytest==7.4.0",
-        "xgboost==2.0.0"
+        "xgboost==2.0.0",
     ],
 )

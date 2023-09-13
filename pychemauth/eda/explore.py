@@ -8,13 +8,13 @@ original sources is made available when appropriate.
 author: nam
 """
 import itertools
-import tqdm
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
+import tqdm
 from sklearn.preprocessing import LabelEncoder
+
 
 class InspectData:
     """Class containing tools used to inspect raw data."""
@@ -32,7 +32,7 @@ class InspectData:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         clusters : list(int), optional(default=range(1, 11))
             List of the number of clusters to use.
 
@@ -83,9 +83,9 @@ class InspectData:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         clustering : sklearn.cluster
-            Clustering algorithm that implements a .fit_predict method, 
+            Clustering algorithm that implements a .fit_predict method,
             e.g., sklearn.cluster.KMeans.
 
         Returns
@@ -193,7 +193,7 @@ class InspectData:
 
         fig : matplotlib.pyplot.figure or None
             Figure the result is plotted on if display = True, otherwise None.
-            
+
         Note
         ----
         Ward clustering is used to cluster collinear features based on "distance",
@@ -218,12 +218,15 @@ class InspectData:
 
         X = np.asarray(X, dtype=np.float64)
         if feature_names is None:
+
             def naming(i):
                 return i
+
         else:
             feature_names = list(
                 feature_names
             )  # Needs to be a list for compatibility elsewhere
+
             def naming(i):
                 return feature_names[i]
 
@@ -364,7 +367,7 @@ class InspectData:
 
         Example
         -------
-        >>> selected_features, cluster_id_to_feature_ids = 
+        >>> selected_features, cluster_id_to_feature_ids =
         ... pychemauth.eda.explore.InspectData.cluster_collinear(X,
         ... feature_names=feature_names, display=False)
         >>> better_features =
@@ -519,8 +522,8 @@ class InspectData:
         Note
         ----
         A pairplot of the data.  Best to use after dimensionality reduction has
-        been performed, e.g., using pychemauth.eda.explore.InspectData.cluster_collinear() 
-        to select only certain features.  This can be helpful to visualize how 
+        been performed, e.g., using pychemauth.eda.explore.InspectData.cluster_collinear()
+        to select only certain features.  This can be helpful to visualize how
         decorrelated the selected dimensions truly are.
 
         References
@@ -541,4 +544,3 @@ class InspectData:
         sns.pairplot(df, **kwargs)
         if figname is not None:
             plt.savefig(figname, dpi=300, bbox_inches="tight")
-

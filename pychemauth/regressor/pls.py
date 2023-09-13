@@ -83,7 +83,7 @@ class PLS(RegressorMixin, BaseEstimator):
         robust=True,
         sft=False,
     ):
-        """Instantiate the class. """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "n_components": n_components,
@@ -455,7 +455,7 @@ class PLS(RegressorMixin, BaseEstimator):
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.
-        
+
         Returns
         -------
         x-scores : array_like(float, ndim=2)
@@ -553,12 +553,12 @@ class PLS(RegressorMixin, BaseEstimator):
     def check_xy_outliers(self, X, y):
         """
         Check if outliers and extremes exist in the XY data.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.
@@ -591,7 +591,7 @@ class PLS(RegressorMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.

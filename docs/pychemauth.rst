@@ -24,7 +24,7 @@ pychemauth.datasets module
    :members:
    :undoc-members:
    :show-inheritance:
-   
+
 pychemauth.utils module
 -----------------------
 

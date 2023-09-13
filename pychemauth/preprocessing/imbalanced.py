@@ -134,7 +134,7 @@ class ScaledSMOTEENN:
     def fit_resample(self, X, y):
         """
         Resample the dataset.
-        
+
         Parameters
         ----------
         X : ndarray(float, ndim=2)
@@ -145,9 +145,9 @@ class ScaledSMOTEENN:
 
         Returns
         -------
-        X_resampled : ndarray(float, ndim=2) 
+        X_resampled : ndarray(float, ndim=2)
             Resampled X and y in the original "units" of X.
-        
+
         y_resampled : ndarray(str or int, ndim=1)
             Classes associated with each row in X.
 

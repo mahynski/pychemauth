@@ -50,7 +50,7 @@ class LOD:
     """
 
     def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None):
-        """Instantiate the class. """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "lod": lod,
@@ -175,9 +175,11 @@ class LOD:
 
         def impute_(x, lod):
             if self.ignore is not None:
-                if (np.isnan(self.ignore) and np.isnan(x)) or (x == self.ignore):
+                if (np.isnan(self.ignore) and np.isnan(x)) or (
+                    x == self.ignore
+                ):
                     return x
-            
+
             if np.isnan(self.missing_values):
                 compare = lambda x: np.isnan(x)
             else:
@@ -274,7 +276,7 @@ class PCA_IA:
     -------
     >>> itim = PCA_IA(n_components=1, missing_values=np.nan, tol=1.0e-6,
     ... max_iters=1000)
-    >>> X_filled = itim.fit_transform(X_missing)    
+    >>> X_filled = itim.fit_transform(X_missing)
     """
 
     def __init__(
@@ -519,7 +521,7 @@ n_features [{}])] = [{}, {}].".format(
         in [1]). A value of zero implies the PCA model perfectly reconstructs the
         observations. This actually returns the NEGATIVE sum of square error (SSE) on
         the observed data.
-        
+
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
         """
@@ -618,7 +620,7 @@ class PLS_IA:
         max_iters=5000,
         tol=1.0e-6,
     ):
-        """ Instantiate the class."""
+        """Instantiate the class."""
         self.set_params(
             **{
                 "n_components": n_components,

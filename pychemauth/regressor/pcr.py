@@ -78,13 +78,13 @@ class PCR(RegressorMixin, BaseEstimator):
     of outliers. See references such as:
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
-    
+
     [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling",
     Anal. Chem. 2020, 92, 2656−2664.
-    
+
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
-    
+
     [4] "Acceptance areas for multivariate classification derived by projection
     methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
     """
@@ -482,12 +482,12 @@ class PCR(RegressorMixin, BaseEstimator):
     def fit_transform(self, X, y):
         """
         Fit and transform.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.
@@ -532,7 +532,7 @@ class PCR(RegressorMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.
@@ -590,12 +590,12 @@ class PCR(RegressorMixin, BaseEstimator):
     def check_xy_outliers(self, X, y):
         """
         Check if outliers and extremes exist in the XY data.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.
@@ -628,7 +628,7 @@ class PCR(RegressorMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Response values. Should only have a single scalar response for each
             observation.

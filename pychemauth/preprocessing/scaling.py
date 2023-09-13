@@ -77,7 +77,7 @@ class RobustScaler:
 
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
-        
+
         Returns
         -------
         self : RobustScaler
@@ -95,12 +95,12 @@ class RobustScaler:
     def transform(self, X):
         """
         Transform (center and possibly scale) the data after fitting.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
             Unscaled feature matrix.
-        
+
         Returns
         -------
         X_scaled : array_like(float, ndim=2)
@@ -121,12 +121,12 @@ class RobustScaler:
     def inverse_transform(self, X):
         """
         Invert the transformation.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
             Scaled feature matrix.
-          
+
         Returns
         -------
         X_unscaled : array_like(float, ndim=2)
@@ -147,7 +147,7 @@ class RobustScaler:
     def fit_transform(self, X, y=None):
         """
         Fit and then transform some data.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
@@ -229,7 +229,7 @@ class CorrectedScaler:
     def fit(self, X, y=None):
         """
         Fit the scaler using some training data.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
@@ -237,7 +237,7 @@ class CorrectedScaler:
 
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
-        
+
         Returns
         -------
         self : CorrectedScaler
@@ -255,12 +255,12 @@ class CorrectedScaler:
     def transform(self, X):
         """
         Transform (center and possibly scale) the data after fitting.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
             Unscaled feature matrix.
-        
+
         Returns
         -------
         X_scaled : array_like(float, ndim=2)
@@ -288,12 +288,12 @@ class CorrectedScaler:
     def inverse_transform(self, X):
         """
         Invert the transformation.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
             Scaled feature matrix.
-          
+
         Returns
         -------
         X_unscaled : array_like(float, ndim=2)
@@ -314,7 +314,7 @@ class CorrectedScaler:
     def fit_transform(self, X, y=None):
         """
         Fit and then transform some data.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)

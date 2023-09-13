@@ -28,10 +28,10 @@ class RedFlags:
     ----------
     use : list(str), optional(default=None)
         Name of checks to use; if None then run all.
-            
+
     tag : str, optional(default="")
         Optional string to prepend to any warnings.
-            
+
     Note
     ----
     This check returns warnings for each possible issue that it finds. If no
@@ -74,14 +74,14 @@ class RedFlags:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict.
-            
+
         Raises
         ------
         warnings.warn if any check fails.
-            
+
         Note
         ----
         X may be an object that contains columns of different types of data (e.g., str, bool, floats)
@@ -136,16 +136,16 @@ class RedFlags:
     def check_nan(self, X, y=None):
         """
         Check if any entries in X or y are NaN.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict. If these are floating points, also check for
             NaN values.
-            
+
         Returns
         -------
         found : scalar(bool)
@@ -170,16 +170,16 @@ class RedFlags:
     def check_inf(self, X, y=None):
         """
         Check if any entries in X or y are Inf.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict. If these are floating points, also check for
             Inf values.
-            
+
         Returns
         -------
         found : scalar(bool)
@@ -204,15 +204,15 @@ class RedFlags:
     def check_zero_variance(self, X, y=None):
         """
         Check if any columns in X are constant (unsupervised).
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Ignored.
-            
+
         Returns
         -------
         found : scalar(bool)
@@ -232,18 +232,18 @@ class RedFlags:
     def check_min_observations(self, X, y, n=5):
         r"""
         Check each class has a minimum number of observations.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict.
-            
+
         n : scalar(int), optional(default=5)
             Minimum number of observations to expect, else throw warning.
-            
+
         Returns
         -------
         found : scalar(bool)
@@ -273,18 +273,18 @@ class RedFlags:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict.
-            
+
         n : scalar(int), optional(default=5)
             Minimum number of different values to expect, else throw warning.
-            
+
         Returns
         -------
         found : scalar(bool)
             If any classes have less than `n` unique values in any column of X.
-            
+
         Note
         ----
         This is important during CV which might split, e.g., a bimodal distribution up so that
@@ -321,18 +321,18 @@ class RedFlags:
     def check_duplicates(self, X, y=None, tol=1.0e-12):
         """
         Check if any rows in X are duplicates numerically.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Ignored.
-            
+
         tol : scalar(float), optional(default=1.0e-12)
             Minimum Euclidean distance between rows to avoid throwing warning.
-            
+
         Returns
         -------
         found : scalar(bool)
@@ -362,20 +362,20 @@ class RedFlags:
     def check_zero_class_variance(self, X, y=None):
         """
         Check if columns in X are constant for any classes.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or float, ndim=1), optional(default=None)
             Target to predict. If not provided, this test is skipped.
-            
+
         Returns
         -------
         found : scalar(bool)
             If any classes have columns of X with zero variance.
-            
+
         Notes
         -----
         For models like SIMCA, which break things up based on class, this
@@ -405,6 +405,7 @@ class RedFlags:
                         found = True
         return found
 
+
 class JSScreen:
     """
     Use Jensen-Shannon divergences to screen for interesting features.
@@ -415,17 +416,17 @@ class JSScreen:
         Maximum macroclass size; will return all combinations
         up to the point of containing n atomic classes.  In
         None, goes from 1 to len(atomic_classes).
-            
+
     feature_names : list(str), optional(default=None)
         Names of features (columns of X) in order.
-            
+
     js_bins : scalar(int), optional(default=25)
         Number of bins to use when computing the Jensen-Shannon
         divergence.
-            
+
     robust : scalar(bool), optional(default=False)
         Whether or not use the robust option in JensenShannonDivergence.
-            
+
     Note
     ----
     For a classification problem, this uses JS divergences to
@@ -441,7 +442,7 @@ class JSScreen:
     classification.
 
     * This is a supervised method.
-    
+
     * Using too many bins makes individual measurements all start to
     look unique and therefore 2 distributions appear to have a large
     JS divergence.  Be sure to try using a different number of bins
@@ -449,8 +450,8 @@ class JSScreen:
     can be very problematic because they cause the the (max-min)
     range to be amplified artificially, which might actually make
     divergences look small because the bins are now too coarse.
-    
-    * See `pychemauth.preprocessing.feature_selection.JensenShannonDivergence` 
+
+    * See `pychemauth.preprocessing.feature_selection.JensenShannonDivergence`
     for more discussion on the potential importance/impact of class
     imbalance with respect to bin size.
 
@@ -497,7 +498,7 @@ class JSScreen:
         ----------
         atomic_classes : array_like(str or int, ndim=1)
             List of classes, can strings or integers, for example.
-            
+
         n : scalar(int) or None
             Maximum macroclass size; will return all combinations
             up to the point of containing n atomic classes.  If
@@ -526,10 +527,10 @@ class JSScreen:
         ----------
         y : array_like(str or int, ndim=1)
             Ground-truth classes.
-            
+
         macroclass : tuple(str)
             Tuple of classes that belong to the macroclass being created.
-            
+
         naming : callable, optional(default=None)
             Function to name combinations of atomic classes; None defaults
             to the JSScreen.merge() method.
@@ -538,7 +539,7 @@ class JSScreen:
         -------
         macro : ndarray(str, ndim=1)
             Classes after merging atomic ones into the macroclass.
-            
+
         Note
         ----
         All entries are turned into strings during this process.
@@ -579,7 +580,7 @@ class JSScreen:
         ----------
         y : array_like(str or int, ndim=1)
             Ground-truth classes.
-            
+
         n : scalar(int) or None
             Maximum macroclass size; will return all combinations
             up to the point of containing n atomic classes.  If
@@ -607,15 +608,15 @@ class JSScreen:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-            
+
         y : array_like(str or int, ndim=1)
             Ground truth classes.
-            
+
         Result
         ------
         self : JSScreen
             Fitted model.
-            
+
         Note
         ----
         y is converted to a numpy array of strings automatically.
@@ -668,12 +669,12 @@ class JSScreen:
     def visualize_grid(self, ax=None):
         """
         Visualize the results with a heatmap.
-        
+
         Parameters
         ----------
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot the result on.
-            
+
         Returns
         -------
         ax : matplotlib.pyplot.axes
@@ -692,28 +693,28 @@ class JSScreen:
         )
         ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
         ax.set_title(r"$\nabla \cdot JS$")
-        
+
         return ax
 
     def visualize_classes(self, method="max", ax=None, display=True):
         """
         Visualize the classes by summarizing over the features.
-        
+
         Parameters
         ----------
         method : str, optional(default="max")
             How to determine the "best" results; must be "mean" or "max".
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot the results on.
-        
+
         display : scalar(bool), optional(default=True)
             Whether to plot the results or not.
-            
+
         Returns
         -------
         best : list(str, float, float)
-            Tuple of columns sorted in descending order based on the "best" 
+            Tuple of columns sorted in descending order based on the "best"
             score, the score itself, and the standard deviation.
         """
         if display:
@@ -763,7 +764,7 @@ class JSScreen:
         ----------
         top : scalar(int), optional(default=None)
             The number of top macroclasses to visualize. If None then show all.
-        
+
         bins : scalar(int), optional(default=25)
             Number of bins to use in the histogram.
 
@@ -774,7 +775,7 @@ class JSScreen:
         -------
         ax : array_like(matplotlib.pyplot.axes, ndim=1)
             Axes results are plotted on.
-        
+
         Note
         ----
         This will actually provide a visualization for all the top
@@ -867,9 +868,9 @@ class JSScreen:
         Returns
         -------
         interesting : list(tuple(str, str), dict(str:float))
-            Summary of incremental changes that meet the "interesting" criteria.  
+            Summary of incremental changes that meet the "interesting" criteria.
             See :py:func:`JSScreen.incremental`.
-        
+
         proposed_combinations : dict(set)
             Merges that are considered "interesting", dictionary of unique sets
             formed from these merges.
@@ -935,7 +936,7 @@ class JSScreen:
         -------
         incremental : list(tuple(str, str), dict(str:float))
             Summary of incremental changes given as list([tuple(macroclass, addition),
-            {"delta":change, "final":JS, "individuals":{class:JS}}]). This reflects 
+            {"delta":change, "final":JS, "individuals":{class:JS}}]). This reflects
             the change that results from merging "addition" with macroclass,
             sorted from highest to lowest.  Note that this is a signed change,
             so you may wish to consider the magnitude instead.  The "final" JS
@@ -994,6 +995,7 @@ class JSScreen:
             incremental.items(), key=lambda x: x[1]["delta"], reverse=True
         )
 
+
 class JSBinary:
     """
     Look at pairwise "separability" according to the Jensen-Shannon divergence.
@@ -1002,15 +1004,15 @@ class JSBinary:
     ----------
     js_bins : scalar(int), optional(default=25)
         Number of bins to use when computing the Jensen-Shannon divergence.
-        
+
     robust : scalar(bool), optional(default=False)
         Whether to robust option for JensenShannonDivergence.
-            
+
     Note
     ----
     For a classification problem, look at the maximum JSD that can exists
     across all features between pairs of classes.  This creates a binary
-    comparison between individual classes instead of a one-vs-all comparison 
+    comparison between individual classes instead of a one-vs-all comparison
     done in JSScreen.
 
     It can be helpful to look for the "elbow" as you plot number of bins vs.
@@ -1018,7 +1020,7 @@ class JSBinary:
     """
 
     def __init__(self, js_bins=25, robust=False):
-        """Instantiate the class. """
+        """Instantiate the class."""
         self.set_params(**{"js_bins": js_bins, "robust": robust})
         return
 
@@ -1040,10 +1042,10 @@ class JSBinary:
         ----------
         X : array_like(float, ndim=2)
             Features matrix.
-            
+
         y : array_like(str or int, ndim=1)
             Ground truth classes.
-            
+
         Returns
         -------
         self : JSBinary
@@ -1100,14 +1102,14 @@ class JSBinary:
             indices so if this is provided, converts indices to names
             based on this array; otherwise a matrix of indices is
             returned.
-            
+
         Returns
         -------
         top_features : ndarray(object, ndim=2)
             Matrix of top feature names (if provided) or indices indicating
             the feature responsible for the maximum JSD between features i and
             j.  Diagonals are set to "NONE".
-            
+
         Example
         -------
         >>> jsb.top_features(feature_names=X.columns)
@@ -1127,12 +1129,12 @@ class JSBinary:
     def visualize(self, ax=None):
         """
         Visualize the results with a heatmap.
-        
+
         Parameters
         ----------
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot the result on.
-            
+
         Returns
         -------
         ax : matplotlib.pyplot.axes

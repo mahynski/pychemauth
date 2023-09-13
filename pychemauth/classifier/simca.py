@@ -5,11 +5,10 @@ author: nam
 """
 import copy
 import warnings
-import scipy
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import scipy
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
@@ -26,30 +25,30 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     ----------
     n_components : scalar(int), optional(default=1)
         Number of components to use in the SIMCA model.
-        
+
     alpha : scalar(float), optional(default=0.05)
         Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        
+
     gamma : scalar(float), optional(default=0.01)
         Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        
+
     target_class : scalar(str or int), optional(default=None)
         The class used to fit the SIMCA model; the rest are used
         to test specificity.
-        
+
     style : str, optional(default="dd-simca")
         Type of SIMCA to use ("simca" or "dd-simca")
-        
+
     use : str, optional(default="rigorous")
         Which methodology to use to evaluate the model ("rigorous", "compliant")
         (default="rigorous"). See Ref. [1] for more details.
-        
+
     scale_x : scalar(bool), optional(default=True)
         Whether or not to scale X by its sample standard deviation or not.
         This depends on the meaning of X and is up to the user to
         determine if scaling it (by the standard deviation) makes sense.
         Note that X is always centered.
-        
+
     robust : str, optional(default="semi")
         Whether or not to apply robust methods to estimate degrees of freedom.
         This is only used with DD-SIMCA. "full" is not implemented yet, but
@@ -62,7 +61,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         is why "semi: is the default value. If `sft`=True then this value is
         ignored and a robust method is applied to iteratively clean the dataset,
         while the final fitting uses the classical approach.
-        
+
     sft : scalar(bool), optional(default=False)
         Whether or not to use the iterative outlier removal scheme described
         in Ref. [2], called "sequential focused trimming."  This is only used
@@ -72,7 +71,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         "clean" data uses classical estimates.  This option may throw away data
         it is originally provided for training; it keeps only "regular" samples
         (inliers and extremes) to train the model.
-            
+
     Note
     ----
     Essentially, a SIMCA model is trained for one target class. The target is
@@ -92,7 +91,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     be important to consider to avoid bias in the model.
 
     When TEFF is used to choose a model, this is a "compliant" approach,
-    whereas when TSNS is used instead, this is a "rigorous" approach. 
+    whereas when TSNS is used instead, this is a "rigorous" approach.
     In rigorous models, alpha should be fixed as other hyperparameters are adjusted
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected. [1]
@@ -102,13 +101,14 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     [1] "Rigorous and compliant approaches to one-class classification,"
     Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
     Lab. Sys. (2016) 89-96.
-    
+
     [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
-    
+
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
+
     def __init__(
         self,
         n_components=1,
@@ -121,7 +121,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         robust="semi",
         sft=False,
     ):
-        """ Instantiate the classifier."""
+        """Instantiate the classifier."""
         self.set_params(
             **{
                 "n_components": n_components,
@@ -161,7 +161,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         """
         Fit the SIMCA authenticator model.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -170,7 +170,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
             "target_class".
-        
+
         Returns
         -------
         self : SIMCA_Authenticator
@@ -214,7 +214,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
         self.is_fitted_ = True
 
-        self.classes_ = [True, False] # For sklearn compatibility - not used
+        self.classes_ = [True, False]  # For sklearn compatibility - not used
 
         return self
 
@@ -226,7 +226,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         Returns
         -------
         projected : ndarray(float, ndim=2)
@@ -247,7 +247,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         y : array_like(str or int, ndim=1)
             Class labels or indices. Should include some examples of
             "target_class".
@@ -267,16 +267,16 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     def predict(self, X):
         """
         Make a prediction.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Input feature matrix.
-        
+
         Returns
         -------
         predictions : ndarray(bool, ndim=1)
-            Whether or not each point is an inlier.   
+            Whether or not each point is an inlier.
         """
         check_is_fitted(self, "is_fitted_")
         return self.__model_.predict(X)
@@ -284,7 +284,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations are inliers.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -292,7 +292,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         y : array_like(str or int, ndim=1), optional(default=None)
             Class labels or indices.
-        
+
         Returns
         -------
         probability : ndarray(float, ndim=2)
@@ -337,7 +337,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     def model(self):
         """
         Return the trained undelying SIMCA Model.
-        
+
         Returns
         -------
         model : SIMCA_Model or DDSIMCA_Model
@@ -523,7 +523,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
     [2] "Pattern recognition by means of disjoint principal components models,"
     S. Wold, Pattern Recognition 8 (1976) 127–139.
-    
+
     [3] "Decision criteria for soft independent modelling of class analogy
     applied to near infrared data" De Maesschalk et al., Chemometrics and
     Intelligent Laboratory Systems 47 (1999) 65-77.
@@ -581,7 +581,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             automatically.
 
         y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored. If passed, it is checked that they are all identical and this 
+            Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
         Returns
@@ -603,8 +603,12 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.n_features_in_ = self.__X_.shape[1]
 
         max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
-        if (self.n_components > max_components):
-            warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(np.max([1, max_components])))
+        if self.n_components > max_components:
+            warnings.warn(
+                "The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(
+                    np.max([1, max_components])
+                )
+            )
             self.set_params(**{"n_components": np.max([1, max_components])})
 
         # 1. Standardize X
@@ -648,7 +652,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     def fit_transform(self, X, y=None):
         """
         Fit and transform.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -674,7 +678,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to 
+            Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
@@ -735,7 +739,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations are inliers.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -748,10 +752,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). 
+            2D array as sigmoid function of the decision_function().
             Probability that each point is an inlier.  First column
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
-            
+
         Note
         ----
         Computes the sigmoid(decision_function(X, y)) as the
@@ -817,7 +821,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         -------
         loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
-            
+
         References
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
@@ -858,7 +862,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         return self.accuracy(X, y)
-    
+
     def accuracy(self, X, y):
         """
         Get the fraction of correct predictions.
@@ -976,6 +980,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
     Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
+
     def __init__(
         self,
         n_components,
@@ -1046,7 +1051,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             automatically.
 
         y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored. If passed, it is checked that they are all identical and this 
+            Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
         Returns
@@ -1082,9 +1087,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
             self.n_features_in_ = self.__X_.shape[1]
 
-            max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1 
-            if (self.n_components > max_components):
-                warnings.warn("The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(np.max([1, max_components])))
+            max_components = (
+                np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
+            )
+            if self.n_components > max_components:
+                warnings.warn(
+                    "The number of PCA components exceeds maximum allowable ({}) - changing to this value".format(
+                        np.max([1, max_components])
+                    )
+                )
                 self.set_params(**{"n_components": np.max([1, max_components])})
 
             if robust == "full":
@@ -1226,7 +1237,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted 
+            Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
         Returns
@@ -1240,11 +1251,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     def fit_transform(self, X, y=None):
         """
         Fit and transform.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted 
+            Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
         Returns
@@ -1279,11 +1290,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     def distance(self, X):
         """
         Compute how far away points are from this class.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted 
+            Columns of features; observations are rows - will be converted
             to a numpy array automatically.
 
         Returns
@@ -1348,8 +1359,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). 
-            First column is NOT inlier, 1-p(x), second column is inlier 
+            2D array as sigmoid function of the decision_function().
+            First column is NOT inlier, 1-p(x), second column is inlier
             probability, p(x).
 
         Note
@@ -1420,7 +1431,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         -------
         loss : scalar(float)
             Negative, normalized log loss; :math:`\frac{1}{N} \sum_i \left( y_{in}(i) {\rm ln}(p_{in}(i)) + (1-y_{in}(i)) {\rm ln}(1-p_{in}(i)) \right)`
-            
+
         References
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
@@ -1461,7 +1472,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         return self.accuracy(X, y)
-    
+
     def accuracy(self, X, y):
         """
         Get the fraction of correct predictions.
@@ -1502,12 +1513,12 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        extremes : ndarray(bool, ndim=1) 
+        extremes : ndarray(bool, ndim=1)
             Boolean mask of X if each point falls between acceptance threshold
             (belongs to class) and the outlier threshold (extreme).
 
-        outliers : ndarray(bool, ndim=1) 
-            Boolean mask of X if each point falls beyond the outlier (outlier) 
+        outliers : ndarray(bool, ndim=1)
+            Boolean mask of X if each point falls beyond the outlier (outlier)
             threshold.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1550,7 +1561,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Warning
         -------
-        Both extreme points and outliers are considered "extremes" here.  
+        Both extreme points and outliers are considered "extremes" here.
         """
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
@@ -1592,7 +1603,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     def plot_loadings(self, feature_names=None, ax=None):
         """
         Make a 2D loadings plot.
-        
+
         Parameters
         ----------
         feature_names : array_like(str, ndim=1), optional(default=None)

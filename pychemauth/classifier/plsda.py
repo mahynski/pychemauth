@@ -33,30 +33,30 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         K-1 is used as a lower bound instead of 1, where K is
         the number of classes.  This can assist in stability
         issues with the soft version.
-        
+
     alpha : scalar(float), optional(default=0.05)
         Type I error rate (signficance level).
-        
+
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
-        
+
     not_assigned : scalar(int) or str, optional(default="-1")
         Category to give a point in soft version if not assigned to any
         known class.
-        
+
     style : str, optional(default="soft")
         PLS style; can be "soft" or "hard".
-        
+
     scale_x : scalar(bool), optional(default=True)
         Whether or not to scale the X matrix during the PLS(2) stage.
         This depends on the meaning of X and is up to the user to
         determine if scaling it (by the standard deviation) makes sense.
         Note that X and Y are always centered, Y is never scaled.
-        
+
     score_metric : str, optional(default="TEFF")
         Which metric to use as the score.  Can be {TEFF, TSNS, TSPS}
         (default=TEFF). TEFF^2 = TSNS*TSPS.
-            
+
     Note
     ----
     Implements "hard" classification as an "LDA-like" criterion, and a
@@ -170,7 +170,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
@@ -220,7 +220,9 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         assert self.not_assigned not in set(
             self.__ohencoder_.categories_[0]
         ), "not_assigned value is already taken"
-        self.classes_ = np.concatenate((self.__ohencoder_.categories_[0], [self.not_assigned]))# For sklearn compatibility - not used
+        self.classes_ = np.concatenate(
+            (self.__ohencoder_.categories_[0], [self.not_assigned])
+        )  # For sklearn compatibility - not used
 
         self.__class_mask_ = {}
         for i in range(len(self.__ohencoder_.categories_[0])):
@@ -444,7 +446,7 @@ n_features [{}])] = [{}, {}].".format(
     def mahalanobis(self, X):
         """
         Compute the squared Mahalanobis distance to each class center.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -455,13 +457,13 @@ n_features [{}])] = [{}, {}].".format(
         -------
         distance : array_like(float, ndim=1)
             Squared distance to each class for each observation.
-            
+
         Note
         ----
         Scipy has a built-in function that could replace this in the future.
         Here we compute d^2 whereas scipy evalutes the square root to compute
-        d. 
-        
+        d.
+
         References
         ----------
         See https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.mahalanobis.html.
@@ -514,7 +516,7 @@ n_features [{}])] = [{}, {}].".format(
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(str or int, ndim=1), optional(default=None)
             Response. Ignored if it is not used (unsupervised methods).
 
@@ -522,7 +524,7 @@ n_features [{}])] = [{}, {}].".format(
         -------
         decision_function : ndarray
             Shifted, negative distance for each sample.
-            
+
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
@@ -548,13 +550,13 @@ n_features [{}])] = [{}, {}].".format(
     def predict_proba(self, X, y=None):
         """
         Predict the probability that observations belong each class.
-    
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(str or int, ndim=1), optional(default=None)
             Response. Ignored if it is not used (unsupervised methods).
 
@@ -563,7 +565,7 @@ n_features [{}])] = [{}, {}].".format(
         probabilities : ndarray(float, ndim=2)
             Probability of class membership; columns are ordered according
             to class indices.
-            
+
         Note
         ----
         Soft PLSDA: assumes each class is normally distributed and uses
@@ -582,7 +584,7 @@ n_features [{}])] = [{}, {}].".format(
         This probability can be used for inspection by SHAP to help explain
         how this makes its decisions, at least with respect to assignment of
         individual class membership.
-        
+
         This gives the same effective results as predict() except that function
         directly returns the class(es) a point is predicted to belong to and is sorted
         by class likelihood.  No sorting is done here.
@@ -594,7 +596,7 @@ n_features [{}])] = [{}, {}].".format(
 
         The softmax function (hard boundaries) will result in probabilities
         which sum to 1.
-        
+
         References
         ----------
         See SHAP documentation for a discussion on the utility and impact
@@ -642,7 +644,7 @@ n_features [{}])] = [{}, {}].".format(
             predictions for each entry if `style=soft`, and are listed from left to right in
             order of decreasing likelihood. For Hard PLS-DA only a simple list is
             returned.
-        
+
         Note
         ----
         If multiple predictions are made, they are ordered according to likelihood,
@@ -663,7 +665,9 @@ n_features [{}])] = [{}, {}].".format(
                 if len(belongs_to) == 0:
                     belongs_to = [self.not_assigned]
             else:
-                belongs_to = d[0][0] # Take the closest class (smallest distance)
+                belongs_to = d[0][
+                    0
+                ]  # Take the closest class (smallest distance)
 
             predictions.append(belongs_to)
 
@@ -679,7 +683,7 @@ n_features [{}])] = [{}, {}].".format(
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
-            
+
         actual : array_like(str or int, ndim=1)
             Array of ground truth classes for the predicted points.  Should
             have only one class per point.
@@ -688,28 +692,28 @@ n_features [{}])] = [{}, {}].".format(
         -------
         df : pandas.DataFrame
             Inputs (index) vs. predictions (columns).
-            
+
         I : pandas.Series
             Number of each class asked to classify.
-            
+
         CSNS : pandas.Series
             Class sensitivity.
-            
+
         CSPS : pandas.Series
             Class specificity.
-            
+
         CEFF : pandas.Series
             Class efficiency.
-            
+
         TSNS : scalar(float)
             Total sensitivity.
-            
+
         TSPS : scalar(float)
             Total specificity.
-            
+
         TEFF : scalar(float)
             Total efficiency.
-            
+
         Note
         ----
         When making predictions about extraneous classes (not in training set)
@@ -719,7 +723,7 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
 
         # For Hard PLS-DA, internally convert to list(list) so Soft PLS-DA is processed the same way.
-        if self.style.lower() == 'hard':
+        if self.style.lower() == "hard":
             predictions = [[p] for p in predictions]
 
         trained_classes = np.unique(self.__ohencoder_.categories_)
@@ -851,7 +855,7 @@ n_features [{}])] = [{}, {}].".format(
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-            
+
         y : array_like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
@@ -884,10 +888,10 @@ n_features [{}])] = [{}, {}].".format(
         classes : list or None, optional(default=None)
             If None, plot coefficients for all categories; otherwise just classes
             specified.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
-            
+
         return_coeff : scalar(bool), optional(default=False)
             Return PLS2 coefficients instead of the figure axis. N x D where D
             is the number of features in X (X.shape[1]) and N is the number of
@@ -946,7 +950,7 @@ n_features [{}])] = [{}, {}].".format(
             List of styles to plot, e.g., ["hard", "soft"]. This can always
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
@@ -978,7 +982,7 @@ n_features [{}])] = [{}, {}].".format(
             List of styles to plot, e.g., ["hard", "soft"]. This can always
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
@@ -986,7 +990,7 @@ n_features [{}])] = [{}, {}].".format(
         -------
         ax : matplotlib.pyplot.axes
             Figure axes being plotted on.
-            
+
         Note
         ----
         This can only be done when we have K=2 training classes because the
@@ -1017,7 +1021,7 @@ n_features [{}])] = [{}, {}].".format(
                 Since these are in normalized score space (projection of OHE
                 simplex) one order of magnitude higher (i.e., 10) is usually a
                 good bound.
-                
+
             rbins : scalar(int), optional(default=1000)
                 Number of points to seach from class center (r=0 to r=rmax) for
                 boundary.
@@ -1027,7 +1031,7 @@ n_features [{}])] = [{}, {}].".format(
             cutoff : list(ndarray)
                 2D array of points for each class (ordered according to
                 class_centers) delineating the extremes boundary.
-                
+
             outlier : list(ndarray)
                 2D array of points for each class (ordered according to
                 class_centers) delineating the outlier boundary.
@@ -1176,7 +1180,7 @@ n_features [{}])] = [{}, {}].".format(
             List of styles to plot, e.g., ["hard", "soft"]. This can always
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
-            
+
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
@@ -1184,7 +1188,7 @@ n_features [{}])] = [{}, {}].".format(
         -------
         ax : matplotlib.pyplot.axes
             Figure axes being plotted on.
-            
+
         Note
         ----
         This can only be done when we have K=3 training classes because the
@@ -1228,7 +1232,7 @@ n_features [{}])] = [{}, {}].".format(
             cutoff : list(ndarray)
                 2D array of points for each class (ordered according to
                 class_centers) delineating the extremes boundary.
-                
+
             outlier : list(ndarray)
                 2D array of points for each class (ordered according to
                 class_centers) delineating the outlier boundary.
@@ -1280,10 +1284,10 @@ n_features [{}])] = [{}, {}].".format(
             ----------
             maxp : scalar(int), optional(default=1000)
                 Maximum number of points to use along a line.
-                
+
             rmax : scalar(float), optional(default=2.0)
                 Maximum radius from intersection to compute lines.
-                
+
             dx : scalar(float), optional(default=0.05)
                 Delta x along lines.
 
@@ -1350,7 +1354,12 @@ n_features [{}])] = [{}, {}].".format(
                 mid = (
                     self.__class_centers_[i] + self.__class_centers_[j]
                 ) / 2.0
-                sign.append(np.sign(mid[0] - np.mean([p_[0] for p_ in self.__class_centers_])))
+                sign.append(
+                    np.sign(
+                        mid[0]
+                        - np.mean([p_[0] for p_ in self.__class_centers_])
+                    )
+                )
 
             lines = {}
             for sign, (i, j) in list(zip(sign, pairs)):

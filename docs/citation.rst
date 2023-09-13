@@ -6,13 +6,13 @@ If you use PyChemAuth in a publication, please cite the appropriate version (mos
 .. image:: https://zenodo.org/badge/331207062.svg
    :target: https://zenodo.org/badge/latestdoi/331207062
 
-PyChemAuth contains both original code and wrappers around other libraries and thus relies on contributions from many other sources.  
+PyChemAuth contains both original code and wrappers around other libraries and thus relies on contributions from many other sources.
 If you use these tools be sure to cite the original authors.
 
 Code
 ####
 
-If you use UMAP refer to the authors' `github repo <https://github.com/lmcinnes/umap>`_ for information about citation.  
+If you use UMAP refer to the authors' `github repo <https://github.com/lmcinnes/umap>`_ for information about citation.
 At the very least, you should cite the manuscript associated with the software itself:
 
 .. code-block:: bibtex
@@ -30,7 +30,7 @@ At the very least, you should cite the manuscript associated with the software i
 If you use `PyOD <https://pyod.readthedocs.io/en/latest/>`_ be sure to cite:
 
 .. code-block:: bibtex
-    
+
    @article{zhao2019pyod,
    author  = {Zhao, Yue and Nasrullah, Zain and Li, Zheng},
    title   = {PyOD: A Python Toolbox for Scalable Outlier Detection},
@@ -45,7 +45,7 @@ If you use `PyOD <https://pyod.readthedocs.io/en/latest/>`_ be sure to cite:
 Refer to several citations for `SHAP <https://github.com/slundberg/shap>`_ on the authors' website, but at a minimum be sure to cite:
 
 .. code-block:: bibtex
-    
+
    @incollection{NIPS2017_7062,
    title = {A Unified Approach to Interpreting Model Predictions},
    author = {Lundberg, Scott M and Lee, Su-In},
@@ -61,7 +61,7 @@ Refer to several citations for `SHAP <https://github.com/slundberg/shap>`_ on th
 The `imbalanced-learn <https://imbalanced-learn.org/stable/index.html>`_ package should be cited as:
 
 .. code-block:: bibtex
-   
+
    @article{JMLR:v18:16-365,
    author  = {Guillaume  Lema{{\^i}}tre and Fernando Nogueira and Christos K. Aridas},
    title   = {Imbalanced-learn: A Python Toolbox to Tackle the Curse of Imbalanced Datasets in Machine Learning},

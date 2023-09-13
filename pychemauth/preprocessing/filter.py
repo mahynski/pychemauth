@@ -12,21 +12,21 @@ from sklearn.utils.validation import check_array, check_is_fitted
 class MSC:
     """
     Perform multiplicative scatter correction.
-    
+
     Parameters
     ----------
     Xref : array_like(float, ndim=2), optional(default=None)
         Optional reference to use as background instead of X when fitting.
-    
+
     Note
     ----
-    From [1]: Multiplicative scatter correction (MSC) focuses on light 
-    scattering and particle size issues. It corrects for both multiplicative 
+    From [1]: Multiplicative scatter correction (MSC) focuses on light
+    scattering and particle size issues. It corrects for both multiplicative
     and additive effects, and is based on two assumptions:
-    
+
     * a sample is considered as an addition of two components, a signal
     term and a noise term (scatter); the latter is to be corrected for.
-    
+
     * the scatter term is estimated with linear regression and assumes
     the coefficients will be the same for all samples across all
     wavelengths (axis=1 for X).
@@ -75,13 +75,13 @@ class MSC:
     def fit(self, X, y=None):
         """
         Compute the reference background, if necessary.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
-            Feature matrix to use as background. If `Xref` is provided 
+            Feature matrix to use as background. If `Xref` is provided
             this is ignored.
-        
+
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
 
@@ -96,7 +96,7 @@ class MSC:
             self.Xref = np.mean(X, axis=0)
         else:
             self.Xref = np.asarray(self.Xref, dtype=np.float64)
-            
+
         self.n_features_in_ = len(self.Xref)
 
         assert X.shape[1] == self.n_features_in_
@@ -108,7 +108,7 @@ class MSC:
     def transform(self, X):
         """
         Transform the data.
-        
+
         Parameter
         ---------
         X : array_like(float, ndim=2)
@@ -119,7 +119,9 @@ class MSC:
         X_corrected : ndarray(float, ndim=2)
             Corrected feature matrix.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True)  # Force a copy
+        X = check_array(
+            np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True
+        )  # Force a copy
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
@@ -142,14 +144,14 @@ class MSC:
         ---------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
         X_corrected : ndarray(float, ndim=2)
-            Corrected feature matrix.   
+            Corrected feature matrix.
         """
         self.fit(X)
 
@@ -159,7 +161,7 @@ class MSC:
 class SNV:
     """
     Perform a Standard Normal Variates transformation.
-    
+
     Parameters
     ----------
     robust : scalar(bool), optional(default=False)
@@ -169,7 +171,7 @@ class SNV:
     detrend : scalar(bool), optional(default=False)
         Whether or not to apply a detrend transformation after the SNV
         transformation.
-        
+
     q : scalar(float), optional(default=50)
             Percentile to use for RNV, if RNV is used; for SNV this is ignored.
 
@@ -187,15 +189,15 @@ class SNV:
     correct spectra for calibration.
 
     From [1]:
-        
+
     * SNV corrects for both baseline shift and global intensity variations.
-    
+
     * SNV improves the PLS model prediction, especially when used on
     NIR data with scattering effects.
-        
+
     * When using SNV, the spectra always have positive and negative values
     centered on 0, which may make interpretation a little more difficult.
-    
+
     * SNV assumes that multiplicative effects are uniform over the whole
     spectral range, which is not always the case, so artifacts could be
     introduced by this transformation
@@ -269,20 +271,20 @@ class SNV:
     def fit(self, X, y=None):
         """
         Store the size of the data (number of columns) for consistency later.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.  Not stored, but is used to determined the expected
             size of future matrices.
-        
+
         y : array_like(float, ndimd=1)
             Ignored.
 
         Returns
         -------
         self : SNV
-            Fitted model.        
+            Fitted model.
         """
         X = check_array(X, accept_sparse=False)
 
@@ -296,18 +298,20 @@ class SNV:
     def transform(self, X):
         """
         Transform the data.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Feature matrix.  
+            Feature matrix.
 
         Returns
         -------
         X_corrected : array_like(float, ndim=2)
             Corrected feature matrix.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True)  # Force a copy
+        X = check_array(
+            np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True
+        )  # Force a copy
         check_is_fitted(self, "is_fitted_")
         assert X.shape[1] == self.n_features_in_
 
@@ -343,11 +347,11 @@ class SNV:
     def fit_transform(self, X, y=None):
         """
         Fit and then transform some data.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Feature matrix.  
+            Feature matrix.
 
         y : array_like(float, ndimd=1)
             Ignored.
@@ -365,33 +369,33 @@ class SNV:
 class SavGol:
     """
     Perform a Savitzky-Golay filtering.
-    
+
     Parameters
     ----------
     window_length : scalar(int)
-        The length of the filter window (i.e., the number of coefficients). If mode is "interp", 
+        The length of the filter window (i.e., the number of coefficients). If mode is "interp",
         window_length must be less than or equal to the size of x.
 
     polyorder : scalar(int)
         The order of the polynomial used to fit the samples. polyorder must be less than window_length.
 
     deriv : scalar(int), optional(default=0)
-        The order of the derivative to compute. This must be a nonnegative integer. The default is 0, 
+        The order of the derivative to compute. This must be a nonnegative integer. The default is 0,
         which means to filter the data without differentiating.
 
     delta : scalar(float), optional(default=1.0)
-        The spacing of the samples to which the filter will be applied. This is only used if deriv > 0. 
+        The spacing of the samples to which the filter will be applied. This is only used if deriv > 0.
         Default is 1.0.
 
     axis : scalar(int), optional(default=-1)
         The axis of the array x along which the filter is to be applied. Default is -1.
 
     mode : str, optional(default="interp")
-        Must be "mirror", "constant", "nearest", "wrap" or "interp". This determines the type of extension 
-        to use for the padded signal to which the filter is applied. When mode is "constant", the padding 
-        value is given by cval. See the Notes for more details on "mirror", "constant", "wrap", and 
-        "nearest". When the "interp" mode is selected (the default), no extension is used. Instead, a 
-        degree polyorder polynomial is fit to the last window_length values of the edges, and this polynomial 
+        Must be "mirror", "constant", "nearest", "wrap" or "interp". This determines the type of extension
+        to use for the padded signal to which the filter is applied. When mode is "constant", the padding
+        value is given by cval. See the Notes for more details on "mirror", "constant", "wrap", and
+        "nearest". When the "interp" mode is selected (the default), no extension is used. Instead, a
+        degree polyorder polynomial is fit to the last window_length values of the edges, and this polynomial
         is used to evaluate the last window_length // 2 output values.
 
     cval : scalar(float), optional(default=0.0)
@@ -413,7 +417,7 @@ class SavGol:
         mode="interp",
         cval=0.0,
     ):
-        """Instantiate the class. """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "window_length": window_length,
@@ -454,7 +458,7 @@ class SavGol:
         ----------
         X : array_like(float, ndim=2)
             Feature matrix.
-        
+
         y : array_like(float, ndim=1)
             Ignored.
 
@@ -491,7 +495,7 @@ class SavGol:
     def transform(self, X):
         """
         Transform (center and possibly scale) the data after fitting.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)
@@ -522,7 +526,7 @@ class SavGol:
     def fit_transform(self, X, y=None):
         """
         Fit and then transform some data.
-        
+
         Parameters
         ----------
         X : array_like(float, ndim=2)

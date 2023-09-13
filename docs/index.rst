@@ -133,11 +133,6 @@ These routines offer the most flexible approaches and include alternative bounda
 Explanations and Interpretations
 ################################
 
-:py:mod:`pychemauth.analysis.inspect` provides a number of tools and wrappers for model inspection methods.  For example:
-
-* :py:func:`Partial dependence plots` illustrate the dependence of the response variable, :math:`\vec{y}`, and each of its features (columns in :math:`\mathbf{X}`) by averaging over the values of the rest of the features.  See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/partial_dependence.html>`_ for more information.
-* :py:func:`Permutation feature importance` is an inspection method that describes the importance of a feature based on how much more poorly a fitted model performs when it is shuffled.  This is model agnostic, but can be strongly influenced by strongly correlated features. See `scikit-learn's discussion <https://scikit-learn.org/stable/modules/permutation_importance.html#permutation-feature-importance>`_ for more information.
-
 While examination of loadings, for example, is one way to understand commonly employed chemometric tools, more complex models require more complex tools to inspect these "black boxes".
 
 * `SHAP <https://shap.readthedocs.io/en/latest/>`_ - "(SHapley Additive exPlanations) is a game theoretic approach to explain the output of any machine learning model. It connects optimal credit allocation with local explanations using the classic Shapley values from game theory and their related extensions."  Its model-agnostic nature means that this can be employed to explain any model or pipeline.
@@ -150,26 +145,18 @@ While examination of loadings, for example, is one way to understand commonly em
 
 "Probabilities" that ML routines produce are usually not guaranteed to be "meaningful."  Elliptic boundaries and other conventional techniques often invoke assumptions about the normality of the data, for example, that allow meaningful interpretation of distances and probabilities that these methods yield.  For example, if you have a set of points for which the probability of class membership is 80%, you would expect 80% of those points to belong to the class and to be incorrect about 20% of them.  However, ML routines often produce  "probabilities" which are nothing more than numerical values whose maximum determines the assigned classes; the exact value of that probability does not need to be meaningful for these routines to produce (accurate) predictions of class membership. This can be addressed with `probability calibration <https://scikit-learn.org/stable/modules/calibration.html#calibration>`_.  The basic solution is to add another function that translates the output of an ML model into something more meaningful.  See `here <https://scikit-learn.org/stable/modules/calibration.html#calibration>`_ for more detailed examples and discussion.  Calibration may be particular useful before trying to apply explanation tools or interpret the results of a model.
 
-Diagnostics
-###########
-
-:py:mod:`pychemauth.analysis.inspect` also provides a number of tools to understand model performance.  For example:
-
-* `Learning curves <https://scikit-learn.org/stable/modules/learning_curve.html#learning-curve>`_ can be used to tell if your model will benefit from more data, or if you need a more powerful model to achieve better performance.
-* `Confusion matrices <https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html>`_ help identify which classes a model tends to confuse and which it can easily distinguish between.
-
 .. toctree::
    :maxdepth: 3
    :caption: Introduction
 
-   quickstart 
+   quickstart
    citation
    contributing
-   
+
 .. toctree::
    :maxdepth: 3
    :caption: API Reference
-   
+
    modules
 
 .. toctree::

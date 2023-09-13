@@ -9,14 +9,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
 from baycomp import two_on_single
+from sklearn.base import clone
 from sklearn.model_selection import (
+    GridSearchCV,
+    KFold,
     RepeatedKFold,
     RepeatedStratifiedKFold,
     StratifiedKFold,
 )
-from sklearn.base import clone
 
-from sklearn.model_selection import GridSearchCV, KFold, StratifiedKFold
 
 class BiasedNestedCV:
     """
@@ -29,32 +30,32 @@ class BiasedNestedCV:
 
     k_outer : scalar(int), optional(default=10)
         K-fold for outer loop.
-            
+
     Note
     ----
     This performs a version of repeated "flat CV" as defined in [1] to statistically
-    compare the performance of two pipelines or models.  This is done by 
+    compare the performance of two pipelines or models.  This is done by
     nesting flat CV inside an outer loop, akin to nested CV.
     This differs from scikit-learn's "built in" method of doing nested CV of
     cross_val_score(GridSeachCV()) in that cross_val_score() returns
     the scores from each test fold on the outer loop, obtained by training the best
     model on the entire inner set of training folds using the best
-    hyperparameters determined by that the inner loop.  This is conventional "Nested CV" 
-    which uses the performance on the held-out test fold for an unbiased esimate of 
+    hyperparameters determined by that the inner loop.  This is conventional "Nested CV"
+    which uses the performance on the held-out test fold for an unbiased esimate of
     the generalization error [2].
-    
-    Here, we instead extract the performance estimates from the best model's validation 
-    fold (held out part of the inner training folds) used to select the hyperparameters 
-    for a given iteration of the outer loop.  These performance estimates are positively 
-    biased, but extensive real-world testing suggests that using the scores from the 
-    "flat CV" to **rank** different models does not make practical difference [2] to 
-    their relative ordering. Therefore, we can use the inner scores directly in concert 
+
+    Here, we instead extract the performance estimates from the best model's validation
+    fold (held out part of the inner training folds) used to select the hyperparameters
+    for a given iteration of the outer loop.  These performance estimates are positively
+    biased, but extensive real-world testing suggests that using the scores from the
+    "flat CV" to **rank** different models does not make practical difference [2] to
+    their relative ordering. Therefore, we can use the inner scores directly in concert
     with paired t-tests to compare different pipelines when it is too computationally
     expensive to do repeated nested CV.
 
-    Unlike simple repetition of any CV procedure, framing this as a nested CV uses 
-    the outer loop as way to "shift" or decorrelate the data chunks more relative to 
-    simply reshuffling and reusing the data.  Thus, the Nadeau and Bengio's correction 
+    Unlike simple repetition of any CV procedure, framing this as a nested CV uses
+    the outer loop as way to "shift" or decorrelate the data chunks more relative to
+    simply reshuffling and reusing the data.  Thus, the Nadeau and Bengio's correction
     factor [3] for the t-test is less necessary, but further aids in making conservative
     inference.
 
@@ -63,7 +64,7 @@ class BiasedNestedCV:
     [1] Wainer, J. and Cawley G., "Nested cross-validation when
     selecting classifiers is overzealous for most practical applications."
     Expert Systems with Applications 182, 115222 (2021).
-    
+
     [2] Cawley, G.C. and Talbot, N.L.C., "On over-fitting in model selection and
     subsequent selection bias in performance evaluation," J. Mach. Learn. Res
     11, 2079-2107 (2010).
@@ -119,6 +120,7 @@ class BiasedNestedCV:
         return scores
 
     def random_search(self, *args, **kwargs):
+        """Perform nested random search CV."""
         raise NotImplementedError
 
     def grid_search(self, pipeline, param_grid, X, y, classification=True):
@@ -146,7 +148,7 @@ class BiasedNestedCV:
         -------
         scores : ndarray(float, ndim=1)
             Array of length K*R containing scores from all test folds.
-            
+
         Note
         ----
         For an RxK nested loop, R*K total scores are returned.  For
@@ -175,7 +177,8 @@ class BiasedNestedCV:
             else KFold(n_splits=self.__k_outer, random_state=1, shuffle=True),
         )
         return scores
-    
+
+
 class Compare:
     """Compare the performances of different ML pipelines or algorithms."""
 
@@ -206,7 +209,7 @@ class Compare:
         -------
         ax : matplotlib.pyplot.Axes
             Axes the radial graph is plotted on.
-            
+
         Note
         ----
         When nested k-fold or repeated k-fold tests on different pipelines
@@ -284,37 +287,37 @@ class Compare:
         estimators : array_like(sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator, ndim=1)
             A list of pipelines or estimators that implements the fit() and score()
             methods. These can also be a GridSearchCV object.
-        
+
         X : array_like(float, ndim=2)
             Matrix of features.
-        
+
         y : array_like(float, ndim=1)
             Array of outputs to predict.
-        
+
         n_repeats : scalar(int), optional(default=5)
             Number of times cross-validator needs to be repeated.
-        
+
         k : scalar(int), optional(default=2)
             K-fold cross-validation to use.
-        
+
         random_state : scalar(int) or numpy.random.RandomState instance, optional(default=0)
             Controls the randomness of each repeated cross-validation instance.
-        
+
         stratify : scalar(bool), optional(default=True)
             If True, use RepeatedStratifiedKFold - this is only valid for
             classification tasks.
-        
+
         estimators_mask : list(array_like(bool, ndim=1)), optional(default=None)
             Which columns of X to use in each estimator; default of None uses all columns for
             all estimators.  If specified, a mask must be given for each estimator.
-        
+
         Returns
         -------
         scores : ndarray(float, ndim=2)
             List of scores for estimator.  Each row is a different estimator, in order
             of how they were provided, and each column is the result from a different
             test fold.
-            
+
         Note
         ----
         The random state of the CV is the same for each so each pipeline or
@@ -324,8 +327,8 @@ class Compare:
         When comparing 2 pipelines that use different columns of X, use the
         estimators_mask variables to specify which columns to use.
         """
-        if not hasattr(estimators, '__iter__'):
-            raise TypeError('estimators is not iterable')
+        if not hasattr(estimators, "__iter__"):
+            raise TypeError("estimators is not iterable")
         else:
             estimators = [clone(est) for est in estimators]
 
@@ -346,12 +349,16 @@ class Compare:
         if estimators_mask is not None:
             if len(estimators_mask) != len(estimators):
                 raise Exception("A mask must be provided for each estimator.")
-            estimators_mask = [np.asarray(mask, dtype=bool) for mask in estimators_mask]
-            for i,mask in enumerate(estimators_mask):
+            estimators_mask = [
+                np.asarray(mask, dtype=bool) for mask in estimators_mask
+            ]
+            for i, mask in enumerate(estimators_mask):
                 if len(mask) != X.shape[1]:
                     raise ValueError(f"Mask index {i} has the wrong size")
         else:
-            estimators_mask = [np.array([True] * X.shape[1]) for est in estimators]
+            estimators_mask = [
+                np.array([True] * X.shape[1]) for est in estimators
+            ]
 
         scores = []
         for train_index, test_index in split:
@@ -359,9 +366,11 @@ class Compare:
             y_train, y_test = y[train_index], y[test_index]
 
             fold_scores = []
-            for i,est in enumerate(estimators):
+            for i, est in enumerate(estimators):
                 est.fit(X_train[:, estimators_mask[i]], y_train)
-                fold_scores.append(est.score(X_test[:, estimators_mask[i]], y_test))
+                fold_scores.append(
+                    est.score(X_test[:, estimators_mask[i]], y_test)
+                )
             scores.append(fold_scores)
 
         return np.array(scores, dtype=np.float64).T
@@ -386,7 +395,7 @@ class Compare:
         -------
         p : scalar(float)
             p value
-            
+
         Note
         ----
         Perform 1-sided hypothesis testing to see if any difference in
@@ -402,8 +411,10 @@ class Compare:
         two, and you want to check if that is statistically significant or not.
         """
         if np.mean(scores1) < np.mean(scores2):
-            raise ValueError("scores1 should have a higher mean value that scores2; reverse them and try again.")
-        
+            raise ValueError(
+                "scores1 should have a higher mean value that scores2; reverse them and try again."
+            )
+
         assert len(scores1) == len(
             scores2
         ), "scores must have the same \
@@ -446,7 +457,7 @@ class Compare:
         -------
         probs : tuple(float, float , float)
             Tuple of (prob_1, p_equiv, prob_2).
-            
+
         Note
         ----
         Perform Bayesian analysis to predict the probability that pipe(line)1
