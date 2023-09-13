@@ -209,37 +209,6 @@ class InspectData:
         References
         ----------
         See https://scikit-learn.org/stable/auto_examples/inspection/plot_permutation_importance_multicollinear.html
-
-        Example
-        -------
-        >>> from sklearn.datasets import load_breast_cancer
-        >>> from sklearn.ensemble import RandomForestClassifier
-        >>> data = load_breast_cancer()
-        >>> X, y = data.data, data.target
-        >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-        >>> # Train model in first round
-        >>> clf = RandomForestClassifier(n_estimators=100, random_state=42)
-        >>> clf.fit(X_train, y_train)
-        >>> clf.score(X_test, y_test) # 97%
-        >>> # Look at pfi --> EVERYTHING comes out as irrelevant because many features highly correlated
-        >>> pychemauth.analysis.inspect.InspectModel.pfi(clf, X_test, y_test, n_repeats=30, 
-        ... feature_names=data.feature_names.tolist())
-        >>> # Look at multicollinearity
-        >>> selected_features, cluster_id_to_feature_ids, _ =
-        ... pychemauth.eda.explore.InspectData.cluster_collinear(X, # Unsupervised
-        ...                                figsize=(12, 8),
-        ...                                display=True,
-        ...                                t=2,
-        ...                                feature_names=None) # Get indices
-        >>> # Fit again just using these selected features
-        >>> X_train, X_test = X_train[:,selected_features],
-        ... X_test[:,selected_features]
-        >>> clf.fit(X_train, y_train)
-        >>> clf.score(X_test, y_test) # 96%, almost identical as expected
-        >>> # Top is "mean radius", which according to dendogram above, is
-        ... highly correlated with other "size" metrics
-        >>> pychemauth.analysis.inspect.InspectModel.pfi(clf, X_test, y_test, n_repeats=30,
-        ... feature_names=data.feature_names[selected_features])
         """
         from collections import defaultdict
 
@@ -249,15 +218,12 @@ class InspectData:
 
         X = np.asarray(X, dtype=np.float64)
         if feature_names is None:
-
             def naming(i):
                 return i
-
         else:
             feature_names = list(
                 feature_names
             )  # Needs to be a list for compatibility elsewhere
-
             def naming(i):
                 return feature_names[i]
 

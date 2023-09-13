@@ -762,9 +762,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         References
         ----------
         See SHAP documentation for a discussion on the utility and impact
-        of "squashing functions": https://shap.readthedocs.io/en/latest/\
-        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
-        #Probability-space-explaination
+        of "squashing functions": https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html#Probability-space-explaination
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
@@ -1726,17 +1724,17 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 (
                     "g",
                     in_mask,
-                    class_ + " = Inlier" + " ({})".format(np.sum(in_mask)),
+                    "{} = Inlier ({})".format(class_, np.sum(in_mask)),
                 ),
                 (
                     "orange",
                     ext_mask,
-                    class_ + " = Extreme" + " ({})".format(np.sum(ext_mask)),
+                    "{} = Extreme ({})".format(class_, np.sum(ext_mask)),
                 ),
                 (
                     "r",
                     out_mask,
-                    class_ + " = Outlier" + " ({})".format(np.sum(out_mask)),
+                    "{} = Outlier ({})".format(class_, np.sum(out_mask)),
                 ),
             ]:
                 if np.sum(mask) > 0:
