@@ -16,3 +16,4 @@ API Examples
    jupyter/gallery/feature_selection
    jupyter/gallery/comparing_pipelines
    jupyter/gallery/model_inspection
+   jupyter/gallery/learning_curves
