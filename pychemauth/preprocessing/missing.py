@@ -246,7 +246,7 @@ class PCA_IA:
     is never larger than the size of any training fold otherwise an exception will
     be thrown.
 
-    The PCA model (loadings) found during training are fixed and used during testing
+    The PCA model (loadings) found during training is fixed and used during testing
     to reconstruct test data if that is also missing.  This is necessary during
     cross-validation, for example, because the original data set may have missing data
     throughout and is subsequently split (repeatedly) so test folds will have some
@@ -579,7 +579,7 @@ class PLS_IA:
     is never larger than the size of any training fold otherwise an exception will
     be thrown.
 
-    The PLS model (loadings) found during training are fixed and used during testing
+    The PLS model (loadings) found during training is fixed and used during testing
     to reconstruct test data if that is also missing.  This is necessary during
     cross-validation, for example, because the original data set may have missing data
     throughout and is subsequently split (repeatedly) so test folds will have some
