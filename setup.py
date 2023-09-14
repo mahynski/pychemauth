@@ -32,7 +32,7 @@ setup(
         "ipywidgets",
         "matplotlib==3.7.2",
         "nodejs==0.1.1",
-        "numpy==1.24.4",
+        "numpy==1.24.3",
         "pandas==2.0.3",
         "pre-commit==3.3.3",
         "scikit-learn==1.3.0",
