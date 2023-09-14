@@ -93,6 +93,7 @@ can upload your data to your Drive and simply access it from there.
 
 
 You can then install pychemauth and begin your analysis.
+Note you may be prompted to restart the runtime after installing pychemauth, which is normal. Simply restart and continue.
 
 .. code-block:: python
    :linenos:
