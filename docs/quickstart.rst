@@ -53,7 +53,6 @@ Start by creating a new notebook directly from inside your Google Drive account 
 
 .. image:: _static/colab_example.gif
 
-Below is the code that accompanies the gif above.
 
 How can you upload your data so you can access it from your Drive? There are 2 options.  The first involves
 uploading the file(s) directly to this particular runtime instance.  If you are concerned about controlling
@@ -93,13 +92,27 @@ can upload your data to your Drive and simply access it from there.
 
 
 You can then install pychemauth and begin your analysis.
-Note you may be prompted to restart the runtime after installing pychemauth, which is normal. Simply restart and continue.
 
 .. code-block:: python
    :linenos:
 
    # 3. Install PyChemAuth
    !pip install git+https://github.com/mahynski/pychemauth@main
+
+
+Note that you may be prompted to restart the runtime after installing pychemauth, which is normal. 
+You can restart from the top menu (Runtime > Restart runtime) or us the python code below.
+
+.. code-block:: python
+   :linenos:
+   
+   import os
+   os.kill(os.getpid(), 9)
+
+
+.. code-block:: python
+   :linenos:
+
    import pychemauth
 
    # Perform analysis ...
