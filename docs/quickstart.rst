@@ -6,19 +6,22 @@ Installation
 
 Vist the `github repo <https://github.com/mahynski/pychemauth>`_ to check for the most recent version and replace "X.X.X" below.
 
+The easiest way to install pychemauth is with `pip <https://pypi.org/project/pip/>`_:
+
+.. code-block:: python
+   :linenos:
+   
+   pip install git+https://github.com/mahynski/pychemauth@main
+
+You can also download the `repository <https://github.com/mahynski/pychemauth>`_ and install it from there. Check for the most recent version, or whichever is desired, and replace "X.X.X" below.
+
 .. code-block:: bash
    :linenos:
 
    git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1
    cd pychemauth
    pip install .
-
-You should run unittests to make sure your installation is working correctly.
-
-.. code-block:: bash
-   :linenos:
-
-   pytest
+   pytest # Optional, but recommended to run unittests
 
 Usage
 #####
@@ -62,7 +65,8 @@ Below is the code that accompanies the gif above.
 
    for fn in uploaded.keys():
    print('User uploaded file "{name}" with length {length} bytes'.format(
-    name=fn, length=len(uploaded[fn])))
+        name=fn, length=len(uploaded[fn]))
+   )
 
 
 .. code-block:: python
@@ -76,14 +80,8 @@ Below is the code that accompanies the gif above.
 .. code-block:: python
    :linenos:
 
-   # 3. Clone PyChemAuth repo
-   !git clone https://github.com/mahynski/pychemauth.git --depth 1 --branch vX.Y.Z
-   !cd pychemauth; pip install .; cd ..
-
-
-.. code-block:: python
-   :linenos:
-
+   # 3. Install PyChemAuth
+   !pip install git+https://github.com/mahynski/pychemauth@main
    import pychemauth
 
    # Perform analysis ...
