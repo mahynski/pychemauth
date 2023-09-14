@@ -4,8 +4,6 @@ Quick Start Guide
 Installation
 ############
 
-Vist the `github repo <https://github.com/mahynski/pychemauth>`_ to check for the most recent version and replace "X.X.X" below.
-
 The easiest way to install pychemauth is with `pip <https://pypi.org/project/pip/>`_:
 
 .. code-block:: python
@@ -92,6 +90,7 @@ can upload your data to your Drive and simply access it from there.
    # Read your csv data into a Pandas DataFrame
    import pandas as pd
    df = pd.read_csv("/drive/MyDrive/my_file.csv")
+
 
 You can then install pychemauth and begin your analysis.
 
