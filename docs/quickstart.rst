@@ -51,31 +51,49 @@ Deploying on `Colab <https://colab.google/>`_
 
 You can use pychemauth in the cloud for free by using `Google Colab <https://colab.research.google.com>`_.
 Click the link and follow the instructions to set up an account if you do not already have one.
+Start by creating a new notebook directly from inside your Google Drive account and proceed as follows.
 
 .. image:: _static/colab_example.gif
 
 Below is the code that accompanies the gif above.
+
+How can you upload your data so you can access it from your Drive? There are 2 options.  The first involves
+uploading the file(s) directly to this particular runtime instance.  If you are concerned about controlling
+where this data goes, consider the second option of mounting your Drive from the notebook.  In that case you
+can upload your data to your Drive and simply access it from there.
 
 .. code-block:: python
    :linenos:
 
    # 1. Upload your data as a .csv file (enter this code and click "Choose Files")
    from google.colab import files
-   uploaded = files.upload() # Currently there are some issues with this on Firefox
+   my_file = files.upload() # Currently there are some issues with this on Firefox
 
-   for fn in uploaded.keys():
+   for fn in my_file.keys():
    print('User uploaded file "{name}" with length {length} bytes'.format(
-        name=fn, length=len(uploaded[fn]))
+        name=fn, length=len(my_file[fn]))
    )
+
+   # Read your csv data into a Pandas DataFrame
+   import pandas as pd
+   df = pd.read_csv(list(uploaded.keys())[0])
 
 
 .. code-block:: python
    :linenos:
 
-   # 2. Read your csv data into a Pandas DataFrame
-   import pandas as pd
-   df = pd.read_csv(list(uploaded.keys())[0])
+   # 2. Put the file in your Google Drive and access it from there
+   from google.colab import drive
+   drive.mount('/content/drive')
 
+   # Your Drive is mounted here
+   %ls drive/MyDrive/
+
+   # Read your csv data into a Pandas DataFrame
+   import pandas as pd
+   df = pd.read_csv("/drive/MyDrive/my_file.csv")
+
+You can then install pychemauth and begin your analysis.
 
 .. code-block:: python
    :linenos:
