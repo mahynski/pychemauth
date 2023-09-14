@@ -80,4 +80,4 @@ Refer to the `sklearn-som <https://sklearn-som.readthedocs.io/en/latest/>`_ webs
 Data
 ####
 
-Example data used in this repository comes from several sources including:
+Example data used in this repository comes from several sources; refer to the documentation for each data loader (e.g., `load_pgaa`) for the appropriate citation(s).
