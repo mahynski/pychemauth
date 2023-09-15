@@ -12,6 +12,15 @@ Python-based Chemometric Authentication
 
 Please refer to the documentation hosted on [readthedocs](https://pychemauth.readthedocs.io/en/latest/index.html).
 
+# Description
+This is a toolkit to perform chemometric analysis, though it is primarily focused on authentication. These methods are designed to follow scikit-learn’s estimator API so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning (ML) tools.
+
+# Citation
+Refer to the CITATION.cff file for information regarding the citation of this repository.  Also see the [documentation](https://pychemauth.readthedocs.io/en/latest/citation.html) for more details.
+
+# Contact information
+* Nathan A. Mahynski, Material Measurement Laboratory, Chemical Sciences Division, Chemical Informatics Group. Contact: nathan.mahynski@nist.gov
+
 # License Information
-* See LICENSE for more information.
+* See LICENSE.md for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by [NIST](https://www.nist.gov/).
