@@ -191,7 +191,7 @@ class PLS(RegressorMixin, BaseEstimator):
             # 2. Preprocess Y data
             self.__y_scaler_ = CorrectedScaler(
                 with_mean=True, with_std=False
-            )  # Always center and maybe scale Y
+            )  # Always center and do not scale Y
             self.__y_scaler_.fit(self.__y_)
 
             # 3. Perform PLS
@@ -219,7 +219,7 @@ class PLS(RegressorMixin, BaseEstimator):
 
             self.__pls_ = PLSRegression(
                 n_components=self.n_components,
-                scale=self.scale_x,
+                scale=False, # Scaling was already done as desired
                 max_iter=10000,
             )
 

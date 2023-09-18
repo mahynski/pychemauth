@@ -27,7 +27,7 @@ Out-of-distribution (OOD) detection is a more general term which encompasses the
 
 License Information
 ###################
-* See LICENSE for more information.
+* See `LICENSE.md <https://github.com/mahynski/pychemauth/blob/main/LICENSE.md>`_ for more information.
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by `NIST <https://www.nist.gov/>`_.
 
 Core Capabilities
