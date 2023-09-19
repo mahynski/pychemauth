@@ -28,6 +28,7 @@ Out-of-distribution (OOD) detection is a more general term which encompasses the
 License Information
 ###################
 * See `LICENSE.md <https://github.com/mahynski/pychemauth/blob/main/LICENSE.md>`_ for more information.
+
 * Any mention of commercial products is for information only; it does not imply recommendation or endorsement by `NIST <https://www.nist.gov/>`_.
 
 Core Capabilities
@@ -109,11 +110,11 @@ Topological Methods (Intermediate data limit)
 * `UMAP <https://umap-learn.readthedocs.io/en/latest/>`_
 
 These approaches may be considered intermediate between conventional chemometric methods and modern AI/ML algorithms.  These are generally `non-linear dimensionality reduction <https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction>`_ methods that try to preserve properties, like the topology, of the original data; once projected into a lower dimensional space (embedding), statistical models can be constructed, for example, by drawing an ellipse around the points belonging to a known class. Conventional chemometric authentication methods operate in a similar fashion but with a simpler dimensionality reduction step. Although `many methods <https://scikit-learn.org/stable/modules/outlier_detection.html>`_ can be used to detect anomalies in this embedding (score space), we favor the `elliptic envelope <https://scikit-learn.org/stable/modules/generated/sklearn.covariance.EllipticEnvelope.html#sklearn.covariance.EllipticEnvelope>`_ here for its simplicity and statistical interpretability. Only members of one known class are purposefully trained on (at a time).
+
 * :py:class:`EllipticManifold` - a combined manifold learning/dimensionality reduction step followed by the determination of an elliptical boundary to detect outliers.
 
 Machine Learning (Large data limit)
 ###################################
-
 In ML/AI, the problem of detecting novelties (a previously unknown class) when only a finite subset of known classes are available for training is known as `open set recognition <https://www.wjscheirer.com/projects/openset-recognition/>`_.  Here are some references for further reading:
 
 * `Yang, J., Zhou K., Li Y., and Z. Liu. "Generalized out-of-distribution detection: A survey," (2022): arXiv:2110.11334 <https://arxiv.org/abs/2110.11334>`_
