@@ -688,17 +688,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         II, _, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
-        X = self._matrix_X(X)
+        X_pred = self.__ss_.inverse_transform(self.__pca_.inverse_transform(self.transform(X)))
+        numer = np.sum((X - X_pred) ** 2, axis=1) / ( self.__a_ - KK ) # See [3]
 
-        X_pred = np.matmul(self.transform(X), self.__pca_.components_)
-        # See [3]
-        numer = np.sum((self.__ss_.transform(X) - X_pred) ** 2, axis=1) / (
-            self.__a_ - KK
-        )
-
-        X_pred = np.matmul(self.transform(self.__X_), self.__pca_.components_)
-        # See [3]
-        OD2 = np.sum((self.__ss_.transform(self.__X_) - X_pred) ** 2, axis=1)
+        X_pred = self.__ss_.inverse_transform(self.__pca_.inverse_transform(self.transform(self.__X_)))
+        OD2 = np.sum((self.__X_ - X_pred) ** 2, axis=1) # See [3]
         denom = np.sum(OD2) / ((self.__a_ - KK) * (II - KK - 1))
 
         # F-score for each distance
@@ -1277,7 +1271,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         T = self.__pca_.transform(X_raw_std)
         X_pred = self.__pca_.inverse_transform(
             T
-        )  # np.matmul(T, self.__pca_.components_)
+        )
 
         # OD
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
