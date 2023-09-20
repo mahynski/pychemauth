@@ -325,7 +325,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1),
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
-                self.__S_[i] /= (t.shape[0]-1) # t.shape[0] is used by Ref [1]
+                self.__S_[i] /= t.shape[0] - 1  # t.shape[0] is used by Ref [1]
                 try:
                     # Check if positive definite.
                     np.linalg.cholesky(self.__S_[i])
@@ -354,7 +354,7 @@ n_features [{}])] = [{}, {}].".format(
         # scales all distances the same amount - for hard classification this has no
         # effect since the decision is based on the smallest value, so uniform scaling
         # does not change the result.
-        self.__L_ = L # * (self.__T_train_.shape[0] - 1) 
+        self.__L_ = L  # * (self.__T_train_.shape[0] - 1)
         if self.__L_.ndim == 0:  # When we have a binary problem
             self.__L_ = np.array([[self.__L_]])
 

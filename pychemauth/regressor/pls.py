@@ -219,7 +219,7 @@ class PLS(RegressorMixin, BaseEstimator):
 
             self.__pls_ = PLSRegression(
                 n_components=self.n_components,
-                scale=False, # Scaling was already done as desired
+                scale=False,  # Scaling was already done as desired
                 max_iter=10000,
             )
 

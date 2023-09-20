@@ -87,7 +87,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [4] "Multivariate class modeling for the verification of food-authenticity 
+    [4] "Multivariate class modeling for the verification of food-authenticity
     claims," Oliveri, P., and Downey, G., TrAC Trends in Anal. Chem. 35 (2012) 74-86.
     """
 

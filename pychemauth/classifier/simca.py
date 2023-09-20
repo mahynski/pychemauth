@@ -688,11 +688,15 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         II, _, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
-        X_pred = self.__ss_.inverse_transform(self.__pca_.inverse_transform(self.transform(X)))
-        numer = np.sum((X - X_pred) ** 2, axis=1) / ( self.__a_ - KK ) # See [3]
+        X_pred = self.__ss_.inverse_transform(
+            self.__pca_.inverse_transform(self.transform(X))
+        )
+        numer = np.sum((X - X_pred) ** 2, axis=1) / (self.__a_ - KK)  # See [3]
 
-        X_pred = self.__ss_.inverse_transform(self.__pca_.inverse_transform(self.transform(self.__X_)))
-        OD2 = np.sum((self.__X_ - X_pred) ** 2, axis=1) # See [3]
+        X_pred = self.__ss_.inverse_transform(
+            self.__pca_.inverse_transform(self.transform(self.__X_))
+        )
+        OD2 = np.sum((self.__X_ - X_pred) ** 2, axis=1)  # See [3]
         denom = np.sum(OD2) / ((self.__a_ - KK) * (II - KK - 1))
 
         # F-score for each distance
@@ -1269,9 +1273,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         X_raw_std = self.__ss_.transform(X_raw)
         T = self.__pca_.transform(X_raw_std)
-        X_pred = self.__pca_.inverse_transform(
-            T
-        )
+        X_pred = self.__pca_.inverse_transform(T)
 
         # OD
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
@@ -1628,7 +1630,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         if len(feature_names) != self.n_features_in_:
             raise ValueError("Must provide a name for each column.")
 
-        a = self.__pca_.components_.T*np.sqrt(self.__pca_.explained_variance_)
+        a = self.__pca_.components_.T * np.sqrt(self.__pca_.explained_variance_)
         ax.plot(a[:, 0], a[:, 1], "o")
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")

@@ -8,7 +8,7 @@ The easiest way to install pychemauth is with `pip <https://pypi.org/project/pip
 
 .. code-block:: python
    :linenos:
-   
+
    pip install git+https://github.com/mahynski/pychemauth@main
 
 You can also download the `repository <https://github.com/mahynski/pychemauth>`_ and install it from there. Check for the most recent version, or whichever is desired, and replace "X.X.X" below.
@@ -100,12 +100,12 @@ You can then install pychemauth and begin your analysis.
    !pip install git+https://github.com/mahynski/pychemauth@main
 
 
-Note that you may be prompted to restart the runtime after installing pychemauth, which is normal. 
+Note that you may be prompted to restart the runtime after installing pychemauth, which is normal.
 You can restart from the top menu (Runtime > Restart runtime) or us the python code below.
 
 .. code-block:: python
    :linenos:
-   
+
    import os
    os.kill(os.getpid(), 9)
 

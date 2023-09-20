@@ -116,7 +116,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertEqual(pred[2], "THA1")
 
         # Check some distances from projection to class centers
-        distances = (345-1)*np.array(
+        distances = (345 - 1) * np.array(
             [
                 [
                     0.004397761999084647,
@@ -306,9 +306,9 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [2.5119598 ,  5.39530629, 37.66112251],
-                [17.35162637,  1.05449711, 37.77998796],
-                [28.49535801, 18.15494857,  0.06570618],
+                [2.5119598, 5.39530629, 37.66112251],
+                [17.35162637, 1.05449711, 37.77998796],
+                [28.49535801, 18.15494857, 0.06570618],
             ]
         )
         d = plsda.mahalanobis(raw_x)
@@ -332,7 +332,7 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((CSNS.values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        x = np.array([0.99193548, 0.9335443,  1.0])
+        x = np.array([0.99193548, 0.9335443, 1.0])
         err = np.all(np.abs((CSPS.values - x)) < 1.0e-6)
         self.assertTrue(err)
 
@@ -475,7 +475,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertEqual(pred[2], "Oregano")
 
         # Check some distances from projection to class centers
-        distances = (86-1)*np.array(
+        distances = (86 - 1) * np.array(
             [
                 [0.00010100838627651073, 0.07384404529354482],
                 [0.0012469215301886371, 0.10055537646974555],
@@ -638,9 +638,9 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [4.66075428e-02, 5.30138906e+01],
+                [4.66075428e-02, 5.30138906e01],
                 [0.57535766, 72.19040758],
-                [26.34009511,  1.31936337],
+                [26.34009511, 1.31936337],
             ]
         )
         d = plsda.mahalanobis(raw_x)
