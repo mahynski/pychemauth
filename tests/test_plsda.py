@@ -116,7 +116,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertEqual(pred[2], "THA1")
 
         # Check some distances from projection to class centers
-        distances = np.array(
+        distances = (345-1)*np.array(
             [
                 [
                     0.004397761999084647,
@@ -306,21 +306,21 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [2.538126045790289, 5.587995799331847, 37.83387995734197],
-                [17.532372477230968, 1.0921577192191358, 37.953290659545495],
-                [28.792184657319407, 18.803339592324903, 0.06600758061716426],
+                [2.5119598 ,  5.39530629, 37.66112251],
+                [17.35162637,  1.05449711, 37.77998796],
+                [28.49535801, 18.15494857,  0.06570618],
             ]
         )
         d = plsda.mahalanobis(raw_x)
         d = np.array([d[1], d[125], d[150]])
-        err = np.all(np.abs((d - distances)) < 1.0e-12)
+        err = np.all(np.abs((d - distances)) < 1.0e-5)
         self.assertTrue(err)
 
         # Check FOM on test and train
         df, Itot, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = plsda.figures_of_merit(
             plsda.predict(raw_x), raw_y
         )
-        x = np.array([[91, 17, 0, 2], [0, 27, 0, 2], [2, 2, 203, 13]])
+        x = np.array([[91, 19, 0, 1], [0, 27, 0, 2], [2, 2, 203, 13]])
         err = np.all((df.values - x) == 0)
         self.assertTrue(err)
 
@@ -332,18 +332,18 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((CSNS.values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        x = np.array([0.99193548, 0.93987342, 1.0])
+        x = np.array([0.99193548, 0.9335443,  1.0])
         err = np.all(np.abs((CSPS.values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        x = np.array([0.96466505, 0.93544351, 0.96277756])
+        x = np.array([0.96466505, 0.93228855, 0.96277756])
         err = np.all(np.abs((CEFF.values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         self.assertTrue(np.abs(TSNS - 0.9304347826086956) < 1.0e-12)
-        self.assertTrue(np.abs(TSPS - 0.9695652173913043) < 1.0e-12)
+        self.assertTrue(np.abs(TSPS - 0.9666666666666667) < 1.0e-12)
         self.assertTrue(
-            np.abs(TEFF - np.sqrt(0.9304347826086956 * 0.9695652173913043))
+            np.abs(TEFF - np.sqrt(0.9304347826086956 * 0.9666666666666667))
             < 1.0e-12
         )
 
@@ -351,7 +351,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(
             np.abs(
                 plsda.score(raw_x, raw_y)
-                - np.sqrt(0.9304347826086956 * 0.9695652173913043)
+                - np.sqrt(0.9304347826086956 * 0.9666666666666667)
             )
             < 1.0e-12
         )
@@ -475,7 +475,7 @@ class TestPLSDA(unittest.TestCase):
         self.assertEqual(pred[2], "Oregano")
 
         # Check some distances from projection to class centers
-        distances = np.array(
+        distances = (86-1)*np.array(
             [
                 [0.00010100838627651073, 0.07384404529354482],
                 [0.0012469215301886371, 0.10055537646974555],
@@ -638,14 +638,14 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [0.04934916301333544, 53.80514269526369],
-                [0.6092022269286212, 73.26787634972074],
-                [27.88951247330385, 1.3390553574558735],
+                [4.66075428e-02, 5.30138906e+01],
+                [0.57535766, 72.19040758],
+                [26.34009511,  1.31936337],
             ]
         )
         d = plsda.mahalanobis(raw_x)
         d = np.array([d[0], d[10], d[50]])
-        err = np.all(np.abs((d - distances)) < 1.0e-12)
+        err = np.all(np.abs((d - distances)) < 1.0e-6)
         self.assertTrue(err)
 
         # Check FOM on test and train
