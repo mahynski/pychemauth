@@ -72,6 +72,9 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected. [1]
 
+    This resembles "unequal class models" (UNEQ), but fits the elliptical
+    boundary after a (possibly non-linear) dimensionality reduction has taken place. [4]
+
     References
     ----------
     [1] "Rigorous and compliant approaches to one-class classification,"
@@ -83,6 +86,9 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
     [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+
+    [4] "Multivariate class modeling for the verification of food-authenticity 
+    claims," Oliveri, P., and Downey, G., TrAC Trends in Anal. Chem. 35 (2012) 74-86.
     """
 
     def __init__(
