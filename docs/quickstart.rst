@@ -54,7 +54,7 @@ Start by creating a new notebook directly from inside your Google Drive account 
 .. image:: _static/colab_example.gif
 
 
-How can you upload your data so you can access it from your Drive? There are 2 options.  The first involves
+How can you upload your data so you can access it from Colab? There are 2 options.  The first involves
 uploading the file(s) directly to this particular runtime instance.  If you are concerned about controlling
 where this data goes, consider the second option of mounting your Drive from the notebook.  In that case you
 can upload your data to your Drive and simply access it from there.
@@ -101,7 +101,7 @@ You can then install pychemauth and begin your analysis.
 
 
 Note that you may be prompted to restart the runtime after installing pychemauth, which is normal.
-You can restart from the top menu (Runtime > Restart runtime) or us the python code below.
+You can restart from the top menu (Runtime > Restart runtime) or use the python code below.
 
 .. code-block:: python
    :linenos:
