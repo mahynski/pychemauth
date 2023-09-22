@@ -383,12 +383,12 @@ class PLS(RegressorMixin, BaseEstimator):
         X_ = self.__x_scaler_.transform(X)
         x_scores = self.__pls_.transform(X_)
 
-        x_scores_t_ = self.transform(self.__X_)
+        x_scores_t_ = self.transform(self.__X_) 
         h = np.diagonal(
             np.matmul(
                 np.matmul(
                     x_scores,
-                    np.linalg.inv(np.matmul(x_scores_t_.T, x_scores_t_)),
+                    np.linalg.inv(np.matmul(x_scores_t_.T, x_scores_t_) / (self.__X_.shape[0]-1)), # For consistency with mdatools 0.14.1
                 ),
                 x_scores.T,
             )
@@ -485,6 +485,57 @@ class PLS(RegressorMixin, BaseEstimator):
         return self.__y_scaler_.inverse_transform(
             self.__pls_.predict(self.__x_scaler_.transform(X))
         )
+
+    def pls2_coeff(self, feature_names=None, ax=None, return_coeff=False):
+        """
+        Plot the coefficients in the PLS model to examine variable importance.
+
+        Parameters
+        ----------
+        feature_names : list, optional(default=None)
+            Names of each feature (column) in X; if None, each is numbered starting
+            from 1.
+
+        ax : matplotlib.pyplot.axes, optional(default=None)
+            Axes to plot results on.  If None, a new figure is created.
+
+        return_coeff : scalar(bool), optional(default=False)
+            Whether to return the PLS coefficients instead of the figure axis. 
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes or ndarray
+            Figure axes being plotted on or the PLS coefficients depending on
+            the value of `return_coeff`.
+
+        Warning
+        -------
+        Predictions are made according to `Y - Y_mean = coef@(X - X_mean)/scale + intercept`; 
+        since Y is centered the intercept = 0, if `scale_x=True` then scale = std(X), 
+        otherwise it is just unity. The coefficients are affected by the scale of 
+        each feature in X.  For interpretation, use `scale_x=True` so X is autoscaled.
+        This way the magnitude of the coefficient corresponds to the significance 
+        of the feature. Note that X and Y are always centered. 
+        """
+        if ax is None:
+            fig, ax = plt.subplots(nrows=1, ncols=1)
+
+        if feature_names is None:
+            feature_names = [str(i+1) for i in range(self.n_features_in_)]
+        else:
+            feature_names = feature_names
+
+        coeffs = np.array(self.__pls_.coef_[0])
+
+        ax.plot(np.arange(len(feature_names)), coeffs, 'o')
+        ax.set_xticks(np.arange(len(feature_names)), feature_names, rotation=90)
+        ax.set_xlabel("Feature")
+        ax.set_ylabel("PLS Coefficient")
+
+        if return_coeff:
+            return coeffs
+        else:
+            return ax
 
     def score(self, X, y):
         """
@@ -583,7 +634,7 @@ class PLS(RegressorMixin, BaseEstimator):
 
         return extremes, outliers
 
-    def visualize(self, X, y, figsize=None):
+    def visualize(self, X, y, figsize=None, log=True):
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations.
 
@@ -598,6 +649,9 @@ class PLS(RegressorMixin, BaseEstimator):
 
         figsize : tuple(int, int), optional(default=None)
             Figure size.
+
+        log : scalar(bool), optional(default=True)
+            Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
@@ -628,18 +682,18 @@ class PLS(RegressorMixin, BaseEstimator):
         )
 
         axes[0].plot(
-            np.log(1.0 + h_lim / self.__h0_),
-            np.log(1.0 + q_lim / self.__q0_),
+            np.log(1.0 + h_lim / self.__h0_) if log else h_lim / self.__h0_,
+            np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
         axes[0].plot(
-            np.log(1.0 + h_lim_out / self.__h0_),
-            np.log(1.0 + q_lim_out / self.__q0_),
+            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_)),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
+            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
+            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
         )
 
         ext_mask, out_mask = self.check_x_outliers(X_)
@@ -662,21 +716,21 @@ class PLS(RegressorMixin, BaseEstimator):
             ),
         ]:
             axes[0].plot(
-                np.log(1.0 + h_[mask] / self.__h0_),
-                np.log(1.0 + q_[mask] / self.__q0_),
+                np.log(1.0 + h_[mask] / self.__h0_) if log else h_[mask] / self.__h0_,
+                np.log(1.0 + q_[mask] / self.__q0_) if log else q_[mask] / self.__q0_,
                 label=label,
                 marker="o",
                 lw=0,
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
+        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
+        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
         axes[0].legend(loc="upper right")
         axes[0].set_xlim(0, xlim)
         axes[0].set_ylim(0, ylim)
-        axes[0].set_xlabel(r"${\rm ln(1 + h/h_0)}$")
-        axes[0].set_ylabel(r"${\rm ln(1 + q/q_0)}$")
+        axes[0].set_xlabel(r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$")
+        axes[0].set_ylabel(r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$")
         axes[0].set_title("Full Distance (X)")
 
         # 2. XY plot
@@ -697,18 +751,18 @@ class PLS(RegressorMixin, BaseEstimator):
         )
 
         axes[1].plot(
-            np.log(1.0 + f_lim / self.__f0_),
-            np.log(1.0 + z_lim / self.__z0_),
+            np.log(1.0 + f_lim / self.__f0_) if log else f_lim / self.__f0_,
+            np.log(1.0 + z_lim / self.__z0_)if log else z_lim / self.__z0_,
             "g-",
         )
         axes[1].plot(
-            np.log(1.0 + f_lim_out / self.__f0_),
-            np.log(1.0 + z_lim_out / self.__z0_),
+            np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_,
+            np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + f_lim_out / self.__f0_)),
-            1.1 * np.max(np.log(1.0 + z_lim_out / self.__z0_)),
+            1.1 * np.max(np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_),
+            1.1 * np.max(np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_),
         )
 
         ext_mask, out_mask = self.check_xy_outliers(X_, y_)
@@ -731,21 +785,21 @@ class PLS(RegressorMixin, BaseEstimator):
             ),
         ]:
             axes[1].plot(
-                np.log(1.0 + f_[mask] / self.__f0_),
-                np.log(1.0 + z_[mask] / self.__z0_),
+                np.log(1.0 + f_[mask] / self.__f0_) if log else f_[mask] / self.__f0_,
+                np.log(1.0 + z_[mask] / self.__z0_) if log else z_[mask] / self.__z0_,
                 label=label,
                 marker="o",
                 lw=0,
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + f_ / self.__f0_))])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + z_ / self.__z0_))])
+        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + f_ / self.__f0_) if log else f_ / self.__f0_)])
+        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + z_ / self.__z0_) if log else z_ / self.__z0_)])
         axes[1].legend(loc="upper right")
         axes[1].set_xlim(0, xlim)
         axes[1].set_ylim(0, ylim)
-        axes[1].set_xlabel(r"${\rm ln(1 + f/f_0)}$")
-        axes[1].set_ylabel(r"${\rm ln(1 + z/z_0)}$")
+        axes[1].set_xlabel(r"${\rm ln(1 + f/f_0)}$" if log else r"${\rm f/f_0}$")
+        axes[1].set_ylabel(r"${\rm ln(1 + z/z_0)}$" if log else r"${\rm z/z_0}$")
         axes[1].set_title("Total Distance (XY)")
         plt.tight_layout()
 
