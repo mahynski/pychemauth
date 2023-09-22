@@ -644,6 +644,9 @@ class PCA(ClassifierMixin, BaseEstimator):
             fig = plt.figure()
             ax = plt.gca()
 
+        if feature_names is None:
+            feature_names = [str(i) for i in range(self.n_features_in_)]
+
         if self.n_components < 2:
             raise ValueError(
                 "Cannot visualize when using less than 2 components."
@@ -652,7 +655,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         if len(feature_names) != self.n_features_in_:
             raise ValueError("Must provide a name for each column.")
 
-        a = self.__pca_.components_.T * np.sqrt(self.__pca_.explained_variance_)
+        # Some communities multiply by the sqrt(eigenvalues) - for consistency with mdatools 0.14.1 we do not.
+        a = self.__pca_.components_.T #* np.sqrt(self.__pca_.explained_variance_) 
         ax.plot(a[:, 0], a[:, 1], "o")
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
