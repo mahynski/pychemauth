@@ -421,7 +421,46 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         }
 
 
-class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
+class _PassthroughDR(ClassifierMixin, BaseEstimator):
+    """Allow data to pass through without modification."""
+
+    def __init__(self, n_components=0):
+        """Initialize the class."""
+        self.set_params(
+            **{
+                "n_components": n_components,
+            }
+        )
+        self.is_fitted_ = False
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "n_components": self.n_components,
+        }
+
+    def fit(self, X, y=None):
+        """Fit the model."""
+        self.n_components = np.asarray(X, dtype=np.float64).shape[1]
+        self.is_fitted_ = True
+        return self
+
+    def transform(self, X):
+        """Transform the data."""
+        return X
+
+    def fit_transform(self, X):
+        """Fit and transform."""
+        return self.fit(X).transform(X)
+
+
+class EllipticManifold_Model(BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 
@@ -430,15 +469,19 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     alpha : scalar(float)
         Type I error rate (signficance level).
 
-    dr_model : object
-        Dimensionality reduction model, such as PCA; must support fit() and transform().
+    dr_model : object, optional(default=`_PassthroughDR`)
+        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`,
+        and `get_params()` which must return a parameter indicating the dimensionality of
+        the space after transformation; typically this is "n_components".  By default, a
+        simple passthrough class is provided which leaves the data unchanged and performs
+        no dimensionality reduction.
 
     kwargs : dict
-        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs). Must
-        contain the `ndims` keyword.
+        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs).
 
     ndims : str, optional(default="n_components")
-        Keyword in kwargs that corresponds to the dimensionality of the final space.
+        Keyword in that corresponds to the dimensionality of the final space.
+        The `dr_model.get_params()` dictionary should contain this keyword.
 
     robust : scalar(bool), optional(default=True)
         Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
@@ -530,8 +573,8 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     def __init__(
         self,
         alpha,
-        dr_model,
-        kwargs,
+        dr_model=_PassthroughDR,
+        kwargs={},
         ndims="n_components",
         robust=True,
         center="score",
@@ -631,14 +674,14 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = True
 
         # Compute (squared) Mahalanobis critical distance
-        if not (self.ndims in self.kwargs):
+        if not (self.ndims in self.model_.get_params()):
             raise ValueError(
-                "Cannot determined score space dimensionality, {} not in kwargs.".format(
+                "Cannot determined score space dimensionality, {} not in dr_model.get_params().".format(
                     self.ndims
                 )
             )
         self.__d_crit_ = scipy.stats.chi2.ppf(
-            1.0 - self.alpha, self.kwargs[self.ndims]
+            1.0 - self.alpha, self.model_.get_params()[self.ndims]
         )
 
         # Compute scatter matrix
@@ -1052,7 +1095,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
-        n = self.kwargs[self.ndims]
+        n = self.model_.get_params()[self.ndims]
         if n == 1:
             return self._visualize_1d(X_mats, labels, ax)
         elif n == 2:
@@ -1081,10 +1124,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
-        if self.kwargs[self.ndims] != 2:
+        if self.model_.get_params()[self.ndims] != 2:
             raise Exception(
                 "Cannot perform 2D visualization for a {} dimensional score space.".format(
-                    self.kwargs[self.ndims]
+                    self.model_.get_params()[self.ndims]
                 )
             )
         if len(labels) != len(X_mats):
@@ -1187,10 +1230,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
-        if self.kwargs[self.ndims] != 1:
+        if self.model_.get_params()[self.ndims] != 1:
             raise Exception(
                 "Cannot perform 1D visualization for a {} dimensional score space.".format(
-                    self.kwargs[self.ndims]
+                    self.model_.get_params()[self.ndims]
                 )
             )
         if len(labels) != len(X_mats):
