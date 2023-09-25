@@ -1275,7 +1275,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         T = self.__pca_.transform(X_raw_std)
         X_pred = self.__pca_.inverse_transform(T)
 
-        # OD - this is to produce identical results to mdatools (https://mdatools.com/docs/)
+        # OD - this is to produce identical results to mdatools 0.14.1
         q_vals = np.sum((X_raw_std - X_pred) ** 2, axis=1)
 
         # SD
