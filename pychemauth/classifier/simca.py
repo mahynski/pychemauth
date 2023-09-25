@@ -1631,7 +1631,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             raise ValueError("Must provide a name for each column.")
 
         # Some communities multiply by the sqrt(eigenvalues) - for consistency with mdatools 0.14.1 we do not.
-        a = self.__pca_.components_.T # * np.sqrt(self.__pca_.explained_variance_)
+        a = (
+            self.__pca_.components_.T
+        )  # * np.sqrt(self.__pca_.explained_variance_)
         ax.plot(a[:, 0], a[:, 1], "o")
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
@@ -1702,13 +1704,27 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "g-",
         )
         axis.plot(
-            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
-            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
+            np.log(1.0 + h_lim_out / self.__h0_)
+            if log
+            else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_)
+            if log
+            else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
+            1.1
+            * np.max(
+                np.log(1.0 + h_lim_out / self.__h0_)
+                if log
+                else h_lim_out / self.__h0_
+            ),
+            1.1
+            * np.max(
+                np.log(1.0 + q_lim_out / self.__q0_)
+                if log
+                else q_lim_out / self.__q0_
+            ),
         )
         X_ = self._matrix_X(X)
         y_ = np.array(y)
@@ -1750,16 +1766,40 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             ]:
                 if np.sum(mask) > 0:
                     axis.plot(
-                        np.log(1.0 + h_[mask] / self.__h0_) if log else h_[mask] / self.__h0_,
-                        np.log(1.0 + q_[mask] / self.__q0_) if log else q_[mask] / self.__q0_,
+                        np.log(1.0 + h_[mask] / self.__h0_)
+                        if log
+                        else h_[mask] / self.__h0_,
+                        np.log(1.0 + q_[mask] / self.__q0_)
+                        if log
+                        else q_[mask] / self.__q0_,
                         label=label,
                         marker=markers[i % len(markers)],
                         lw=0,
                         color=c,
                         alpha=0.35,
                     )
-            xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
-            ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
+            xlim = np.max(
+                [
+                    xlim,
+                    1.1
+                    * np.max(
+                        np.log(1.0 + h_ / self.__h0_)
+                        if log
+                        else h_ / self.__h0_
+                    ),
+                ]
+            )
+            ylim = np.max(
+                [
+                    ylim,
+                    1.1
+                    * np.max(
+                        np.log(1.0 + q_ / self.__q0_)
+                        if log
+                        else q_ / self.__q0_
+                    ),
+                ]
+            )
         axis.legend(bbox_to_anchor=(1, 1))
         axis.set_xlim(0, xlim)
         axis.set_ylim(0, ylim)

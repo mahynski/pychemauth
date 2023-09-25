@@ -418,7 +418,10 @@ class PCR(RegressorMixin, BaseEstimator):
                 np.matmul(
                     x_scores,
                     np.linalg.inv(
-                        np.matmul(self.__T_train_.T, self.__T_train_) / (self.__T_train_.shape[0]-1), # For consistency with PLS from mdatools 0.14.1
+                        np.matmul(self.__T_train_.T, self.__T_train_)
+                        / (
+                            self.__T_train_.shape[0] - 1
+                        ),  # For consistency with PLS from mdatools 0.14.1
                     ),
                 ),
                 x_scores.T,
@@ -673,13 +676,27 @@ class PCR(RegressorMixin, BaseEstimator):
             "g-",
         )
         axes[0].plot(
-            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
-            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
+            np.log(1.0 + h_lim_out / self.__h0_)
+            if log
+            else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_)
+            if log
+            else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
+            1.1
+            * np.max(
+                np.log(1.0 + h_lim_out / self.__h0_)
+                if log
+                else h_lim_out / self.__h0_
+            ),
+            1.1
+            * np.max(
+                np.log(1.0 + q_lim_out / self.__q0_)
+                if log
+                else q_lim_out / self.__q0_
+            ),
         )
 
         ext_mask, out_mask = self.check_x_outliers(X_)
@@ -710,13 +727,33 @@ class PCR(RegressorMixin, BaseEstimator):
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
+        xlim = np.max(
+            [
+                xlim,
+                1.1
+                * np.max(
+                    np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_
+                ),
+            ]
+        )
+        ylim = np.max(
+            [
+                ylim,
+                1.1
+                * np.max(
+                    np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_
+                ),
+            ]
+        )
         axes[0].legend(loc="upper right")
         axes[0].set_xlim(0, xlim)
         axes[0].set_ylim(0, ylim)
-        axes[0].set_xlabel(r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$")
-        axes[0].set_ylabel(r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$")
+        axes[0].set_xlabel(
+            r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$"
+        )
+        axes[0].set_ylabel(
+            r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$"
+        )
         axes[0].set_title("Full Distance (X)")
 
         # 2. XY plot
@@ -742,13 +779,27 @@ class PCR(RegressorMixin, BaseEstimator):
             "g-",
         )
         axes[1].plot(
-            np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_,
-            np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_,
+            np.log(1.0 + f_lim_out / self.__f0_)
+            if log
+            else f_lim_out / self.__f0_,
+            np.log(1.0 + z_lim_out / self.__z0_)
+            if log
+            else z_lim_out / self.__z0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_),
-            1.1 * np.max(np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_),
+            1.1
+            * np.max(
+                np.log(1.0 + f_lim_out / self.__f0_)
+                if log
+                else f_lim_out / self.__f0_
+            ),
+            1.1
+            * np.max(
+                np.log(1.0 + z_lim_out / self.__z0_)
+                if log
+                else z_lim_out / self.__z0_
+            ),
         )
 
         ext_mask, out_mask = self.check_xy_outliers(X_, y_)
@@ -771,21 +822,45 @@ class PCR(RegressorMixin, BaseEstimator):
             ),
         ]:
             axes[1].plot(
-                np.log(1.0 + f_[mask] / self.__f0_) if log else f_[mask] / self.__f0_,
-                np.log(1.0 + z_[mask] / self.__z0_) if log else z_[mask] / self.__z0_,
+                np.log(1.0 + f_[mask] / self.__f0_)
+                if log
+                else f_[mask] / self.__f0_,
+                np.log(1.0 + z_[mask] / self.__z0_)
+                if log
+                else z_[mask] / self.__z0_,
                 label=label,
                 marker="o",
                 lw=0,
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + f_ / self.__f0_) if log else f_ / self.__f0_)])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + z_ / self.__z0_) if log else z_ / self.__z0_)])
+        xlim = np.max(
+            [
+                xlim,
+                1.1
+                * np.max(
+                    np.log(1.0 + f_ / self.__f0_) if log else f_ / self.__f0_
+                ),
+            ]
+        )
+        ylim = np.max(
+            [
+                ylim,
+                1.1
+                * np.max(
+                    np.log(1.0 + z_ / self.__z0_) if log else z_ / self.__z0_
+                ),
+            ]
+        )
         axes[1].legend(loc="upper right")
         axes[1].set_xlim(0, xlim)
         axes[1].set_ylim(0, ylim)
-        axes[1].set_xlabel(r"${\rm ln(1 + f/f_0)}$" if log else r"${\rm f/f_0}$")
-        axes[1].set_ylabel(r"${\rm ln(1 + z/z_0)}$" if log else r"${\rm z/z_0}$")
+        axes[1].set_xlabel(
+            r"${\rm ln(1 + f/f_0)}$" if log else r"${\rm f/f_0}$"
+        )
+        axes[1].set_ylabel(
+            r"${\rm ln(1 + z/z_0)}$" if log else r"${\rm z/z_0}$"
+        )
         axes[1].set_title("Total Distance (XY)")
         plt.tight_layout()
 
