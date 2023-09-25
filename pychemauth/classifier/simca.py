@@ -1650,7 +1650,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def visualize(self, X, y, ax=None):
+    def visualize(self, X, y, ax=None, log=True):
         """
         Plot the chi-squared acceptance area with observations.
 
@@ -1665,6 +1665,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axis object to plot on.
+
+        log : scalar(bool), optional(default=True)
+            Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
@@ -1694,18 +1697,18 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             axis = ax
 
         axis.plot(
-            np.log(1.0 + h_lim / self.__h0_),
-            np.log(1.0 + q_lim / self.__q0_),
+            np.log(1.0 + h_lim / self.__h0_) if log else h_lim / self.__h0_,
+            np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
         axis.plot(
-            np.log(1.0 + h_lim_out / self.__h0_),
-            np.log(1.0 + q_lim_out / self.__q0_),
+            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_)),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
+            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
+            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
         )
         X_ = self._matrix_X(X)
         y_ = np.array(y)
@@ -1747,21 +1750,21 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             ]:
                 if np.sum(mask) > 0:
                     axis.plot(
-                        np.log(1.0 + h_[mask] / self.__h0_),
-                        np.log(1.0 + q_[mask] / self.__q0_),
+                        np.log(1.0 + h_[mask] / self.__h0_) if log else h_[mask] / self.__h0_,
+                        np.log(1.0 + q_[mask] / self.__q0_) if log else q_[mask] / self.__q0_,
                         label=label,
                         marker=markers[i % len(markers)],
                         lw=0,
                         color=c,
                         alpha=0.35,
                     )
-            xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
-            ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
+            xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
+            ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
         axis.legend(bbox_to_anchor=(1, 1))
         axis.set_xlim(0, xlim)
         axis.set_ylim(0, ylim)
-        axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$")
-        axis.set_ylabel(r"${\rm ln(1 + q/q_0)}$")
+        axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$")
+        axis.set_ylabel(r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$")
 
         return axis
 

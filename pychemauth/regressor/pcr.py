@@ -620,7 +620,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
         return extremes, outliers
 
-    def visualize(self, X, y, figsize=None):
+    def visualize(self, X, y, figsize=None, log=True):
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations.
 
@@ -635,6 +635,9 @@ class PCR(RegressorMixin, BaseEstimator):
 
         figsize : tuple(int, int), optional(default=None)
             Figure size.
+
+        log : scalar(bool), optional(default=True)
+            Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
@@ -665,18 +668,18 @@ class PCR(RegressorMixin, BaseEstimator):
         )
 
         axes[0].plot(
-            np.log(1.0 + h_lim / self.__h0_),
-            np.log(1.0 + q_lim / self.__q0_),
+            np.log(1.0 + h_lim / self.__h0_) if log else h_lim / self.__h0_,
+            np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
         axes[0].plot(
-            np.log(1.0 + h_lim_out / self.__h0_),
-            np.log(1.0 + q_lim_out / self.__q0_),
+            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_)),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
+            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
+            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
         )
 
         ext_mask, out_mask = self.check_x_outliers(X_)
@@ -707,13 +710,13 @@ class PCR(RegressorMixin, BaseEstimator):
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
+        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
+        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
         axes[0].legend(loc="upper right")
         axes[0].set_xlim(0, xlim)
         axes[0].set_ylim(0, ylim)
-        axes[0].set_xlabel(r"${\rm ln(1 + h/h_0)}$")
-        axes[0].set_ylabel(r"${\rm ln(1 + q/q_0)}$")
+        axes[0].set_xlabel(r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$")
+        axes[0].set_ylabel(r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$")
         axes[0].set_title("Full Distance (X)")
 
         # 2. XY plot
@@ -734,18 +737,18 @@ class PCR(RegressorMixin, BaseEstimator):
         )
 
         axes[1].plot(
-            np.log(1.0 + f_lim / self.__f0_),
-            np.log(1.0 + z_lim / self.__z0_),
+            np.log(1.0 + f_lim / self.__f0_) if log else f_lim / self.__f0_,
+            np.log(1.0 + z_lim / self.__z0_) if log else z_lim / self.__z0_,
             "g-",
         )
         axes[1].plot(
-            np.log(1.0 + f_lim_out / self.__f0_),
-            np.log(1.0 + z_lim_out / self.__z0_),
+            np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_,
+            np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + f_lim_out / self.__f0_)),
-            1.1 * np.max(np.log(1.0 + z_lim_out / self.__z0_)),
+            1.1 * np.max(np.log(1.0 + f_lim_out / self.__f0_) if log else f_lim_out / self.__f0_),
+            1.1 * np.max(np.log(1.0 + z_lim_out / self.__z0_) if log else z_lim_out / self.__z0_),
         )
 
         ext_mask, out_mask = self.check_xy_outliers(X_, y_)
@@ -768,21 +771,21 @@ class PCR(RegressorMixin, BaseEstimator):
             ),
         ]:
             axes[1].plot(
-                np.log(1.0 + f_[mask] / self.__f0_),
-                np.log(1.0 + z_[mask] / self.__z0_),
+                np.log(1.0 + f_[mask] / self.__f0_) if log else f_[mask] / self.__f0_,
+                np.log(1.0 + z_[mask] / self.__z0_) if log else z_[mask] / self.__z0_,
                 label=label,
                 marker="o",
                 lw=0,
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + f_ / self.__f0_))])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + z_ / self.__z0_))])
+        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + f_ / self.__f0_) if log else f_ / self.__f0_)])
+        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + z_ / self.__z0_) if log else z_ / self.__z0_)])
         axes[1].legend(loc="upper right")
         axes[1].set_xlim(0, xlim)
         axes[1].set_ylim(0, ylim)
-        axes[1].set_xlabel(r"${\rm ln(1 + f/f_0)}$")
-        axes[1].set_ylabel(r"${\rm ln(1 + z/z_0)}$")
+        axes[1].set_xlabel(r"${\rm ln(1 + f/f_0)}$" if log else r"${\rm f/f_0}$")
+        axes[1].set_ylabel(r"${\rm ln(1 + z/z_0)}$" if log else r"${\rm z/z_0}$")
         axes[1].set_title("Total Distance (XY)")
         plt.tight_layout()
 

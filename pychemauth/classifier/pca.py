@@ -675,7 +675,7 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def visualize(self, X, ax=None):
+    def visualize(self, X, ax=None, log=True):
         """
         Plot the chi-squared acceptance area with observations.
 
@@ -687,6 +687,9 @@ class PCA(ClassifierMixin, BaseEstimator):
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
+
+        log : scalar(bool), optional(default=True)
+            Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
@@ -718,18 +721,18 @@ class PCA(ClassifierMixin, BaseEstimator):
         )
 
         axis.plot(
-            np.log(1.0 + h_lim / self.__h0_),
-            np.log(1.0 + q_lim / self.__q0_),
+            np.log(1.0 + h_lim / self.__h0_) if log else h_lim / self.__h0_,
+            np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
         axis.plot(
-            np.log(1.0 + h_lim_out / self.__h0_),
-            np.log(1.0 + q_lim_out / self.__q0_),
+            np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_,
+            np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_,
             "r-",
         )
         xlim, ylim = (
-            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_)),
-            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_)),
+            1.1 * np.max(np.log(1.0 + h_lim_out / self.__h0_) if log else h_lim_out / self.__h0_),
+            1.1 * np.max(np.log(1.0 + q_lim_out / self.__q0_) if log else q_lim_out / self.__q0_),
         )
 
         ext_mask, out_mask = self.check_outliers(X)
@@ -752,21 +755,21 @@ class PCA(ClassifierMixin, BaseEstimator):
             ),
         ]:
             axis.plot(
-                np.log(1.0 + h_[mask] / self.__h0_),
-                np.log(1.0 + q_[mask] / self.__q0_),
+                np.log(1.0 + h_[mask] / self.__h0_) if log else h_[mask] / self.__h0_,
+                np.log(1.0 + q_[mask] / self.__q0_) if log else q_[mask] / self.__q0_,
                 label=label,
                 marker="o",
                 lw=0,
                 color=c,
                 alpha=0.35,
             )
-        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_))])
-        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_))])
+        xlim = np.max([xlim, 1.1 * np.max(np.log(1.0 + h_ / self.__h0_) if log else h_ / self.__h0_)])
+        ylim = np.max([ylim, 1.1 * np.max(np.log(1.0 + q_ / self.__q0_) if log else q_ / self.__q0_)])
         axis.legend(loc="upper right")
         axis.set_xlim(0, xlim)
         axis.set_ylim(0, ylim)
-        axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$")
-        axis.set_ylabel(r"${\rm ln(1 + q/q_0)}$")
+        axis.set_xlabel(r"${\rm ln(1 + h/h_0)}$" if log else r"${\rm h/h_0}$")
+        axis.set_ylabel(r"${\rm ln(1 + q/q_0)}$" if log else r"${\rm q/q_0}$")
 
         return axis
 
