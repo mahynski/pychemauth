@@ -47,7 +47,7 @@ class TestPCR_scaling(unittest.TestCase):
         self.assertEqual(self.model._PCR__Nq_, 7)
         self.assertEqual(self.model._PCR__Nz_, 1)
         np.testing.assert_almost_equal(
-            self.model._PCR__h0_, 0.13060986390853277
+            self.model._PCR__h0_, 0.13060986390853277 * (self.X.shape[0] -1)
         )
         np.testing.assert_almost_equal(self.model._PCR__q0_, 5.116083367151128)
         np.testing.assert_almost_equal(
@@ -63,9 +63,9 @@ class TestPCR_scaling(unittest.TestCase):
     def test_h_q(self):
         """Check some h and q values."""
         h, q = self.model._h_q(self.X)
-        ans_h = np.array([0.06977, 0.274621, 0.132318])
+        ans_h = np.array([0.06977, 0.274621, 0.132318]) * (self.X.shape[0] -1)
         ans_q = np.array([4.187058, 5.961213, 4.029075])
-        np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
+        np.testing.assert_almost_equal(h[:3], ans_h, decimal=5)
         np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)
 
     def test_f(self):
@@ -148,7 +148,7 @@ class TestPCR_center(unittest.TestCase):
         self.assertEqual(self.model._PCR__Nq_, 4)
         self.assertEqual(self.model._PCR__Nz_, 1)
         np.testing.assert_almost_equal(
-            self.model._PCR__h0_, 0.08547084406857604
+            self.model._PCR__h0_, 0.08547084406857604 * (self.X.shape[0] -1)
         )
         np.testing.assert_almost_equal(
             self.model._PCR__q0_, 0.00020476865764116616
@@ -166,7 +166,7 @@ class TestPCR_center(unittest.TestCase):
     def test_h_q(self):
         """Check some h and q values."""
         h, q = self.model._h_q(self.X)
-        ans_h = np.array([0.05916447, 0.15571287, 0.10156415])
+        ans_h = np.array([0.05916447, 0.15571287, 0.10156415]) * (self.X.shape[0] -1)
         ans_q = np.array([0.00018677, 0.0003949, 0.0001755])
         np.testing.assert_almost_equal(h[:3], ans_h, decimal=6)
         np.testing.assert_almost_equal(q[:3], ans_q, decimal=6)

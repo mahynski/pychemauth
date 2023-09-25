@@ -64,7 +64,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     Soft PLS-DA may assign a point to 0, 1, or >1 classes, while the hard
     PLS-DA always assigns exactly one class to a point.
 
-    This relies on :py:func:`sklearn.cross_decomposition.PLSRegression` which can
+    This relies on :func:`sklearn.cross_decomposition.PLSRegression` which can
     perform either PLS1 or PLS2; however, here we default to PLS2 and
     always one-hot-encode multiple classes, even in the instance of binary
     classification where PLS1 could be used instead.
@@ -325,7 +325,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1),
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
-                self.__S_[i] /= t.shape[0] - 1  # t.shape[0] is used by Ref [1]
+                self.__S_[i] /= (t.shape[0] - 1)  # t.shape[0] is used by Ref [1]
                 try:
                     # Check if positive definite.
                     np.linalg.cholesky(self.__S_[i])

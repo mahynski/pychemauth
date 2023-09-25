@@ -418,7 +418,7 @@ class PCR(RegressorMixin, BaseEstimator):
                 np.matmul(
                     x_scores,
                     np.linalg.inv(
-                        np.matmul(self.__T_train_.T, self.__T_train_)
+                        np.matmul(self.__T_train_.T, self.__T_train_) / (self.__T_train_.shape[0]-1), # For consistency with PLS from mdatools 0.14.1
                     ),
                 ),
                 x_scores.T,
