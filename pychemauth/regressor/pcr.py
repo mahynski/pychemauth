@@ -622,7 +622,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
     def visualize(self, X, y, figsize=None, log=True):
         r"""
-        Plot the :math:`\Chi^{2}` acceptance area with observations.
+        Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------

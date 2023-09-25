@@ -676,8 +676,8 @@ class PCA(ClassifierMixin, BaseEstimator):
         return ax
 
     def visualize(self, X, ax=None, log=True):
-        """
-        Plot the chi-squared acceptance area with observations.
+        r"""
+        Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------
