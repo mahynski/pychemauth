@@ -1494,20 +1494,20 @@ class TestDDSIMCA(unittest.TestCase):
         # Fit on 2 classes - only uses Pure to train
         _ = sc.fit(np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a)))
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x_a, raw_y_a)["tsns"])
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)["TSNS"])
         )  # Test only alt class
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x, raw_y)["tsps"])
+            np.isnan(sc.metrics(raw_x, raw_y)["TSPS"])
         )  # Test only target class
         metrics = sc.metrics(
             np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a))
         )
         self.assertTrue(
-            np.abs(metrics["teff"] - np.sqrt(metrics["tsps"] * metrics["tsns"]))
+            np.abs(metrics["TEFF"] - np.sqrt(metrics["TSPS"] * metrics["TSNS"]))
             < 1.0e-12
         )
-        self.assertTrue(np.abs(metrics["tsns"] - 0.8472222222222222) < 1.0e-12)
-        self.assertTrue(np.abs(metrics["tsps"] - 0.9444444444444444) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["TSNS"] - 0.8472222222222222) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["TSPS"] - 0.9444444444444444) < 1.0e-12)
 
     def test_ddsimca_auth_classical(self):
         """Test SIMCA_Authenticator using the DDSIMCA_Model."""
@@ -1555,17 +1555,17 @@ class TestDDSIMCA(unittest.TestCase):
         )
 
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x_a, raw_y_a)["tsns"])
+            np.isnan(sc.metrics(raw_x_a, raw_y_a)["TSNS"])
         )  # Test only alt class
         self.assertTrue(
-            np.isnan(sc.metrics(raw_x, raw_y)["tsps"])
+            np.isnan(sc.metrics(raw_x, raw_y)["TSPS"])
         )  # Test only target class
         metrics = sc.metrics(
             np.vstack((raw_x, raw_x_a)), np.hstack((raw_y, raw_y_a))
         )
         self.assertTrue(
-            np.abs(metrics["teff"] - np.sqrt(metrics["tsps"] * metrics["tsns"]))
+            np.abs(metrics["TEFF"] - np.sqrt(metrics["TSPS"] * metrics["TSNS"]))
             < 1.0e-12
         )
-        self.assertTrue(np.abs(metrics["tsns"] - 0.9305555555555556) < 1.0e-12)
-        self.assertTrue(np.abs(metrics["tsps"] - 0.9444444444444444) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["TSNS"] - 0.9305555555555556) < 1.0e-12)
+        self.assertTrue(np.abs(metrics["TSPS"] - 0.9444444444444444) < 1.0e-12)
