@@ -1,8 +1,8 @@
 Real Applications
 =================
 
-..
-    .. nbgallery::
+.. nbgallery::
     :hidden:
 
-    jupyter/gallery/
+    jupyter/gallery/example_2023_pgaa
+    jupyter/gallery/example_2023_stamp
