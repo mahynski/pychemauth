@@ -325,7 +325,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1),
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
-                self.__S_[i] /= t.shape[0] - 1  # t.shape[0] is used by Ref [1]
+                self.__S_[i] /= (t.shape[0] - 1)  # t.shape[0] is used by Ref [1]
                 try:
                     # Check if positive definite.
                     np.linalg.cholesky(self.__S_[i])
@@ -542,6 +542,7 @@ n_features [{}])] = [{}, {}].".format(
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
+        check_is_fitted(self, "is_fitted_")
         distances2 = self.mahalanobis(X)
 
         if self.style.lower() == "soft":
@@ -610,6 +611,7 @@ n_features [{}])] = [{}, {}].".format(
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
+        check_is_fitted(self, "is_fitted_")
         distances2 = self.mahalanobis(X)
         p = np.exp(-np.clip(distances2 / 2.0, a_max=None, a_min=-500))
 
@@ -655,6 +657,7 @@ n_features [{}])] = [{}, {}].".format(
         from highest to lowest, i.e., by the (lowest) Mahalanobis distance (squared)
         to that class' center.
         """
+        check_is_fitted(self, "is_fitted_")
         distances = self.mahalanobis(X)
 
         # Return all classes within d_crit, sorted from smallest to largest for
@@ -694,29 +697,32 @@ n_features [{}])] = [{}, {}].".format(
 
         Returns
         -------
-        df : pandas.DataFrame
-            Inputs (index) vs. predictions (columns).
+        fom : dict
+            Dictionary object with the following attributes.
 
-        I : pandas.Series
-            Number of each class asked to classify.
+            CM : pandas.DataFrame
+                Inputs (index) vs. predictions (columns); akin to a confusion matrix.
 
-        CSNS : pandas.Series
-            Class sensitivity.
+            I : pandas.Series
+                Number of each class asked to classify.
 
-        CSPS : pandas.Series
-            Class specificity.
+            CSNS : pandas.Series
+                Class sensitivity.
 
-        CEFF : pandas.Series
-            Class efficiency.
+            CSPS : pandas.Series
+                Class specificity.
 
-        TSNS : scalar(float)
-            Total sensitivity.
+            CEFF : pandas.Series
+                Class efficiency.
 
-        TSPS : scalar(float)
-            Total specificity.
+            TSNS : scalar(float)
+                Total sensitivity.
 
-        TEFF : scalar(float)
-            Total efficiency.
+            TSPS : scalar(float)
+                Total specificity.
+
+            TEFF : scalar(float)
+                Total efficiency.
 
         Note
         ----
@@ -834,7 +840,7 @@ n_features [{}])] = [{}, {}].".format(
         # previously unseen samples).
         TEFF = np.sqrt(TSPS * TSNS)
 
-        return (
+        return dict(zip(['CM', 'I', 'CSNS', 'CSPS', 'CEFF', 'TSNS', 'TSPS', 'TEFF'], (
             df[
                 [c for c in df.columns if c in trained_classes]
                 + [self.not_assigned]
@@ -848,7 +854,7 @@ n_features [{}])] = [{}, {}].".format(
             TSNS,
             TSPS,
             TEFF,
-        )
+        )))
 
     def score(self, X, y):
         """
@@ -872,16 +878,15 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
 
         X, y = np.array(X), np.array(y)
-        df, I, CSNS, CSPS, CEFF, TSNS, TSPS, TEFF = self.figures_of_merit(
+        metrics = self.figures_of_merit(
             self.predict(X), y
         )
-        metrics = {"teff": TEFF, "tsns": TSNS, "tsps": TSPS}
-        if self.score_metric.lower() not in metrics:
+        if self.score_metric.upper() not in metrics:
             raise ValueError(
-                "Unrecognized metric : {}".format(self.score_metric.lower())
+                "Unrecognized metric : {}".format(self.score_metric.upper())
             )
         else:
-            return metrics[self.score_metric.lower()]
+            return metrics[self.score_metric.upper()]
 
     def pls2_coeff(self, classes=None, ax=None, return_coeff=False):
         """
@@ -907,6 +912,7 @@ n_features [{}])] = [{}, {}].".format(
             Figure axes being plotted on or the PLS2 coefficients depending on
             the value of `return_coeff`.
         """
+        check_is_fitted(self, "is_fitted_")
         if ax is None:
             fig, ax = plt.subplots(nrows=1, ncols=1)
 

@@ -372,6 +372,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         approach returns TEFF. In both cases, a larger output is a
         "better" model.
         """
+        check_is_fitted(self, "is_fitted_")
         if self.use == "rigorous":
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
@@ -647,6 +648,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         t-scores : array_like(float, ndim=2)
             Projection of X via PCA into a score space.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.__pca_.transform(self.__ss_.transform(self._matrix_X(X)))
 
     def fit_transform(self, X, y=None):
@@ -686,6 +688,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         F : ndarray(float, ndim=1)
             F value for each observation.
         """
+        check_is_fitted(self, "is_fitted_")
         II, _, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
         X_pred = self.__ss_.inverse_transform(
@@ -732,6 +735,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
+        check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__f_crit_))
 
     def predict_proba(self, X, y=None):
@@ -768,6 +772,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
+        check_is_fitted(self, "is_fitted_")
         p_inlier = 1.0 / (
             1.0
             + np.exp(
@@ -794,6 +799,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         inliers : ndarray(bool, ndim=1)
             Bolean array of whether a point belongs to this class.
         """
+        check_is_fitted(self, "is_fitted_")
         F = self.distance(X)
 
         # If f < f_crit, it belongs to the class
@@ -824,6 +830,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
+        check_is_fitted(self, "is_fitted_")
         assert len(X) == len(y)
         assert np.all(
             [a in [True, False] for a in y]
@@ -859,6 +866,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.accuracy(X, y)
 
     def accuracy(self, X, y):
@@ -879,6 +887,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         y = self._column_y(y)
         if not isinstance(y[0][0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
@@ -1337,6 +1346,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
+        check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
     def predict_proba(self, X, y=None):
@@ -1375,6 +1385,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
+        check_is_fitted(self, "is_fitted_")
         p_inlier = 1.0 / (
             1.0
             + np.exp(
@@ -1432,6 +1443,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
+        check_is_fitted(self, "is_fitted_")
         assert len(X) == len(y)
         assert np.all(
             [a in [True, False] for a in y]
@@ -1467,6 +1479,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.accuracy(X, y)
 
     def accuracy(self, X, y):
@@ -1487,6 +1500,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         y = self._column_y(y)
         if not isinstance(y[0][0], (bool, np.bool_)):
             raise ValueError("y must be provided as a Boolean array")
@@ -1559,6 +1573,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         -------
         Both extreme points and outliers are considered "extremes" here.
         """
+        check_is_fitted(self, "is_fitted_")
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
@@ -1618,6 +1633,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         This uses the top 2 eigenvectors regardless of the model dimensionality. If it
         is less than 2 a ValueError is returned.
         """
+        check_is_fitted(self, "is_fitted_")
         if ax is None:
             fig = plt.figure()
             ax = plt.gca()

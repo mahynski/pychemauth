@@ -382,6 +382,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         This is computed as a sum of the OD and OD to be used with acceptance
         rule II from [3].
         """
+        check_is_fitted(self, "is_fitted_")
         h, q = self._h_q(X)
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
@@ -414,6 +415,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
+        check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
     def predict_proba(self, X, y=None):
@@ -449,6 +451,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
+        check_is_fitted(self, "is_fitted_")
         p_inlier = p_inlier = 1.0 / (
             1.0
             + np.exp(
@@ -475,6 +478,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         predictions : ndarray(bool, ndim=1)
             Boolean array of whether a point belongs to this class.
         """
+        check_is_fitted(self, "is_fitted_")
         d = self.distance(X)
 
         # If d < c_crit, it is not extreme not outlier
@@ -499,6 +503,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         outliers : ndarray(bool, ndim=1)
             Boolean mask of X if each point falls beyond the outlier threshold.
         """
+        check_is_fitted(self, "is_fitted_")
         dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_
@@ -539,6 +544,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         -------
         Both extreme points and outliers are considered "extremes" here.
         """
+        check_is_fitted(self, "is_fitted_")
         X_ = check_array(X, accept_sparse=False)
         N_tot = X_.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
@@ -601,6 +607,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
+        check_is_fitted(self, "is_fitted_")
         assert len(X) == len(y)
         assert np.all(
             [a in [True, False] for a in y]
@@ -640,6 +647,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         This uses the top 2 eigenvectors regardless of the model dimensionality. If it
         is less than 2 a ValueError is returned.
         """
+        check_is_fitted(self, "is_fitted_")
         if ax is None:
             fig = plt.figure()
             ax = plt.gca()
