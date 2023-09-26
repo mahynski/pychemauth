@@ -13,6 +13,45 @@ from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 
+class _PassthroughDR(ClassifierMixin, BaseEstimator):
+    """Allow data to pass through without modification."""
+
+    def __init__(self, n_components=0):
+        """Initialize the class."""
+        self.set_params(
+            **{
+                "n_components": n_components,
+            }
+        )
+        self.is_fitted_ = False
+
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "n_components": self.n_components,
+        }
+
+    def fit(self, X, y=None):
+        """Fit the model."""
+        self.n_components = np.asarray(X, dtype=np.float64).shape[1]
+        self.is_fitted_ = True
+        return self
+
+    def transform(self, X):
+        """Transform the data."""
+        check_is_fitted(self, "is_fitted_")
+        return X
+
+    def fit_transform(self, X):
+        """Fit and transform."""
+        return self.fit(X).transform(X)
+    
 class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     r"""
     Train an EllipticManifold model for a target class.
@@ -22,15 +61,19 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     alpha : scalar(float)
         Type I error rate (signficance level).
 
-    dr_model : object
-        Dimensionality reduction model, such as PCA; must support fit() and transform().
+    dr_model : object, optional(default=`_PassthroughDR`)
+        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`,
+        and `get_params()` which must return a parameter indicating the dimensionality of
+        the space after transformation; typically this is "n_components".  By default, a
+        simple passthrough class is provided which leaves the data unchanged and performs
+        no dimensionality reduction.
 
-    kwargs : dict
-        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs). Must
-        contain the `ndims` keyword.
+    kwargs : dict, optional(default={})
+        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs).
 
     ndims : str, optional(default="n_components")
-        Keyword in kwargs that corresponds to the dimensionality of the final space.
+        Keyword in that corresponds to the dimensionality of the final space.
+        The `dr_model.get_params()` dictionary should contain this keyword.
 
     robust : scalar(bool), optional(default=True)
         Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
@@ -72,8 +115,12 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     to match this target; in compliant approaches this can be allowed to vary
     and the model with the best efficiency is selected. [1]
 
-    This resembles "unequal class models" (UNEQ), but fits the elliptical
-    boundary after a (possibly non-linear) dimensionality reduction has taken place. [4]
+    This resembles an "unequal class model" (UNEQ), but fits the elliptical
+    boundary after a (possibly non-linear) dimensionality reduction (DR) has taken 
+    place. If no DR is used, then this is just an UNEQ model. [4] If PCA is used
+    this resembles SIMCA, but uses the score distance only to determine class
+    membership (some variants of SIMCA use only the error or "outer distance",
+    while others like DD-SIMCA use both the outer distance and score distance).
 
     References
     ----------
@@ -94,8 +141,8 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     def __init__(
         self,
         alpha=0.05,
-        dr_model=None,
-        kwargs=None,
+        dr_model=_PassthroughDR,
+        kwargs={},
         ndims="n_components",
         robust=True,
         center="score",
@@ -309,6 +356,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         approach returns TEFF. In both cases, a larger output is a
         "better" model.
         """
+        check_is_fitted(self, "is_fitted_")
         if self.use == "rigorous":
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
@@ -420,46 +468,6 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             "X_types": ["2darray"],
         }
 
-
-class _PassthroughDR(ClassifierMixin, BaseEstimator):
-    """Allow data to pass through without modification."""
-
-    def __init__(self, n_components=0):
-        """Initialize the class."""
-        self.set_params(
-            **{
-                "n_components": n_components,
-            }
-        )
-        self.is_fitted_ = False
-
-    def set_params(self, **parameters):
-        """Set parameters; for consistency with scikit-learn's estimator API."""
-        for parameter, value in parameters.items():
-            setattr(self, parameter, value)
-        return self
-
-    def get_params(self, deep=True):
-        """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
-            "n_components": self.n_components,
-        }
-
-    def fit(self, X, y=None):
-        """Fit the model."""
-        self.n_components = np.asarray(X, dtype=np.float64).shape[1]
-        self.is_fitted_ = True
-        return self
-
-    def transform(self, X):
-        """Transform the data."""
-        return X
-
-    def fit_transform(self, X):
-        """Fit and transform."""
-        return self.fit(X).transform(X)
-
-
 class EllipticManifold_Model(BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
@@ -476,7 +484,7 @@ class EllipticManifold_Model(BaseEstimator):
         simple passthrough class is provided which leaves the data unchanged and performs
         no dimensionality reduction.
 
-    kwargs : dict
+    kwargs : dict, optional(default={})
         Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs).
 
     ndims : str, optional(default="n_components")
@@ -701,7 +709,7 @@ class EllipticManifold_Model(BaseEstimator):
         # covariance/plot_mahalanobis_distances.html?highlight=outlier%20detection
         # Do NOT perform additional centering to respect the decision above.
         if self.robust:
-            cov = MinCovDet(assume_centered=True).fit(t)
+            cov = MinCovDet(assume_centered=True, random_state=42).fit(t)
         else:
             cov = EmpiricalCovariance(assume_centered=True).fit(t)
         self.__S_ = cov.covariance_
@@ -798,6 +806,7 @@ class EllipticManifold_Model(BaseEstimator):
         results : ndarray(bool, ndim=1)
             Whether or not each point is an inlier.
         """
+        check_is_fitted(self, "is_fitted_")
         d = self.mahalanobis(X)
         mask = d > np.sqrt(self.__d_crit_)
 
@@ -850,6 +859,7 @@ class EllipticManifold_Model(BaseEstimator):
         Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
         distance.
         """
+        check_is_fitted(self, "is_fitted_")
         return -self.mahalanobis(X)
 
     def decision_function(self, X):
@@ -877,6 +887,7 @@ class EllipticManifold_Model(BaseEstimator):
         ----------
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
+        check_is_fitted(self, "is_fitted_")
         return self.score_samples(X) - (-np.sqrt(self.__d_crit_))
 
     def predict_proba(self, X):
@@ -911,6 +922,7 @@ class EllipticManifold_Model(BaseEstimator):
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
+        check_is_fitted(self, "is_fitted_")
         p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
         prob[:, 1] = p_inlier
@@ -943,6 +955,7 @@ class EllipticManifold_Model(BaseEstimator):
         ----------
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
+        check_is_fitted(self, "is_fitted_")
         assert len(X) == len(y)
         assert np.all(
             [a in [True, False] for a in y]
@@ -978,6 +991,7 @@ class EllipticManifold_Model(BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.accuracy(X, y)
 
     def accuracy(self, X, y):
@@ -998,6 +1012,7 @@ class EllipticManifold_Model(BaseEstimator):
         accuracy : scalar(float)
             Accuracy of predictions.
         """
+        check_is_fitted(self, "is_fitted_")
         y = self._column_y(y)
         if not isinstance(y[0][0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
@@ -1038,6 +1053,7 @@ class EllipticManifold_Model(BaseEstimator):
         The 95% tolerance limit is given in black.  Points which fall outside these
         bounds are highlighted.
         """
+        check_is_fitted(self, "is_fitted_")
         X_ = check_array(np.asarray(X, np.float64), accept_sparse=False)
         N_tot = X_.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
