@@ -362,7 +362,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             assert self.target_class in set(np.unique(y))
 
             m = self.metrics(X, y)
-            return -((m["tsns"] - (1 - self.alpha)) ** 2)
+            return -((m["TSNS"] - (1 - self.alpha)) ** 2)
         elif self.use == "compliant":
             # Make sure we have alternatives to test on
             a = set(np.unique(y))
@@ -373,7 +373,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             assert self.target_class in set(np.unique(y))
 
             m = self.metrics(X, y)
-            return m["teff"]
+            return m["TEFF"]
         else:
             raise ValueError("Unrecognized setting use=" + str(self.use))
 
@@ -392,7 +392,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         Returns
         -------
         metrics : dict(str:float)
-            Dictionary of {"TSNS", "TSPS", "TEFF"}.
+            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS"}.
 
         Note
         ----
@@ -439,10 +439,10 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             TEFF_ = np.sqrt(TSNS_ * TSPS_)
 
         metrics = {
-            "teff": TEFF_,
-            "tsns": TSNS_,
-            "tsps": TSPS_,
-            "csps": CSPS_,
+            "TEFF": TEFF_,
+            "TSNS": TSNS_,
+            "TSPS": TSPS_,
+            "CSPS": CSPS_,
         }
         return metrics
 
