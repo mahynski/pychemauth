@@ -450,10 +450,12 @@ class PCR(RegressorMixin, BaseEstimator):
 
     def _z(self, X, y):
         """Y residual squared, Eq. 7 in [2]."""
+        check_is_fitted(self, "is_fitted_")
         return ((self.predict(X) - self._column_y(y)) ** 2).ravel()
 
     def _g(self, X, y):
         """XY total distance, Eq. 9 in [2]."""
+        check_is_fitted(self, "is_fitted_")
         h, q = self._h_q(X)
         f = self._f(h, q)
         z = self._z(X, y)
@@ -583,6 +585,7 @@ class PCR(RegressorMixin, BaseEstimator):
         ----
         This uses the X matrix's "full distance" in [2] (cf. Eq. 3).
         """
+        check_is_fitted(self, "is_fitted_")
         f = self._f(*self._h_q(X))
 
         extremes = (self.__x_crit_ <= f) & (f < self.__x_out_)
@@ -616,6 +619,7 @@ class PCR(RegressorMixin, BaseEstimator):
         ----
         This uses the system's "total distance" in [2] (cf. Eq. 9).
         """
+        check_is_fitted(self, "is_fitted_")
         g = self._g(X, y)
 
         extremes = (self.__xy_crit_ <= g) & (g < self.__xy_out_)
