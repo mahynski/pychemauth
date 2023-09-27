@@ -325,7 +325,7 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1),
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
-                self.__S_[i] /= (t.shape[0] - 1)  # t.shape[0] is used by Ref [1]
+                self.__S_[i] /= t.shape[0]  # See Ref [1] - centers are known not calculated so do not remove extra DoF
                 try:
                     # Check if positive definite.
                     np.linalg.cholesky(self.__S_[i])
