@@ -6,5 +6,5 @@ Cross Validation
 .. nbgallery::
    :hidden:
 
-   jupyter/gallery/cv_optimization
-   jupyter/gallery/cv_comparison
+   jupyter/learn/cv_optimization
+   jupyter/learn/cv_comparison

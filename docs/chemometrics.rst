@@ -6,9 +6,9 @@ Many `conventional chemometric tools <https://www.tandfonline.com/doi/abs/10.108
 .. nbgallery::
    :hidden:
 
-   jupyter/gallery/ols
-   jupyter/gallery/pca_pcr
-   jupyter/gallery/pls
-   jupyter/gallery/lda
-   jupyter/gallery/plsda
-   jupyter/gallery/simca
+   jupyter/learn/ols
+   jupyter/learn/pca_pcr
+   jupyter/learn/pls
+   jupyter/learn/lda
+   jupyter/learn/plsda
+   jupyter/learn/simca

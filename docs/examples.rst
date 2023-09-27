@@ -4,16 +4,16 @@ API Examples
 .. nbgallery::
    :hidden:
 
-   jupyter/gallery/eda
-   jupyter/gallery/pipelines
-   jupyter/gallery/imputing_examples
-   jupyter/gallery/imbalanced_classes
-   jupyter/gallery/pca_example
-   jupyter/gallery/pls_example
-   jupyter/gallery/plsda_example
-   jupyter/gallery/simca_example
-   jupyter/gallery/elliptic_manifold_example
-   jupyter/gallery/feature_selection
-   jupyter/gallery/comparing_pipelines
-   jupyter/gallery/model_inspection
-   jupyter/gallery/learning_curves
+   jupyter/api/eda
+   jupyter/api/pipelines
+   jupyter/api/imputing_examples
+   jupyter/api/imbalanced_classes
+   jupyter/api/pca
+   jupyter/api/pls
+   jupyter/api/plsda
+   jupyter/api/simca
+   jupyter/api/elliptic_manifold
+   jupyter/api/feature_selection
+   jupyter/api/comparing_pipelines
+   jupyter/api/model_inspection
+   jupyter/api/learning_curves
