@@ -42,5 +42,5 @@ pygments_style = "sphinx"
 nbsphinx_execute = "never"  # Always pre-run notebooks and save their output - just display on readthedocs
 # nbsphinx_kernel_name = 'pychemauth-kernel'
 nbsphinx_thumbnails = {
-    "jupyter/gallery/*": "_static/default.png",
+    "jupyter/api/pipelines": "_static/default.png",
 }
