@@ -44,5 +44,6 @@ setup(
         "watermark==2.4.3",
         "pytest==7.4.0",
         "xgboost==2.0.0",
+        "missingno==0.5.2"
     ],
 )
