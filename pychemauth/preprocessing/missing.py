@@ -187,7 +187,7 @@ class LOD:
         lod_dict = dict(zip(columns_, self.lod))
 
         def impute_(x, lod):
-            if np.any(lod < 0.0): # Check in the loop so we only look at LODs actually being used
+            if lod < 0.0: # Check in the loop so we only look at LODs actually being used
                 raise ValueError("LODs must be non-negative.")
 
             if self.ignore is not None:
