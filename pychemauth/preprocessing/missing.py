@@ -112,8 +112,6 @@ class LOD:
         self.lod = self.lod.ravel()
         if len(self.lod) != self.n_features_in_:
             raise ValueError("LOD must be specified for each column in X")
-        if np.any(self.lod < 0.0):
-            raise ValueError("LODs must be non-negative.")
 
         if self.skip_columns is None:
             self.skip_columns = []
@@ -189,6 +187,9 @@ class LOD:
         lod_dict = dict(zip(columns_, self.lod))
 
         def impute_(x, lod):
+            if np.any(lod < 0.0): # Check in the loop so we only look at LODs actually being used
+                raise ValueError("LODs must be non-negative.")
+
             if self.ignore is not None:
                 if (np.isnan(self.ignore) and np.isnan(x)) or (
                     x == self.ignore
