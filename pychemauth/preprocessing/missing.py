@@ -35,6 +35,9 @@ class LOD:
         If this is set to `np.nan` it overrides `missing_values` and the imputer
         will only operate on values explicitly below the LOD.
 
+    skip_columns : array_like(int, ndim=1), optional(default=None)
+        Indices of columns to skip (not impute).
+
     Note
     ----
     By default, all data in the feature matrix (X) is assumed "missing" because it is
@@ -49,7 +52,7 @@ class LOD:
     >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's left representing missing values.
     """
 
-    def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None):
+    def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None, skip_columns=None):
         """Instantiate the class."""
         self.set_params(
             **{
@@ -57,6 +60,7 @@ class LOD:
                 "missing_values": missing_values,
                 "seed": seed,
                 "ignore": ignore,
+                "skip_columns": skip_columns
             }
         )
         self.is_fitted_ = False
@@ -74,6 +78,7 @@ class LOD:
             "missing_values": self.missing_values,
             "seed": self.seed,
             "ignore": self.ignore,
+            "skip_columns": self.skip_columns
         }
 
     def fit(self, X, y=None):
@@ -110,6 +115,16 @@ class LOD:
         if np.any(self.lod < 0.0):
             raise ValueError("LODs must be non-negative.")
 
+        if self.skip_columns is None:
+            self.skip_columns = []
+        else:
+            if not hasattr(self.skip_columns, '__iter__'):
+                raise ValueError('skip_columns should be an interable list containing integers')
+
+            self.skip_columns = np.asarray(self.skip_columns, dtype=int)
+            if (np.max(self.skip_columns) > self.n_features_in_ - 1) or (np.min(self.skip_columns) < 0):
+                raise ValueError('All skip_columns should be in the range [0, X.shape[1]-1]')
+        
         self.__rng_ = np.random.default_rng(self.seed)
         self.is_fitted_ = True
 
@@ -193,9 +208,10 @@ class LOD:
                 return x
 
         for column in X_df.columns:
-            X_df[column] = X_df[column].apply(
-                lambda x: impute_(x, lod_dict[column])
-            )
+            if not (column in self.skip_columns):
+                X_df[column] = X_df[column].apply(
+                    lambda x: impute_(x, lod_dict[column])
+                )
 
         if isinstance(X, pd.DataFrame):
             return X_df.rename(dict(zip(columns_, X.columns)), axis="columns")
