@@ -686,7 +686,7 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        predictions : list(list) or list
+        predictions : array_like(str or int, ndim=2) or array_like(str or int, ndim=1)
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
@@ -873,7 +873,7 @@ n_features [{}])] = [{}, {}].".format(
         Returns
         -------
         score : scalar(float)
-            Score
+            Score.
         """
         check_is_fitted(self, "is_fitted_")
 
