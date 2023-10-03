@@ -429,7 +429,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         else:
             TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
                 mask
-            )  # TSNS = CSNS for SIMCA
+            )  # TSNS = CSNS
 
         if np.isnan(TSNS_):
             TEFF_ = TSPS_
