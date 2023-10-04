@@ -4,6 +4,7 @@ Compare ML pipelines.
 author: nam
 """
 import math
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -187,7 +188,7 @@ class Compare:
         pass
 
     @staticmethod
-    def visualize(results, n_repeats, alpha=0.05):
+    def visualize(results, n_repeats, alpha=0.05, ignore=np.nan):
         """
         Plot a radial graph of performances for different pipelines.
 
@@ -204,6 +205,13 @@ class Compare:
 
         alpha : scalar(float), optional(default=0.05)
             Significance level.
+
+        ignore : scalar(int, float, str), optional(default=np.nan)
+            If any score is equal to this value (in either list of scores) their 
+            comparison is ignored.  This is to exclude scores from failed fits.
+            sklearn's default `error_score` is `np.nan` so this is set as the
+            default here, but a numeric value of 0 is also commonly used. A
+            warning is raised if any scores are ignored.
 
         Returns
         -------
@@ -232,7 +240,7 @@ class Compare:
 
             for i in range(1, len(performances)):
                 p = Compare.corrected_t(
-                    results[order[0]], results[order[i]], n_repeats
+                    results[order[0]], results[order[i]], n_repeats, ignore=ignore
                 )
                 # Do we REJECT H0 (that pipelines perform the same)?
                 performances[i][-1] = p < alpha
@@ -376,7 +384,7 @@ class Compare:
         return np.array(scores, dtype=np.float64).T
 
     @staticmethod
-    def corrected_t(scores1, scores2, n_repeats):
+    def corrected_t(scores1, scores2, n_repeats, ignore=np.nan):
         """
         Perform corrected 1-sided t-test to compare two pipelines.
 
@@ -390,6 +398,13 @@ class Compare:
 
         n_repeats : scalar(int)
             Number of times k-fold was repeated (i.e., k_outer in BiasedNestedCV).
+
+        ignore : scalar(int, float, str), optional(default=np.nan)
+            If any score is equal to this value (in either list of scores) their 
+            comparison is ignored.  This is to exclude scores from failed fits.
+            sklearn's default `error_score` is `np.nan` so this is set as the
+            default here, but a numeric value of 0 is also commonly used. A
+            warning is raised if any scores are ignored.
 
         Returns
         -------
@@ -409,6 +424,12 @@ class Compare:
         evidence to suggest they are different). The formulation of this test
         is that pipeline1 has the best (average) performance or score of the
         two, and you want to check if that is statistically significant or not.
+
+        Warning
+        -------
+        It is a good idea to manually check the scores for any `np.nan` or 0 
+        values, etc. which can indicate a failed fit. Use `ignore` to exclude
+        these points from the calculation.
         """
         if np.mean(scores1) < np.mean(scores2):
             raise ValueError(
@@ -423,8 +444,22 @@ class Compare:
         n = k_fold * n_repeats
         assert n == len(scores1), "scores must be divisible by n_repeats"
 
+        if ignore is not None:
+            if np.isnan(ignore):
+                mask1 = ~np.isnan(scores1)
+                mask2 = ~np.isnan(scores2)
+            else:
+                mask1 = np.asarray(scores1) != ignore
+                mask2 = np.asarray(scores2) != ignore
+            mask = mask1 & mask2
+        else:
+            mask = np.array([True]*n, dtype=bool)
+
+        if np.sum(mask) < n:
+            warnings.warn("Ignoring {}% of points for corrected_t test".format("%.2f"%(100.0*(1 - np.sum(mask)/n))))
+
         rho = 1.0 / k_fold
-        perf_diffs = np.array(scores1) - np.array(scores2)  # H1: mu > 0
+        perf_diffs = np.array(scores1)[mask] - np.array(scores2)[mask]  # H1: mu > 0
         corrected_t = (np.mean(perf_diffs) - 0.0) / np.sqrt(
             (1.0 / n + rho / (1.0 - rho)) * (np.std(perf_diffs, ddof=1) ** 2)
         )
