@@ -124,7 +124,7 @@ class BiasedNestedCV:
         """Perform nested random search CV."""
         raise NotImplementedError
 
-    def grid_search(self, pipeline, param_grid, X, y, classification=True):
+    def grid_search(self, pipeline, param_grid, X, y, classification=True, error_score=np.nan):
         """
         Perform nested grid search CV.
 
@@ -145,6 +145,9 @@ class BiasedNestedCV:
         classification : scalar(bool), optional(default=True)
             Is this a classification task (otherwise assumed to be regression)?
 
+        error_score : scalar(int, float, np.nan), optional(default=np.nan)
+            Value to return as the score if a failure occurs during fitting.
+
         Returns
         -------
         scores : ndarray(float, ndim=1)
@@ -159,6 +162,7 @@ class BiasedNestedCV:
             estimator=pipeline,
             param_grid=param_grid,
             n_jobs=-1,
+            error_score=error_score,
             cv=StratifiedKFold(
                 n_splits=self.__k_inner, random_state=1, shuffle=True
             )
