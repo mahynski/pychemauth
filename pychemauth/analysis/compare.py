@@ -234,13 +234,30 @@ class Compare:
         """
 
         def perf(results, n_repeats, alpha):
+            if np.isnan(ignore):
+                key = lambda k: np.mean(np.asarray(results[k])[~np.isnan(results[k])])
+            else:
+                key = lambda k: np.mean(np.asarray(results[k])[np.asarray(results[k]) != ignore])
+
             order = sorted(
-                results, key=lambda k: np.mean(results[k]), reverse=True
+                results, key=key, reverse=True
             )
-            performances = [
-                [k, np.mean(results[k]), np.std(results[k]), False]
-                for k in order
-            ]
+
+            performances = []
+            for k in order:
+                res_ = np.asarray(results[k])
+                if np.isnan(ignore):
+                    mask = ~np.isnan(res_)
+                else:
+                    mask = res_ != ignore
+                performances.append(
+                    [
+                        k,
+                        np.mean(res_[mask]),
+                        np.std(res_[mask]),
+                        False
+                    ]
+                )
 
             for i in range(1, len(performances)):
                 p = Compare.corrected_t(
@@ -435,35 +452,19 @@ class Compare:
         values, etc. which can indicate a failed fit. Use `ignore` to exclude
         these points from the calculation.
         """
-        if np.mean(scores1) < np.mean(scores2):
-            raise ValueError(
-                "scores1 should have a higher mean value that scores2; reverse them and try again."
-            )
+        scores1, scores2 = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
 
-        assert len(scores1) == len(
-            scores2
-        ), "scores must have the same \
-        overall length"
         k_fold = len(scores1) // int(n_repeats)
         n = k_fold * n_repeats
         assert n == len(scores1), "scores must be divisible by n_repeats"
 
-        if ignore is not None:
-            if np.isnan(ignore):
-                mask1 = ~np.isnan(scores1)
-                mask2 = ~np.isnan(scores2)
-            else:
-                mask1 = np.asarray(scores1) != ignore
-                mask2 = np.asarray(scores2) != ignore
-            mask = mask1 & mask2
-        else:
-            mask = np.array([True]*n, dtype=bool)
-
-        if np.sum(mask) < n:
-            warnings.warn("Ignoring {}% of points for corrected_t test".format("%.2f"%(100.0*(1 - np.sum(mask)/n))))
-
+        if np.mean(scores1[mask]) < np.mean(scores2[mask]):
+            raise ValueError(
+                "scores1 should have a higher mean value that scores2; reverse them and try again."
+            )
+        
         rho = 1.0 / k_fold
-        perf_diffs = np.array(scores1)[mask] - np.array(scores2)[mask]  # H1: mu > 0
+        perf_diffs = scores1[mask] - scores2[mask]  # H1: mu > 0
         corrected_t = (np.mean(perf_diffs) - 0.0) / np.sqrt(
             (1.0 / n + rho / (1.0 - rho)) * (np.std(perf_diffs, ddof=1) ** 2)
         )
@@ -471,7 +472,34 @@ class Compare:
         return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=n - 1)  # 1-sided test
 
     @staticmethod
-    def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0.0):
+    def _check_scores(scores1, scores2, ignore):
+        """Perform simple sanity checks for scores."""
+        scores1 = np.asarray(scores1).flatten()
+        scores2 = np.asarray(scores2).flatten()
+
+        assert len(scores1) == len(
+            scores2
+        ), "scores must have the same \
+        overall length"
+
+        if ignore is not None:
+            if np.isnan(ignore):
+                mask1 = ~np.isnan(scores1)
+                mask2 = ~np.isnan(scores2)
+            else:
+                mask1 = scores1 != ignore
+                mask2 = scores2 != ignore
+            mask = mask1 & mask2
+        else:
+            mask = np.array([True]*n, dtype=bool)
+
+        if np.sum(mask) < len(scores1):
+            warnings.warn("Ignoring {}% of points for corrected_t test".format("%.2f"%(100.0*(1 - np.sum(mask)/len(scores1)))))
+
+        return scores1, scores2
+
+    @staticmethod
+    def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0.0, ignore=np.nan):
         """
         Bayesian comparison between pipelines to assess relative performance.
 
@@ -492,6 +520,13 @@ class Compare:
         rope : scalar(float), optional(default=0.0)
             The width of the region of practical equivalence.
 
+        ignore : scalar(int, float, str), optional(default=np.nan)
+            If any score is equal to this value (in either list of scores) their 
+            comparison is ignored.  This is to exclude scores from failed fits.
+            sklearn's default `error_score` is `np.nan` so this is set as the
+            default here, but a numeric value of 0 is also commonly used. A
+            warning is raised if any scores are ignored.
+
         Returns
         -------
         probs : tuple(float, float , float)
@@ -510,9 +545,15 @@ class Compare:
         References
         -----
         See https://baycomp.readthedocs.io/en/latest/functions.html.
+
+        Warning
+        -------
+        It is a good idea to manually check the scores for any `np.nan` or 0 
+        values, etc. which can indicate a failed fit. Use `ignore` to exclude
+        these points from the calculation.
         """
-        scores1 = np.array(scores1).flatten()
-        scores2 = np.array(scores2).flatten()
+        scores1, scores2 = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
+
         probs = two_on_single(
             scores1, scores2, rope=rope, runs=n_repeats, names=None, plot=False
         )
