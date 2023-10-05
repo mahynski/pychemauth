@@ -452,7 +452,7 @@ class Compare:
         values, etc. which can indicate a failed fit. Use `ignore` to exclude
         these points from the calculation.
         """
-        scores1, scores2 = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
+        scores1, scores2, mask = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
 
         k_fold = len(scores1) // int(n_repeats)
         n = k_fold * n_repeats
@@ -496,7 +496,7 @@ class Compare:
         if np.sum(mask) < len(scores1):
             warnings.warn("Ignoring {}% of points for corrected_t test".format("%.2f"%(100.0*(1 - np.sum(mask)/len(scores1)))))
 
-        return scores1, scores2
+        return scores1, scores2, mask
 
     @staticmethod
     def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0.0, ignore=np.nan):
@@ -552,10 +552,10 @@ class Compare:
         values, etc. which can indicate a failed fit. Use `ignore` to exclude
         these points from the calculation.
         """
-        scores1, scores2 = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
+        scores1, scores2, mask = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
 
         probs = two_on_single(
-            scores1, scores2, rope=rope, runs=n_repeats, names=None, plot=False
+            scores1[mask], scores2[mask], rope=rope, runs=n_repeats, names=None, plot=False
         )
 
         if rope == 0:
