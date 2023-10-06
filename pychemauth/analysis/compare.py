@@ -465,8 +465,8 @@ class Compare:
         
         rho = 1.0 / k_fold
         perf_diffs = scores1[mask] - scores2[mask]  # H1: mu > 0
-        corrected_t = (np.mean(perf_diffs) - 0.0) / np.sqrt(
-            (1.0 / n + rho / (1.0 - rho)) * (np.std(perf_diffs, ddof=1) ** 2)
+        corrected_t = (np.mean(perf_diffs) - 0.0) / np.sqrt( # n -> sum(mask) to be consistent
+            (1.0 / np.sum(mask) + rho / (1.0 - rho)) * (np.std(perf_diffs, ddof=1) ** 2)
         )
 
         return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=n - 1)  # 1-sided test
