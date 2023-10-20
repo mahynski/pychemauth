@@ -69,7 +69,7 @@ class EstimatorAPICompatibility(unittest.TestCase):
         check_estimator(SavGol(window_length=2, polyorder=1))
 
     def test_collinearfeatureselector(self):
-        """Test SavGol"""
+        """Test CollinearFeatureSelector"""
         from pychemauth.preprocessing.feature_selection import CollinearFeatureSelector
 
         check_estimator(CollinearFeatureSelector())
