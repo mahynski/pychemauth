@@ -141,7 +141,6 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
-
         return self
 
     def get_params(self, deep=True):
