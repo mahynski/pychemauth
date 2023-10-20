@@ -5,10 +5,10 @@ author: nam
 """
 import numpy as np
 import scipy
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from sklearn.base import BaseEstimator, TransformerMixin
 
-
-class RobustScaler:
+class RobustScaler(TransformerMixin, BaseEstimator):
     """
     Perform "robust" autoscaling on the data.
 
@@ -48,7 +48,6 @@ class RobustScaler:
                 "rng": rng,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -83,7 +82,9 @@ class RobustScaler:
         self : RobustScaler
             Fitted model.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if y is not None: # Just so this passes sklearn api checks
+            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
 
         self.n_features_in_ = X.shape[1]
         self.__median_ = np.median(X, axis=0)
@@ -106,17 +107,17 @@ class RobustScaler:
         X_scaled : array_like(float, ndim=2)
             Scaled feature matrix.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
-        result = np.array(X, dtype=float)
         if self.with_median:
-            result -= self.__median_
+            X -= self.__median_
         if self.with_iqr:
-            result /= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
+            X /= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
 
-        return result
+        return X
 
     def inverse_transform(self, X):
         """
@@ -132,17 +133,17 @@ class RobustScaler:
         X_unscaled : array_like(float, ndim=2)
             Unscaled feature matrix.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
-
-        result = X.copy()
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        
         if self.with_iqr:
-            result *= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
+            X *= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
         if self.with_median:
-            result += self.__median_
+            X += self.__median_
 
-        return result
+        return X
 
     def fit_transform(self, X, y=None):
         """
@@ -164,6 +165,30 @@ class RobustScaler:
         self.fit(X)
 
         return self.transform(X)
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
 
 class CorrectedScaler:
@@ -208,7 +233,6 @@ class CorrectedScaler:
                 "biased": biased,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -243,11 +267,13 @@ class CorrectedScaler:
         self : CorrectedScaler
             Fitted model.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if y is not None: # Just so this passes sklearn api checks
+            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
 
         self.n_features_in_ = X.shape[1]
-        self.__mean_ = np.mean(X, axis=0)
-        self.__std_ = np.std(X, axis=0, ddof=(0 if self.biased else 1))
+        self.__mean_ = np.mean(X, axis=0, dtype=np.float64)
+        self.__std_ = np.std(X, axis=0, ddof=(0 if self.biased else 1), dtype=np.float64)
         self.is_fitted_ = True
 
         return self
@@ -266,13 +292,13 @@ class CorrectedScaler:
         X_scaled : array_like(float, ndim=2)
             Scaled feature matrix.
         """
-        X = check_array(X, accept_sparse=False)
-        assert X.shape[1] == self.n_features_in_
         check_is_fitted(self, "is_fitted_")
-        result = np.array(X, dtype=np.float64)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         if self.with_mean:
-            result -= self.__mean_
+            X -= self.__mean_
         if self.with_std:
             tol = 1.0e-18
             if np.any(self.__std_ < tol):
@@ -281,9 +307,9 @@ class CorrectedScaler:
                         np.where(self.__std_ < tol)
                     )
                 )
-            result /= np.sqrt(self.__std_) if self.pareto else self.__std_
+            X /= np.sqrt(self.__std_) if self.pareto else self.__std_
 
-        return result
+        return X
 
     def inverse_transform(self, X):
         """
@@ -299,17 +325,17 @@ class CorrectedScaler:
         X_unscaled : array_like(float, ndim=2)
             Unscaled feature matrix.
         """
-        X = check_array(X, accept_sparse=False)
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
-        result = np.array(X, dtype=float)
         if self.with_std:
-            result *= np.sqrt(self.__std_) if self.pareto else self.__std_
+            X *= np.sqrt(self.__std_) if self.pareto else self.__std_
         if self.with_mean:
-            result += self.__mean_
+            X += self.__mean_
 
-        return result
+        return X
 
     def fit_transform(self, X, y=None):
         """
@@ -331,3 +357,27 @@ class CorrectedScaler:
         self.fit(X)
 
         return self.transform(X)
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }

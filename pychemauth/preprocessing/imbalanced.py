@@ -110,8 +110,6 @@ class ScaledSMOTEENN:
             }
         )
 
-        return
-
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():

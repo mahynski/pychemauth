@@ -6,10 +6,11 @@ author: nam
 import numpy as np
 import scipy.signal
 from scipy.stats import iqr
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class MSC:
+class MSC(TransformerMixin, BaseEstimator):
     """
     Perform multiplicative scatter correction.
 
@@ -57,7 +58,6 @@ class MSC:
                 "Xref": Xref,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -90,16 +90,19 @@ class MSC:
         self : MSC
             Fitted model.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if y is not None: # Just so this passes sklearn api checks
+            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
 
         if self.Xref is None:  # Use the mean from the training set
-            self.Xref = np.mean(X, axis=0)
+            self.Xref_ = np.mean(X, axis=0, dtype=np.float64)
         else:
-            self.Xref = np.asarray(self.Xref, dtype=np.float64)
+            self.Xref_ = np.asarray(self.Xref, dtype=np.float64)
 
-        self.n_features_in_ = len(self.Xref)
+        self.n_features_in_ = len(self.Xref_)
 
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         self.is_fitted_ = True
 
@@ -120,15 +123,16 @@ class MSC:
             Corrected feature matrix.
         """
         X = check_array(
-            np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True
+            X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True
         )  # Force a copy
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         try:
             for row in range(X.shape[0]):
                 coef = np.polynomial.polynomial.polyfit(
-                    self.Xref, X[row, :], deg=1
+                    self.Xref_, X[row, :], deg=1
                 )
                 X[row, :] = (X[row, :] - coef[0]) / coef[1]
         except Exception as e:
@@ -157,8 +161,31 @@ class MSC:
 
         return self.transform(X)
 
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
-class SNV:
+class SNV(TransformerMixin, BaseEstimator):
     """
     Perform a Standard Normal Variates transformation.
 
@@ -251,13 +278,11 @@ class SNV:
     def __init__(self, robust=False, detrend=False, q=50):
         """Instantiate the class."""
         self.set_params(**{"robust": robust, "detrend": detrend, "q": q})
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
-
         return self
 
     def get_params(self, deep=True):
@@ -286,7 +311,9 @@ class SNV:
         self : SNV
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if y is not None: # Just so this passes sklearn api checks
+            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
 
         assert (0.0 < self.q) and (100.0 > self.q)
 
@@ -310,10 +337,11 @@ class SNV:
             Corrected feature matrix.
         """
         X = check_array(
-            np.asarray(X, dtype=np.float64), accept_sparse=False, copy=True
+            X, accept_sparse=False, copy=True, dtype=np.float64, ensure_2d=True, force_all_finite=True
         )  # Force a copy
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         try:
             if not self.robust:
@@ -365,8 +393,31 @@ class SNV:
 
         return self.transform(X)
 
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
-class SavGol:
+class SavGol(TransformerMixin, BaseEstimator):
     """
     Perform a Savitzky-Golay filtering.
 
@@ -429,13 +480,11 @@ class SavGol:
                 "cval": cval,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
-
         return self
 
     def get_params(self, deep=True):
@@ -467,7 +516,7 @@ class SavGol:
         self : SavGol
             Fitted model.
         """
-        X = check_array(np.asarray(X, dtype=np.float64), accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
 
         try:
             _ = scipy.signal.savgol_filter(
@@ -506,9 +555,10 @@ class SavGol:
         X_filtered : ndarray(float, ndim=2)
             Filtered feature matrix.
         """
-        X = check_array(X, accept_sparse=False)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         X_filtered = scipy.signal.savgol_filter(
             X,
@@ -543,3 +593,29 @@ class SavGol:
         self.fit(X)
 
         return self.transform(X)
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_fit2d_1feature" # Needs to have multiple features to fit to
+            ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }

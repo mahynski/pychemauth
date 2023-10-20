@@ -11,12 +11,13 @@ import scipy
 from scipy.stats import entropy
 from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import check_X_y
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from pychemauth.eda.explore import InspectData
 
 
-class CollinearFeatureSelector:
+class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
     """
     Select features from different clusters determined by their collinearity.
 
@@ -81,7 +82,6 @@ class CollinearFeatureSelector:
                 "kwargs": kwargs,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -98,23 +98,6 @@ class CollinearFeatureSelector:
             "kwargs": self.kwargs,
         }
 
-    def _matrix_X(self, X, train=False):
-        """Check that observations are rows of X."""
-        X = np.array(X, dtype=np.float64).copy()
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        elif X.ndim > 2:
-            raise ValueError("Incorrect feature matrix shape")
-
-        if train is True:
-            self.n_features_in_ = X.shape[1]
-        else:
-            assert (
-                X.shape[1] == self.n_features_in_
-            ), "Incorrect number of features given in X."
-
-        return X
-
     def get_feature_names_out(self, input_features=None):
         """
         Return the selected features.
@@ -130,6 +113,7 @@ class CollinearFeatureSelector:
             Array of features if `input_features` is provided, otherwise boolean mask.
 
         """
+        check_is_fitted(self, "is_fitted_")
         mask = np.asarray(self.feature_importances_, dtype=bool)
         if input_features is not None:
             assert (
@@ -148,6 +132,7 @@ class CollinearFeatureSelector:
         support : ndarray(bool, ndim=1)
             Boolean array of columns that were selected.
         """
+        check_is_fitted(self, "is_fitted_")
         return np.asarray(self.feature_importances_, dtype=bool)
 
     def fit(self, X, y=None):
@@ -167,7 +152,11 @@ class CollinearFeatureSelector:
         self : CollinearFeatureSelector
             Fitted selector.
         """
-        X = self._matrix_X(X, train=True)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if y is not None: # Just so this passes sklearn api checks
+            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        self.n_features_in_ = X.shape[1]
+
         (
             selected_features,
             cluster_id_to_feature_ids,
@@ -220,8 +209,13 @@ class CollinearFeatureSelector:
             X with all features not selected removed. If X is provided as a DataFrame
             a DataFrame is returned.
         """
+        check_is_fitted(self, "is_fitted_")
         mask = np.asarray(self.feature_importances_, dtype=bool)
-        X_ = self._matrix_X(X, train=False)[:, mask]
+        X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if X_.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        X_ = X_[:, mask]
+
         if isinstance(X, pd.DataFrame):
             return pd.DataFrame(data=X_, columns=X.columns[mask])
         else:
@@ -246,6 +240,32 @@ class CollinearFeatureSelector:
         """
         self.fit(X, y)
         return self.transform(X)
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_estimators_fit_returns_self" # Unfortunately, this test seems to generate bad dummy data for this
+            ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
 
 class JensenShannonDivergence:

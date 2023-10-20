@@ -361,7 +361,7 @@ class TestMSC(unittest.TestCase):
         except:
             self.assertTrue(False)
 
-        self.assertTrue(np.allclose(X, msc.Xref))
+        self.assertTrue(np.allclose(X, msc.Xref_))
 
     def test_Xref(self):
         """Test Xref is set properly."""
@@ -373,15 +373,15 @@ class TestMSC(unittest.TestCase):
         """Test MSC transformation."""
         msc = MSC(self.X[0, :])
         X_t = msc.fit_transform(self.X)
-        self.assertTrue(np.allclose(X_t[0, :], msc.Xref))
-        self.assertTrue(np.allclose(X_t[1, :], msc.Xref))
+        self.assertTrue(np.allclose(X_t[0, :], msc.Xref_))
+        self.assertTrue(np.allclose(X_t[1, :], msc.Xref_))
 
         msc = MSC(Xref=self.X[1, :])
         X_t = msc.fit_transform(self.X)
-        self.assertTrue(np.allclose(X_t[0, :], msc.Xref))
-        self.assertTrue(np.allclose(X_t[1, :], msc.Xref))
+        self.assertTrue(np.allclose(X_t[0, :], msc.Xref_))
+        self.assertTrue(np.allclose(X_t[1, :], msc.Xref_))
 
         msc = MSC()
         X_t = msc.fit_transform(self.X)
-        self.assertTrue(np.allclose(np.mean(self.X, axis=0), msc.Xref))
-        self.assertTrue(np.allclose(np.mean(self.X, axis=0), msc.Xref))
+        self.assertTrue(np.allclose(np.mean(self.X, axis=0), msc.Xref_))
+        self.assertTrue(np.allclose(np.mean(self.X, axis=0), msc.Xref_))

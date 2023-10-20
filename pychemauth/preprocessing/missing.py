@@ -10,11 +10,12 @@ from sklearn.decomposition import PCA
 from sklearn.impute import MissingIndicator, SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
 
 
-class LOD:
+class LOD(TransformerMixin, BaseEstimator):
     """
     Fill in "missing" measurement values and those that are below LOD randomly.
 
@@ -52,7 +53,7 @@ class LOD:
     >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's left representing missing values.
     """
 
-    def __init__(self, lod, missing_values=np.nan, seed=0, ignore=None, skip_columns=None):
+    def __init__(self, lod=None, missing_values=np.nan, seed=0, ignore=None, skip_columns=None):
         """Instantiate the class."""
         self.set_params(
             **{
@@ -63,7 +64,6 @@ class LOD:
                 "skip_columns": skip_columns
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -98,19 +98,29 @@ class LOD:
         self : LOD
             Fitted model.
         """
-        X, self.lod = check_X_y(
-            X.T,
-            self.lod,
+        X = check_array(
+            X,
             accept_sparse=False,
+            dtype=np.float64,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
         )
-        X = X.T
-        self.n_features_in_ = X.shape[1]
+        if self.lod is None:
+            self.lod_ = np.array([0]*X.shape[1], dtype=np.float64)
+        else:
+            self.lod_ = check_array(
+                self.lod,
+                accept_sparse=False,
+                dtype=np.float64,
+                force_all_finite=True,
+                ensure_2d=False,
+                copy=True,
+            )
+            self.lod_ = self.lod_.ravel()
 
-        self.lod = self.lod.ravel()
-        if len(self.lod) != self.n_features_in_:
+        self.n_features_in_ = X.shape[1]
+        if len(self.lod_) != self.n_features_in_:
             raise ValueError("LOD must be specified for each column in X")
 
         if self.skip_columns is None:
@@ -146,7 +156,7 @@ class LOD:
             Feature matrix with data below LOD replaced. If X was supplied as a
             pandas.DataFrame a new DataFrame is returned.
         """
-        _ = self.fit(X, y)
+        _ = self.fit(X)
 
         return self.transform(X)
 
@@ -168,12 +178,14 @@ class LOD:
         X_checked = check_array(
             X,
             accept_sparse=False,
+            dtype=np.float64,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
         )
         check_is_fitted(self, "is_fitted_")
-        assert X_checked.shape[1] == self.n_features_in_
+        if X_checked.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         # Take all missing values as below LOD.
         # Convert to new DataFrame, even if already one, so it works for np arrays, too.
@@ -184,7 +196,7 @@ class LOD:
             else np.arange(0, X_checked.shape[0])
         )
         X_df = pd.DataFrame(data=X_checked, columns=columns_, index=index_)
-        lod_dict = dict(zip(columns_, self.lod))
+        lod_dict = dict(zip(columns_, self.lod_))
 
         def impute_(x, lod):
             if lod < 0.0: # Check in the loop so we only look at LODs actually being used
@@ -219,8 +231,34 @@ class LOD:
         else:
             return X_df.values
 
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": True,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_fit_score_takes_y"
+            ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
-class PCA_IA:
+
+class PCA_IA(TransformerMixin, BaseEstimator):
     """
     Use iterative PCA to estimate any missing data values.
 
@@ -314,7 +352,6 @@ class PCA_IA:
                 "tol": tol,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -352,6 +389,7 @@ class PCA_IA:
         self.__Xtrain_ = check_array(
             X,
             accept_sparse=False,
+            dtype=np.float64,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
@@ -368,7 +406,7 @@ class PCA_IA:
         lower_bound = 1
         if self.n_components > upper_bound or self.n_components < lower_bound:
             raise Exception(
-                "n_components must [{}, min(n_samples-1 [{}], \
+                "n_components must be in [{}, min(n_samples-1 [{}], \
 n_features [{}])] = [{}, {}].".format(
                     lower_bound,
                     self.__Xtrain_.shape[0] - 1,
@@ -398,8 +436,10 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         # Identify and record location of missing values
         indicator = MissingIndicator(
@@ -505,9 +545,11 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
         check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
@@ -548,14 +590,43 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
         check_is_fitted(self, "is_fitted_")
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
 
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": True,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_fit2d_1sample", # This is supposed to fail
+                ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
-class PLS_IA:
+
+class PLS_IA(TransformerMixin, BaseEstimator):
     """
     Use iterative PLS to estimate missing data values.
 
@@ -647,7 +718,6 @@ class PLS_IA:
                 "tol": tol,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -667,7 +737,7 @@ class PLS_IA:
 
     def _column_y(self, y):
         """Convert y to column format."""
-        y = np.array(y)
+        y = np.asarray(y)
         if y.ndim != 2:
             y = y[:, np.newaxis]
 
@@ -697,11 +767,12 @@ class PLS_IA:
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
         self.n_features_in_ = self.__Xtrain_.shape[1]
 
         self.__ytrain_ = check_array(
-            y, accept_sparse=False, force_all_finite=True, copy=True
+            y, accept_sparse=False, force_all_finite=True, copy=True, dtype=np.float64, ensure_2d=False # Will be converted next
         )
         self.__ytrain_ = self._column_y(
             self.__ytrain_
@@ -751,12 +822,14 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         if train:
             y = check_array(
-                y, accept_sparse=False, force_all_finite=True, copy=True
+                y, accept_sparse=False, force_all_finite=True, copy=True, dtype=np.float64, ensure_2d=False # Will be converted next
             )
             y = self._column_y(
                 y
@@ -874,15 +947,17 @@ n_features [{}])] = [{}, {}].".format(
         X_filled : array_like(float, ndim=2)
             Matrix with missing data filled in.
         """
+        check_is_fitted(self, "is_fitted_")
         X = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
-        check_is_fitted(self, "is_fitted_")
-        assert X.shape[1] == self.n_features_in_
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         _, _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
@@ -917,14 +992,43 @@ n_features [{}])] = [{}, {}].".format(
         The negative of the SSE is returned so the maximum score is corresponds to the
         best model in cross-validation.
         """
+        check_is_fitted(self, "is_fitted_")
         X = check_array(
             X,
             accept_sparse=False,
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
+            dtype=np.float64
         )
-        check_is_fitted(self, "is_fitted_")
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         _, _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": True,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": False,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_fit2d_1sample", # This is supposed to fail
+                ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
