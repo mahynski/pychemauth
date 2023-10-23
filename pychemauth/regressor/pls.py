@@ -94,7 +94,6 @@ class PLS(RegressorMixin, BaseEstimator):
                 "sft": sft,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -164,22 +163,17 @@ class PLS(RegressorMixin, BaseEstimator):
             robust : bool
                 Whether or not to use robust parameter estimation in [3].
             """
-            if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-                raise ValueError("Cannot use sparse data.")
-            self.__X_ = np.array(X).copy()
-            self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
-            # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
-            self.__y_ = self._column_y(
-                y
-            )  # scikit-learn expects 1D array, convert to columns
-            assert self.__y_.shape[1] == 1
-
-            if self.__X_.shape[0] != self.__y_.shape[0]:
-                raise ValueError(
-                    "X ({}) and y ({}) shapes are not compatible".format(
-                        self.__X_.shape, self.__y_.shape
-                    )
-                )
+            self.__X_, self.__y_ = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=True,
+                copy=True,
+            )
+            self.__y_ = self.__y_.reshape(-1, 1)
             self.n_features_in_ = self.__X_.shape[1]
 
             # 1. Preprocess X data
@@ -255,7 +249,7 @@ class PLS(RegressorMixin, BaseEstimator):
             )  # This term is a matter of convention to match the literature
 
             z_vals = self._z(
-                self.__X_, self.__y_
+                self.__X_, self.__y_.ravel()
             )  # Must come after fitting is otherwise complete
             self.__Nz_, self.__z0_ = estimate_dof(
                 z_vals, robust=robust, initial_guess=self.__y_.shape[1]
@@ -371,14 +365,24 @@ class PLS(RegressorMixin, BaseEstimator):
     @property
     def sft_history(self):
         """Return the sequential focused trimming history."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__sft_history_)
 
     def _h_q(self, X):
         """Compute inner and outer (X) distances."""
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        X = self._matrix_X(X)
-        assert X.shape[1] == self.n_features_in_
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         X_ = self.__x_scaler_.transform(X)
         x_scores = self.__pls_.transform(X_)
@@ -415,7 +419,22 @@ class PLS(RegressorMixin, BaseEstimator):
     def _z(self, X, y):
         """Y residual squared, Eq. 7 in [2]."""
         check_is_fitted(self, "is_fitted_")
-        return ((self.predict(X) - self._column_y(y)) ** 2).ravel()
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=True,
+            copy=False,
+        )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
+
+        return ((self.predict(X) - y) ** 2).ravel()
 
     def _g(self, X, y):
         """XY total distance, Eq. 9 in [2]."""
@@ -443,8 +462,18 @@ class PLS(RegressorMixin, BaseEstimator):
             Projection of X via PLS into score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        X = self._matrix_X(X)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         return self.__pls_.transform(self.__x_scaler_.transform(X))
 
@@ -484,12 +513,22 @@ class PLS(RegressorMixin, BaseEstimator):
             Predicted output for each observation.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        X = self._matrix_X(X)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         return self.__y_scaler_.inverse_transform(
             self.__pls_.predict(self.__x_scaler_.transform(X))
-        )
+        ).ravel()
 
     def pls2_coeff(self, feature_names=None, ax=None, return_coeff=False):
         """
@@ -562,16 +601,19 @@ class PLS(RegressorMixin, BaseEstimator):
             Coefficient of determination (R^2).
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        X = self._matrix_X(X)
-        assert X.shape[1] == self.n_features_in_
-        # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
-        y = self._column_y(y)
-        if X.shape[0] != y.shape[0]:
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=True,
+            copy=False,
+        )
+        if X.shape[1] != self.n_features_in_:
             raise ValueError(
-                "X ({}) and y ({}) shapes are not compatible".format(
-                    X.shape, y.shape
-                )
+                "The number of features in predict is different from the number of features in fit."
             )
 
         ss_res = np.sum((self.predict(X) - y) ** 2)
@@ -667,8 +709,20 @@ class PLS(RegressorMixin, BaseEstimator):
             Axes the results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
-        X_ = self._matrix_X(X)
-        y_ = np.array(y).copy()
+        X_, y_ = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype="numeric",
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=True,
+            copy=True,
+        )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         fig, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize)
 
@@ -893,6 +947,7 @@ class PLS(RegressorMixin, BaseEstimator):
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
+            "array_api_support": False,
             "binary_only": False,
             "multilabel": False,
             "multioutput": False,
@@ -900,12 +955,15 @@ class PLS(RegressorMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
+            "_skip_test": [
+                "check_fit2d_1sample",  # Can't fit 1D data
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

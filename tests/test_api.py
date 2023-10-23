@@ -27,6 +27,8 @@ from pychemauth.preprocessing.feature_selection import (
 from pychemauth.preprocessing.filter import MSC, SNV, SavGol
 from pychemauth.preprocessing.missing import LOD, PCA_IA, PLS_IA
 from pychemauth.preprocessing.scaling import CorrectedScaler, RobustScaler
+from pychemauth.regressor.pcr import PCR
+from pychemauth.regressor.pls import PLS
 
 
 class EstimatorAPICompatibility_Transformers(unittest.TestCase):
@@ -111,3 +113,15 @@ class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
     def test_ddsimca_model(self):
         """Test DDSIMCA_Model."""
         check_estimator(DDSIMCA_Model(1))
+
+
+class EstimatorAPICompatibility_Regressors(unittest.TestCase):
+    """Check compatibility of regressors with sklearn's API."""
+
+    def test_pcr(self):
+        """Test PCR."""
+        check_estimator(PCR())
+
+    def test_pls(self):
+        """Test PLS."""
+        check_estimator(PLS())

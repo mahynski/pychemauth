@@ -180,7 +180,7 @@ class BenchmarkMdatools_ScaledRobust(unittest.TestCase):
                 [41.66132062],
                 [35.8585947],
             ]
-        )
+        ).ravel()
         np.testing.assert_almost_equal(
             preds, self.model.predict(self.Xt), decimal=6
         )
@@ -434,7 +434,7 @@ class BenchmarkMdatools_Scaled(unittest.TestCase):
                 [41.66132062],
                 [35.8585947],
             ]
-        )
+        ).ravel()
         np.testing.assert_almost_equal(
             preds, self.model.predict(self.Xt), decimal=6
         )
@@ -684,7 +684,7 @@ class BenchmarkMdatools_UnscaledRobust(unittest.TestCase):
                 [41.65760507],
                 [35.97989294],
             ]
-        )
+        ).ravel()
         np.testing.assert_almost_equal(
             preds, self.model.predict(self.Xt), decimal=6
         )
@@ -934,7 +934,7 @@ class BenchmarkMdatools_Unscaled(unittest.TestCase):
                 [41.65760507],
                 [35.97989294],
             ]
-        )
+        ).ravel()
         np.testing.assert_almost_equal(
             preds, self.model.predict(self.Xt), decimal=6
         )
@@ -1100,7 +1100,7 @@ class TestPLS_Scaled(unittest.TestCase):
 
     def test_predict(self):
         """Check some predictions."""
-        res = self.model.predict(self.X).ravel()[:3]
+        res = self.model.predict(self.X)[:3]
         ans = np.array([13.13851359, 13.15828113, 12.82654325])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
@@ -1187,7 +1187,7 @@ class TestPLS_Unscaled(unittest.TestCase):
 
     def test_predict(self):
         """Check some predictions."""
-        res = self.model.predict(self.X).ravel()[:3]
+        res = self.model.predict(self.X)[:3]
         ans = np.array([13.11803214, 13.09993406, 12.81534794])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 

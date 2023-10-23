@@ -88,7 +88,7 @@ class TestPCR_scaling(unittest.TestCase):
 
     def test_predict(self):
         """Check some predictions."""
-        res = self.model.predict(self.X).ravel()[:3]
+        res = self.model.predict(self.X)[:3]
         ans = np.array([91.29438, 91.309671, 92.205238])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
@@ -193,7 +193,7 @@ class TestPCR_center(unittest.TestCase):
 
     def test_predict(self):
         """Check some predictions."""
-        res = self.model.predict(self.X).ravel()[:3]
+        res = self.model.predict(self.X)[:3]
         ans = np.array([91.31419632, 91.15547212, 91.91895004])
         np.testing.assert_almost_equal(res, ans, decimal=6)
 
@@ -290,7 +290,7 @@ class TestPCR_sklearn(unittest.TestCase):
             n_components=1, scale_x=False, center_y=False, scale_y=False
         )
         _ = manual_pcr.fit(X_train, y_train)
-        b = manual_pcr.predict(X_test).ravel()
+        b = manual_pcr.predict(X_test)
 
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
 
@@ -328,7 +328,7 @@ class TestPCR_sklearn(unittest.TestCase):
             n_components=1, scale_x=False, center_y=True, scale_y=True
         )
         _ = manual_pcr.fit(X_train, y_train)
-        b = manual_pcr.predict(X_test).ravel()
+        b = manual_pcr.predict(X_test)
 
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
 
@@ -347,6 +347,6 @@ class TestPCR_sklearn(unittest.TestCase):
             n_components=1, scale_x=True, center_y=True, scale_y=True
         )
         _ = manual_pcr.fit(X_train, y_train)
-        b = manual_pcr.predict(X_test).ravel()
+        b = manual_pcr.predict(X_test)
 
         self.assertTrue(np.all(np.abs(a - b) < 1.0e-12))
