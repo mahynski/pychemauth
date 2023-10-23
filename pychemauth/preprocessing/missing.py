@@ -5,12 +5,12 @@ author: nam
 """
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.decomposition import PCA
 from sklearn.impute import MissingIndicator, SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
-from sklearn.base import BaseEstimator, TransformerMixin
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
 
@@ -53,7 +53,14 @@ class LOD(TransformerMixin, BaseEstimator):
     >>> X_lod = itim.fit_transform(missing_X) # Will still have NaN's left representing missing values.
     """
 
-    def __init__(self, lod=None, missing_values=np.nan, seed=0, ignore=None, skip_columns=None):
+    def __init__(
+        self,
+        lod=None,
+        missing_values=np.nan,
+        seed=0,
+        ignore=None,
+        skip_columns=None,
+    ):
         """Instantiate the class."""
         self.set_params(
             **{
@@ -61,7 +68,7 @@ class LOD(TransformerMixin, BaseEstimator):
                 "missing_values": missing_values,
                 "seed": seed,
                 "ignore": ignore,
-                "skip_columns": skip_columns
+                "skip_columns": skip_columns,
             }
         )
 
@@ -78,7 +85,7 @@ class LOD(TransformerMixin, BaseEstimator):
             "missing_values": self.missing_values,
             "seed": self.seed,
             "ignore": self.ignore,
-            "skip_columns": self.skip_columns
+            "skip_columns": self.skip_columns,
         }
 
     def fit(self, X, y=None):
@@ -107,7 +114,7 @@ class LOD(TransformerMixin, BaseEstimator):
             copy=True,
         )
         if self.lod is None:
-            self.lod_ = np.array([0]*X.shape[1], dtype=np.float64)
+            self.lod_ = np.array([0] * X.shape[1], dtype=np.float64)
         else:
             self.lod_ = check_array(
                 self.lod,
@@ -126,13 +133,19 @@ class LOD(TransformerMixin, BaseEstimator):
         if self.skip_columns is None:
             self.skip_columns = []
         else:
-            if not hasattr(self.skip_columns, '__iter__'):
-                raise ValueError('skip_columns should be an interable list containing integers')
+            if not hasattr(self.skip_columns, "__iter__"):
+                raise ValueError(
+                    "skip_columns should be an interable list containing integers"
+                )
 
             self.skip_columns = np.asarray(self.skip_columns, dtype=int)
-            if (np.max(self.skip_columns) > self.n_features_in_ - 1) or (np.min(self.skip_columns) < 0):
-                raise ValueError('All skip_columns should be in the range [0, X.shape[1]-1]')
-        
+            if (np.max(self.skip_columns) > self.n_features_in_ - 1) or (
+                np.min(self.skip_columns) < 0
+            ):
+                raise ValueError(
+                    "All skip_columns should be in the range [0, X.shape[1]-1]"
+                )
+
         self.__rng_ = np.random.default_rng(self.seed)
         self.is_fitted_ = True
 
@@ -185,7 +198,9 @@ class LOD(TransformerMixin, BaseEstimator):
         )
         check_is_fitted(self, "is_fitted_")
         if X_checked.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         # Take all missing values as below LOD.
         # Convert to new DataFrame, even if already one, so it works for np arrays, too.
@@ -199,7 +214,9 @@ class LOD(TransformerMixin, BaseEstimator):
         lod_dict = dict(zip(columns_, self.lod_))
 
         def impute_(x, lod):
-            if lod < 0.0: # Check in the loop so we only look at LODs actually being used
+            if (
+                lod < 0.0
+            ):  # Check in the loop so we only look at LODs actually being used
                 raise ValueError("LODs must be non-negative.")
 
             if self.ignore is not None:
@@ -243,15 +260,13 @@ class LOD(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [
-                "check_fit_score_takes_y"
-            ],  
+            "_skip_test": ["check_fit_score_takes_y"],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
@@ -436,10 +451,12 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         # Identify and record location of missing values
         indicator = MissingIndicator(
@@ -545,11 +562,13 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
@@ -590,11 +609,13 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
@@ -611,15 +632,15 @@ n_features [{}])] = [{}, {}].".format(
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_fit2d_1sample", # This is supposed to fail
-                ],  
+                "check_fit2d_1sample",  # This is supposed to fail
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
@@ -767,12 +788,17 @@ class PLS_IA(TransformerMixin, BaseEstimator):
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         self.n_features_in_ = self.__Xtrain_.shape[1]
 
         self.__ytrain_ = check_array(
-            y, accept_sparse=False, force_all_finite=True, copy=True, dtype=np.float64, ensure_2d=False # Will be converted next
+            y,
+            accept_sparse=False,
+            force_all_finite=True,
+            copy=True,
+            dtype=np.float64,
+            ensure_2d=False,  # Will be converted next
         )
         self.__ytrain_ = self._column_y(
             self.__ytrain_
@@ -822,14 +848,21 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if train:
             y = check_array(
-                y, accept_sparse=False, force_all_finite=True, copy=True, dtype=np.float64, ensure_2d=False # Will be converted next
+                y,
+                accept_sparse=False,
+                force_all_finite=True,
+                copy=True,
+                dtype=np.float64,
+                ensure_2d=False,  # Will be converted next
             )
             y = self._column_y(
                 y
@@ -954,10 +987,12 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         _, _, _, mask, imputed_vals, _ = self._em(X, train=False)
 
         X_filled = X.copy()
@@ -999,10 +1034,12 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite="allow-nan",
             ensure_2d=True,
             copy=True,
-            dtype=np.float64
+            dtype=np.float64,
         )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         _, _, _, _, _, sse = self._em(X, train=False)
 
         return -sse
@@ -1019,15 +1056,15 @@ n_features [{}])] = [{}, {}].".format(
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_fit2d_1sample", # This is supposed to fail
-                ],  
+                "check_fit2d_1sample",  # This is supposed to fail
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

@@ -8,21 +8,21 @@ original sources is made available when appropriate.
 author: nam
 """
 import itertools
-import tqdm
-import matplotlib
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import pandas as pd
-
-from sklearn.preprocessing import LabelEncoder
-from bokeh.io import show, output_notebook
+import seaborn as sns
+import tqdm
+from bokeh.io import output_notebook, show
+from bokeh.layouts import column
 from bokeh.models import ColumnDataSource, Slider
 from bokeh.plotting import figure
-from bokeh.layouts import column
-from bokeh.sampledata.periodic_table import elements 
+from bokeh.sampledata.periodic_table import elements
 from bokeh.transform import dodge, factor_cmap
+from sklearn.preprocessing import LabelEncoder
+
 
 class InspectData:
     """Class containing tools used to inspect raw data."""
@@ -161,9 +161,11 @@ class InspectData:
         plt.tight_layout()
 
         return plt.gca()
-    
+
     @staticmethod
-    def cluster_periodic_table(X, step=0.1, hover=False, notebook_url="http://localhost:8888"):
+    def cluster_periodic_table(
+        X, step=0.1, hover=False, notebook_url="http://localhost:8888"
+    ):
         """
         Interactively cluster elements in the periodic table.
 
@@ -171,7 +173,7 @@ class InspectData:
         ----------
         X : pandas.DataFrame
             Dataframe of observations.  Columns should be elements, but may include other
-            numeric measurements such as stable isotopes.  These will be ignored during 
+            numeric measurements such as stable isotopes.  These will be ignored during
             clustering and coloring.
 
         step : scalar(float), optional(default=0.1)
@@ -181,15 +183,15 @@ class InspectData:
             Whether to show elemental properties when the mouse tip hovers over them.
 
         notebook_url : scalar(str), optional(default="http://localhost:8888")
-            The URL of the notebook being used, including the port.  If you are running 
-            a Jupyter notebook server locally the default value is adequate; however, if 
-            you are accessing this remotely you need to specify the complete address so 
+            The URL of the notebook being used, including the port.  If you are running
+            a Jupyter notebook server locally the default value is adequate; however, if
+            you are accessing this remotely you need to specify the complete address so
             Bokeh can forward the plot correctly.  For example, http://123.4.567.890:8888.
 
         Note
         ----
-        Clustering is performed using hierarchical Ward clustering as in 
-        `InspectData.cluster_collinear`.  The `t` value shown there is provided as an 
+        Clustering is performed using hierarchical Ward clustering as in
+        `InspectData.cluster_collinear`.  The `t` value shown there is provided as an
         interactive slider.
 
         Warning
@@ -197,7 +199,6 @@ class InspectData:
         Colors themselves are not meaningful; different colors represent different clusters
         but similar shades do NOT denote anything about the similarity of those clusters.
         """
-
         # Output should be set to notebook.
         output_notebook()
 
@@ -206,7 +207,9 @@ class InspectData:
 
         # Select elements from whatever is provided.
         known_elements = [str(e).lower() for e in elements.copy().symbol.values]
-        used_elements = [str(c) for c in X.columns if str(c).lower() in known_elements]
+        used_elements = [
+            str(c) for c in X.columns if str(c).lower() in known_elements
+        ]
         X = X[used_elements]
 
         def create(doc):
@@ -217,13 +220,13 @@ class InspectData:
             df = elements.copy()
             df["atomic mass"] = df["atomic mass"].astype(str)
             df["group"] = df["group"].astype(str)
-            df["period"] = [periods[x-1] for x in df.period]
+            df["period"] = [periods[x - 1] for x in df.period]
             df = df[df.group != "-"]
             df = df[df.symbol != "Lr"]
             df = df[df.symbol != "Lu"]
 
             # For coloring
-            df['cluster'] = ["0"]*df.shape[0]
+            df["cluster"] = ["0"] * df.shape[0]
 
             source = ColumnDataSource(df)
 
@@ -234,79 +237,152 @@ class InspectData:
                 ("Type", "@metal"),
                 ("CPK color", "$color[hex, swatch]:CPK"),
                 ("Electronic configuration", "@{electronic configuration}"),
-                ('Electronegativity', "@electronegativity"),
-                ('Atomic Radius (pm)', '@{atomic radius}'),
-                ('Ion Radius (pm)', '@{ion radius}'), 
-                ('VdW Radius (pm)', '@{van der Waals radius}'), 
-                ('Standard State', '@{standard state}'),
-                ('Bonding Type', '@{bonding type}'), 
-                ('Melting Point (K)', '@{melting point}'), 
-                ('Boiling Point (K)', '@{boiling point}'), 
-                ('Density (g/m^3)', '@density')
+                ("Electronegativity", "@electronegativity"),
+                ("Atomic Radius (pm)", "@{atomic radius}"),
+                ("Ion Radius (pm)", "@{ion radius}"),
+                ("VdW Radius (pm)", "@{van der Waals radius}"),
+                ("Standard State", "@{standard state}"),
+                ("Bonding Type", "@{bonding type}"),
+                ("Melting Point (K)", "@{melting point}"),
+                ("Boiling Point (K)", "@{boiling point}"),
+                ("Density (g/m^3)", "@density"),
             ]
 
-            p = figure(title="", width=1000, height=450,
-                       x_range=groups, y_range=list(reversed(periods)),
-                       tools="hover" if hover else "", toolbar_location=None, tooltips=TOOLTIPS if hover else None)
+            p = figure(
+                title="",
+                width=1000,
+                height=450,
+                x_range=groups,
+                y_range=list(reversed(periods)),
+                tools="hover" if hover else "",
+                toolbar_location=None,
+                tooltips=TOOLTIPS if hover else None,
+            )
 
             def recompute(attr, old, new):
                 """Cluster and color elements."""
-                selected_features, cluster_id_to_feature_ids, fig = InspectData.cluster_collinear(
-                    np.asarray(X.values, dtype=np.float64), 
-                    feature_names=X.columns, 
+                (
+                    selected_features,
+                    cluster_id_to_feature_ids,
+                    fig,
+                ) = InspectData.cluster_collinear(
+                    np.asarray(X.values, dtype=np.float64),
+                    feature_names=X.columns,
                     display=False,
-                    t=t_slider.value
+                    t=t_slider.value,
                 )
 
-                cm_ = matplotlib.colormaps['rainbow'].resampled(len(cluster_id_to_feature_ids))
-                cmap = {"0": "#999d9a"} # gray
-                for idx, elements in sorted(cluster_id_to_feature_ids.items(), key=lambda x: x[0]):
-                    cmap[str(idx)] = matplotlib.colors.rgb2hex(cm_(idx-1), keep_alpha=True) 
+                cm_ = matplotlib.colormaps["rainbow"].resampled(
+                    len(cluster_id_to_feature_ids)
+                )
+                cmap = {"0": "#999d9a"}  # gray
+                for idx, elements in sorted(
+                    cluster_id_to_feature_ids.items(), key=lambda x: x[0]
+                ):
+                    cmap[str(idx)] = matplotlib.colors.rgb2hex(
+                        cm_(idx - 1), keep_alpha=True
+                    )
                     for elem in elements:
-                        df['cluster'].where(~(df['symbol'].apply(lambda x:str(x).lower()) == elem.lower()), str(idx), inplace=True)
+                        df["cluster"].where(
+                            ~(
+                                df["symbol"].apply(lambda x: str(x).lower())
+                                == elem.lower()
+                            ),
+                            str(idx),
+                            inplace=True,
+                        )
 
-                df.sort_values('cluster', inplace=True, key=lambda x: pd.Series([int(x_) for x_ in x]))
+                df.sort_values(
+                    "cluster",
+                    inplace=True,
+                    key=lambda x: pd.Series([int(x_) for x_ in x]),
+                )
                 source.data = ColumnDataSource.from_df(df)
 
                 # Unfortunately, there doesn't seem to be a way to link the color to the source.  Even
                 # using a column in the df causes an error about waiting, so the best way forward seems
                 # to be to re-build the table each time.
-                r = p.rect("group", "period", 0.95, 0.95, source=source, fill_alpha=1.0, legend_field="cluster",
-                       color=factor_cmap("cluster", palette=list(cmap.values()), factors=list(cmap.keys())))
+                r = p.rect(
+                    "group",
+                    "period",
+                    0.95,
+                    0.95,
+                    source=source,
+                    fill_alpha=1.0,
+                    legend_field="cluster",
+                    color=factor_cmap(
+                        "cluster",
+                        palette=list(cmap.values()),
+                        factors=list(cmap.keys()),
+                    ),
+                )
                 text_props = dict(
-                    source=df, # Leave unconnected from source since this doesn't need to be updated
-                    text_align="left", 
-                    text_baseline="middle", 
-                    color="white"
+                    source=df,  # Leave unconnected from source since this doesn't need to be updated
+                    text_align="left",
+                    text_baseline="middle",
+                    color="white",
                 )
                 x = dodge("group", -0.4, range=p.x_range)
-                p.text(x=x, y="period", text="symbol", text_font_style="bold", **text_props)
-                p.text(x=x, y=dodge("period", 0.3, range=p.y_range), text="atomic number",
-                       text_font_size="11px", **text_props)
-                p.text(x=x, y=dodge("period", -0.35, range=p.y_range), text="name",
-                       text_font_size="7px", **text_props)
-                p.text(x=x, y=dodge("period", -0.2, range=p.y_range), text="atomic mass",
-                       text_font_size="7px", **text_props)
+                p.text(
+                    x=x,
+                    y="period",
+                    text="symbol",
+                    text_font_style="bold",
+                    **text_props
+                )
+                p.text(
+                    x=x,
+                    y=dodge("period", 0.3, range=p.y_range),
+                    text="atomic number",
+                    text_font_size="11px",
+                    **text_props
+                )
+                p.text(
+                    x=x,
+                    y=dodge("period", -0.35, range=p.y_range),
+                    text="name",
+                    text_font_size="7px",
+                    **text_props
+                )
+                p.text(
+                    x=x,
+                    y=dodge("period", -0.2, range=p.y_range),
+                    text="atomic mass",
+                    text_font_size="7px",
+                    **text_props
+                )
                 p.outline_line_color = None
                 p.grid.grid_line_color = None
                 p.axis.axis_line_color = None
                 p.axis.major_tick_line_color = None
                 p.axis.major_label_standoff = 0
                 p.legend.orientation = "horizontal"
-                p.legend.location ="top_center"
+                p.legend.location = "top_center"
                 p.hover.renderers = [r]
 
             # Build table as grid
-            r = p.rect("group", "period", 0.95, 0.95, source=source, fill_alpha=1.0, legend_field="cluster",
-                       color=factor_cmap("cluster", factors=["0"], palette=["#999d9a"]))
+            r = p.rect(
+                "group",
+                "period",
+                0.95,
+                0.95,
+                source=source,
+                fill_alpha=1.0,
+                legend_field="cluster",
+                color=factor_cmap(
+                    "cluster", factors=["0"], palette=["#999d9a"]
+                ),
+            )
 
             # Build slider
-            t_slider = Slider(start=0, 
-                              end=2,
-                              value=0, # Start visualization from t=0
-                              step=step, 
-                              title="t value")
-            t_slider.on_change('value', recompute)
+            t_slider = Slider(
+                start=0,
+                end=2,
+                value=0,  # Start visualization from t=0
+                step=step,
+                title="t value",
+            )
+            t_slider.on_change("value", recompute)
 
             # Color things for the first time
             recompute(None, None, None)

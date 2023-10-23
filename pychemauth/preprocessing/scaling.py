@@ -5,8 +5,9 @@ author: nam
 """
 import numpy as np
 import scipy
-from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
+
 
 class RobustScaler(TransformerMixin, BaseEstimator):
     """
@@ -82,9 +83,23 @@ class RobustScaler(TransformerMixin, BaseEstimator):
         self : RobustScaler
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
-        if y is not None: # Just so this passes sklearn api checks
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
+        if y is not None:  # Just so this passes sklearn api checks
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=True,
+            )
 
         self.n_features_in_ = X.shape[1]
         self.__median_ = np.median(X, axis=0)
@@ -107,10 +122,19 @@ class RobustScaler(TransformerMixin, BaseEstimator):
         X_scaled : array_like(float, ndim=2)
             Scaled feature matrix.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if self.with_median:
             X -= self.__median_
@@ -133,11 +157,20 @@ class RobustScaler(TransformerMixin, BaseEstimator):
         X_unscaled : array_like(float, ndim=2)
             Unscaled feature matrix.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
-        
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
+
         if self.with_iqr:
             X *= np.sqrt(self.__iqr_) if self.pareto else self.__iqr_
         if self.with_median:
@@ -178,13 +211,13 @@ class RobustScaler(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
@@ -267,13 +300,29 @@ class CorrectedScaler:
         self : CorrectedScaler
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
-        if y is not None: # Just so this passes sklearn api checks
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
+        if y is not None:  # Just so this passes sklearn api checks
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=True,
+            )
 
         self.n_features_in_ = X.shape[1]
         self.__mean_ = np.mean(X, axis=0, dtype=np.float64)
-        self.__std_ = np.std(X, axis=0, ddof=(0 if self.biased else 1), dtype=np.float64)
+        self.__std_ = np.std(
+            X, axis=0, ddof=(0 if self.biased else 1), dtype=np.float64
+        )
         self.is_fitted_ = True
 
         return self
@@ -293,9 +342,18 @@ class CorrectedScaler:
             Scaled feature matrix.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if self.with_mean:
             X -= self.__mean_
@@ -326,9 +384,18 @@ class CorrectedScaler:
             Unscaled feature matrix.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if self.with_std:
             X *= np.sqrt(self.__std_) if self.pareto else self.__std_
@@ -370,13 +437,13 @@ class CorrectedScaler:
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

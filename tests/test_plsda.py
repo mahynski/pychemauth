@@ -141,32 +141,30 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
         x = np.array([[87, 0, 10, 0], [2, 24, 3, 0], [0, 0, 219, 0]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([97, 29, 219])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([0.89690722, 0.82758621, 1.0])
-        err = np.all(np.abs((fom['CSNS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSNS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.99193548, 1.0, 0.8968254])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.94322537, 0.90971765, 0.94700866])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.9565217391304348) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 0.9565217391304348) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.9565217391304348) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.9565217391304348) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 0.9565217391304348) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.9565217391304348) < 1.0e-12)
 
         # Check score
         self.assertTrue(
@@ -181,35 +179,33 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(["THA2"] * len(raw_x), dtype=str)
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
 
         x = np.array(
             [
                 [0, 74, 58, 0],
             ]
         )
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([0, 0, 0, 132])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
-        self.assertTrue(np.all([np.isnan(v) for v in fom['CSNS'].values]))
+        self.assertTrue(np.all([np.isnan(v) for v in fom["CSNS"].values]))
 
         x = np.array([1.0, 0.43939394, 0.56060606])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 0.43939394, 0.56060606])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
@@ -306,9 +302,9 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [ 2.53812605,  5.5879958,  37.83387996],
-                [17.53237248,  1.09215772, 37.95329066],
-                [28.79218466, 18.80333959,  0.06600758],
+                [2.53812605, 5.5879958, 37.83387996],
+                [17.53237248, 1.09215772, 37.95329066],
+                [28.79218466, 18.80333959, 0.06600758],
             ]
         )
         d = plsda.mahalanobis(raw_x)
@@ -317,33 +313,33 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
         x = np.array([[91, 17, 0, 2], [0, 27, 0, 2], [2, 2, 203, 13]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([97, 29, 219])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([0.93814433, 0.93103448, 0.92694064])
-        err = np.all(np.abs((fom['CSNS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSNS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.991935, 0.939873, 1.0])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.96466505, 0.935444, 0.96277756])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.9304347826086956) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 0.9695652173913043) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.9304347826086956) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 0.9695652173913043) < 1.0e-12)
         self.assertTrue(
-            np.abs(fom['TEFF'] - np.sqrt(0.9304347826086956 * 0.9695652173913043))
+            np.abs(
+                fom["TEFF"] - np.sqrt(0.9304347826086956 * 0.9695652173913043)
+            )
             < 1.0e-12
         )
 
@@ -367,35 +363,33 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(["THA2"] * len(raw_x), dtype=str)
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
 
         x = np.array(
             [
                 [0, 0, 2, 130],
             ]
         )
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([0, 0, 0, 132])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
-        self.assertTrue(np.all([np.isnan(v) for v in fom['CSNS'].values]))
+        self.assertTrue(np.all([np.isnan(v) for v in fom["CSNS"].values]))
 
         x = np.array([1.0, 1.0, 0.98484848])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0, 0.98484848])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 0.9924242424242424) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 0.9924242424242424) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
@@ -488,32 +482,30 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
         x = np.array([[18, 0, 0], [0, 68, 0]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([18, 68])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CSNS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSNS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 1.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 1.0) < 1.0e-12)
@@ -526,31 +518,29 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df.values[:, 2], dtype=str)
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
 
         x = np.array([[1, 2, 0], [0, 3, 0], [0, 3, 0]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([3, 0, 3, 0, 3])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
-        self.assertTrue(np.all([np.isnan(v) for v in fom['CSNS'].values]))
+        self.assertTrue(np.all([np.isnan(v) for v in fom["CSNS"].values]))
 
         x = np.array([0.888889, 0.111111])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.888889, 0.111111])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
@@ -638,9 +628,9 @@ class TestPLSDA(unittest.TestCase):
         # Check some distances from projection to class centers
         distances = np.array(
             [
-                [4.93491630e-02, 5.38051427e+01],
-                [6.09202227e-01, 7.32678763e+01],
-                [2.78895125e+01, 1.33905536e+00],
+                [4.93491630e-02, 5.38051427e01],
+                [6.09202227e-01, 7.32678763e01],
+                [2.78895125e01, 1.33905536e00],
             ]
         )
         d = plsda.mahalanobis(raw_x)
@@ -649,32 +639,30 @@ class TestPLSDA(unittest.TestCase):
         self.assertTrue(err)
 
         # Check FOM on test and train
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
         x = np.array([[17, 0, 1], [0, 65, 3]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([18, 68])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([0.944444, 0.955882])
-        err = np.all(np.abs((fom['CSNS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSNS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([0.971825, 0.977692])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.9534883720930233) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.9764672918705589) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.9534883720930233) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.9764672918705589) < 1.0e-12)
 
         # Check score
         self.assertTrue(
@@ -692,31 +680,29 @@ class TestPLSDA(unittest.TestCase):
         )
         raw_x = np.array(df.values[:, 3:], dtype=float)
         raw_y = np.array(df.values[:, 2], dtype=str)
-        fom = plsda.figures_of_merit(
-            plsda.predict(raw_x), raw_y
-        )
+        fom = plsda.figures_of_merit(plsda.predict(raw_x), raw_y)
 
         x = np.array([[0, 0, 3], [0, 0, 3], [0, 0, 3]])
-        err = np.all((fom['CM'].values - x) == 0)
+        err = np.all((fom["CM"].values - x) == 0)
         self.assertTrue(err)
 
         x = np.array([3, 0, 3, 0, 3])
-        err = np.all((fom['I'].values - x) == 0)
+        err = np.all((fom["I"].values - x) == 0)
         self.assertTrue(err)
 
-        self.assertTrue(np.all([np.isnan(v) for v in fom['CSNS'].values]))
+        self.assertTrue(np.all([np.isnan(v) for v in fom["CSNS"].values]))
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CSPS'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CSPS"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
         x = np.array([1.0, 1.0])
-        err = np.all(np.abs((fom['CEFF'].values - x)) < 1.0e-6)
+        err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom['TSNS'] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TSPS'] - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom['TEFF'] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TSPS"] - 1.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
 
         # Check score
         self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)

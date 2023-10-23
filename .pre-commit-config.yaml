@@ -15,13 +15,13 @@ repos:
     -   id: debug-statements
     -   id: requirements-txt-fixer
 
--   repo: https://github.com/pycqa/isort
-    rev: 5.11.5
-    hooks:
-    -   id: isort
-        args: ["--profile", "black", "--filter-files"]
-        language: python
-        types: [python]
+      #-   repo: https://github.com/pycqa/isort
+      #    rev: 5.11.5
+      #    hooks:
+      #    -   id: isort
+      #        args: ["--profile", "black", "--filter-files"]
+      #        language: python
+      #        types: [python]
 -   repo: https://github.com/psf/black
     rev: 22.8.0
     hooks:

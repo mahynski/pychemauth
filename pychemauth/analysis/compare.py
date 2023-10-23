@@ -124,7 +124,15 @@ class BiasedNestedCV:
         """Perform nested random search CV."""
         raise NotImplementedError
 
-    def grid_search(self, pipeline, param_grid, X, y, classification=True, error_score=np.nan):
+    def grid_search(
+        self,
+        pipeline,
+        param_grid,
+        X,
+        y,
+        classification=True,
+        error_score=np.nan,
+    ):
         """
         Perform nested grid search CV.
 
@@ -211,7 +219,7 @@ class Compare:
             Significance level.
 
         ignore : scalar(int, float, str), optional(default=np.nan)
-            If any score is equal to this value (in either list of scores) their 
+            If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
             default here, but a numeric value of 0 is also commonly used. A
@@ -235,13 +243,15 @@ class Compare:
 
         def perf(results, n_repeats, alpha):
             if np.isnan(ignore):
-                key = lambda k: np.mean(np.asarray(results[k])[~np.isnan(results[k])])
+                key = lambda k: np.mean(
+                    np.asarray(results[k])[~np.isnan(results[k])]
+                )
             else:
-                key = lambda k: np.mean(np.asarray(results[k])[np.asarray(results[k]) != ignore])
+                key = lambda k: np.mean(
+                    np.asarray(results[k])[np.asarray(results[k]) != ignore]
+                )
 
-            order = sorted(
-                results, key=key, reverse=True
-            )
+            order = sorted(results, key=key, reverse=True)
 
             performances = []
             for k in order:
@@ -251,17 +261,15 @@ class Compare:
                 else:
                     mask = res_ != ignore
                 performances.append(
-                    [
-                        k,
-                        np.mean(res_[mask]),
-                        np.std(res_[mask]),
-                        False
-                    ]
+                    [k, np.mean(res_[mask]), np.std(res_[mask]), False]
                 )
 
             for i in range(1, len(performances)):
                 p = Compare.corrected_t(
-                    results[order[0]], results[order[i]], n_repeats, ignore=ignore
+                    results[order[0]],
+                    results[order[i]],
+                    n_repeats,
+                    ignore=ignore,
                 )
                 # Do we REJECT H0 (that pipelines perform the same)?
                 performances[i][-1] = p < alpha
@@ -421,7 +429,7 @@ class Compare:
             Number of times k-fold was repeated (i.e., k_outer in BiasedNestedCV).
 
         ignore : scalar(int, float, str), optional(default=np.nan)
-            If any score is equal to this value (in either list of scores) their 
+            If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
             default here, but a numeric value of 0 is also commonly used. A
@@ -448,11 +456,13 @@ class Compare:
 
         Warning
         -------
-        It is a good idea to manually check the scores for any `np.nan` or 0 
+        It is a good idea to manually check the scores for any `np.nan` or 0
         values, etc. which can indicate a failed fit. Use `ignore` to exclude
         these points from the calculation.
         """
-        scores1, scores2, mask = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
+        scores1, scores2, mask = Compare._check_scores(
+            scores1=scores1, scores2=scores2, ignore=ignore
+        )
 
         k_fold = len(scores1) // int(n_repeats)
         n = k_fold * n_repeats
@@ -462,11 +472,14 @@ class Compare:
             raise ValueError(
                 "scores1 should have a higher mean value that scores2; reverse them and try again."
             )
-        
+
         rho = 1.0 / k_fold
         perf_diffs = scores1[mask] - scores2[mask]  # H1: mu > 0
-        corrected_t = (np.mean(perf_diffs) - 0.0) / np.sqrt( # n -> sum(mask) to be consistent
-            (1.0 / np.sum(mask) + rho / (1.0 - rho)) * (np.std(perf_diffs, ddof=1) ** 2)
+        corrected_t = (
+            np.mean(perf_diffs) - 0.0
+        ) / np.sqrt(  # n -> sum(mask) to be consistent
+            (1.0 / np.sum(mask) + rho / (1.0 - rho))
+            * (np.std(perf_diffs, ddof=1) ** 2)
         )
 
         return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=n - 1)  # 1-sided test
@@ -491,15 +504,21 @@ class Compare:
                 mask2 = scores2 != ignore
             mask = mask1 & mask2
         else:
-            mask = np.array([True]*n, dtype=bool)
+            mask = np.array([True] * n, dtype=bool)
 
         if np.sum(mask) < len(scores1):
-            warnings.warn("Ignoring {}% of points for corrected_t test".format("%.2f"%(100.0*(1 - np.sum(mask)/len(scores1)))))
+            warnings.warn(
+                "Ignoring {}% of points for corrected_t test".format(
+                    "%.2f" % (100.0 * (1 - np.sum(mask) / len(scores1)))
+                )
+            )
 
         return scores1, scores2, mask
 
     @staticmethod
-    def bayesian_comparison(scores1, scores2, n_repeats, alpha, rope=0.0, ignore=np.nan):
+    def bayesian_comparison(
+        scores1, scores2, n_repeats, alpha, rope=0.0, ignore=np.nan
+    ):
         """
         Bayesian comparison between pipelines to assess relative performance.
 
@@ -521,7 +540,7 @@ class Compare:
             The width of the region of practical equivalence.
 
         ignore : scalar(int, float, str), optional(default=np.nan)
-            If any score is equal to this value (in either list of scores) their 
+            If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
             default here, but a numeric value of 0 is also commonly used. A
@@ -548,14 +567,21 @@ class Compare:
 
         Warning
         -------
-        It is a good idea to manually check the scores for any `np.nan` or 0 
+        It is a good idea to manually check the scores for any `np.nan` or 0
         values, etc. which can indicate a failed fit. Use `ignore` to exclude
         these points from the calculation.
         """
-        scores1, scores2, mask = Compare._check_scores(scores1=scores1, scores2=scores2, ignore=ignore)
+        scores1, scores2, mask = Compare._check_scores(
+            scores1=scores1, scores2=scores2, ignore=ignore
+        )
 
         probs = two_on_single(
-            scores1[mask], scores2[mask], rope=rope, runs=n_repeats, names=None, plot=False
+            scores1[mask],
+            scores2[mask],
+            rope=rope,
+            runs=n_repeats,
+            names=None,
+            plot=False,
         )
 
         if rope == 0:

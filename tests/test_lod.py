@@ -32,7 +32,9 @@ class TestLOD(unittest.TestCase):
 
     def test_skip(self):
         """Test the ability to skip columns."""
-        imputer = LOD(self.lod, missing_values=np.nan, seed=0, skip_columns=[0, 1, 2, 3])
+        imputer = LOD(
+            self.lod, missing_values=np.nan, seed=0, skip_columns=[0, 1, 2, 3]
+        )
         X_lod = imputer.fit_transform(self.X)
         # Should have no affect
         np.testing.assert_almost_equal(X_lod, self.X)
@@ -40,7 +42,7 @@ class TestLOD(unittest.TestCase):
         # Skip just one column
         imputer = LOD(self.lod, missing_values=np.nan, seed=0, skip_columns=[1])
         X_lod = imputer.fit_transform(self.X)
-        np.testing.assert_almost_equal(X_lod[:,1], self.X[:,1])
+        np.testing.assert_almost_equal(X_lod[:, 1], self.X[:, 1])
 
     def test_nan(self):
         """Test nan as missing_value."""

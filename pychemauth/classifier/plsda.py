@@ -181,7 +181,16 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.n_components = int(
             self.n_components
         )  # scikit-learn PLS does not understand floats
-        self.__X_, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=True)
+        self.__X_, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+            copy=True,
+        )
         self.__y_ = self._column_y(
             y
         )  # scikit-learn expects 1D array, convert to columns
@@ -312,7 +321,9 @@ n_features [{}])] = [{}, {}].".format(
                         t[j, :].reshape(t.shape[1], 1),
                         t[j, :].reshape(t.shape[1], 1).T,
                     )
-                self.__S_[i] /= t.shape[0]  # See Ref [1] - centers are known not calculated so do not remove extra DoF
+                self.__S_[i] /= t.shape[
+                    0
+                ]  # See Ref [1] - centers are known not calculated so do not remove extra DoF
                 try:
                     # Check if positive definite.
                     np.linalg.cholesky(self.__S_[i])
@@ -419,9 +430,18 @@ n_features [{}])] = [{}, {}].".format(
             Projection of X via PLS, then by PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         return self.__pca_.transform(
             self.__y_pls_scaler_.inverse_transform(
@@ -460,9 +480,18 @@ n_features [{}])] = [{}, {}].".format(
         See https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.mahalanobis.html.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         T_test = self.transform(X)
 
@@ -828,21 +857,26 @@ n_features [{}])] = [{}, {}].".format(
         # previously unseen samples).
         TEFF = np.sqrt(TSPS * TSNS)
 
-        return dict(zip(['CM', 'I', 'CSNS', 'CSPS', 'CEFF', 'TSNS', 'TSPS', 'TEFF'], (
-            df[
-                [c for c in df.columns if c in trained_classes]
-                + [self.not_assigned]
-            ][
-                [x in np.unique(actual) for x in df.index]
-            ],  # Re-order for easy visualization
-            Itot,
-            CSNS,
-            CSPS,
-            CEFF,
-            TSNS,
-            TSPS,
-            TEFF,
-        )))
+        return dict(
+            zip(
+                ["CM", "I", "CSNS", "CSPS", "CEFF", "TSNS", "TSPS", "TEFF"],
+                (
+                    df[
+                        [c for c in df.columns if c in trained_classes]
+                        + [self.not_assigned]
+                    ][
+                        [x in np.unique(actual) for x in df.index]
+                    ],  # Re-order for easy visualization
+                    Itot,
+                    CSNS,
+                    CSPS,
+                    CEFF,
+                    TSNS,
+                    TSPS,
+                    TEFF,
+                ),
+            )
+        )
 
     def score(self, X, y):
         """
@@ -864,13 +898,21 @@ n_features [{}])] = [{}, {}].".format(
             Score.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
-        if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
-
-        metrics = self.figures_of_merit(
-            self.predict(X), y
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
         )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
+
+        metrics = self.figures_of_merit(self.predict(X), y)
         if self.score_metric.upper() not in metrics:
             raise ValueError(
                 "Unrecognized metric : {}".format(self.score_metric.upper())
@@ -1445,21 +1487,21 @@ n_features [{}])] = [{}, {}].".format(
             "allow_nan": False,
             "array_api_support": False,
             "binary_only": False,
-            "multilabel": True, 
-            "multioutput": False, 
+            "multilabel": True,
+            "multioutput": False,
             "multioutput_only": False,
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_dtype_object", # Causes singular matrix
-            ],  
+                "check_dtype_object",  # Causes singular matrix
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

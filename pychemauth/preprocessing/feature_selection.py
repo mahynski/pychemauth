@@ -9,10 +9,10 @@ import numpy as np
 import pandas as pd
 import scipy
 from scipy.stats import entropy
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.linear_model import LinearRegression
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.eda.explore import InspectData
 
@@ -152,9 +152,24 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         self : CollinearFeatureSelector
             Fitted selector.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
-        if y is not None: # Just so this passes sklearn api checks
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
+        if y is not None:  # Just so this passes sklearn api checks
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=False,
+            )
         self.n_features_in_ = X.shape[1]
 
         (
@@ -211,9 +226,18 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
         mask = np.asarray(self.feature_importances_, dtype=bool)
-        X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X_ = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         if X_.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         X_ = X_[:, mask]
 
         if isinstance(X, pd.DataFrame):
@@ -253,15 +277,15 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_estimators_fit_returns_self" # Unfortunately, this test seems to generate bad dummy data for this
-            ],  
+                "check_estimators_fit_returns_self"  # Unfortunately, this test seems to generate bad dummy data for this
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
@@ -466,7 +490,16 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
         If `per_class` is True, then the ranking is done for each class
         and the `top_k` are chosen from each.
         """
-        self.__X_, self.__y_ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=True)
+        self.__X_, self.__y_ = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+            copy=True,
+        )
         self.n_features_in_ = self.__X_.shape[1]
 
         def compute_(column):
@@ -609,9 +642,17 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             Matrix with only the features selected.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         return X[:, self.__mask_]
 
@@ -793,17 +834,18 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
+
 
 class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
     r"""
@@ -947,7 +989,15 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         self : BorutaSHAPFeatureSelector
             Fitted model.
         """
-        X_, y_ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X_, y_ = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+        )
         self.n_features_in_ = X_.shape[1]
 
         # Convert X and y to pandas.DataFrame and series
@@ -1007,9 +1057,17 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
             Feature matrix with only the relevant columns.
         """
         check_is_fitted(self, "is_fitted_")
-        X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X_ = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         if X_.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         df = pd.DataFrame(data=X_, columns=self.column_names_)[
             self.get_feature_names_out()
         ]
@@ -1041,7 +1099,10 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
         return np.array(
-            [column in self.__boruta_.accepted for column in self.column_names_],
+            [
+                column in self.__boruta_.accepted
+                for column in self.column_names_
+            ],
             dtype=bool,
         )
 
@@ -1057,15 +1118,15 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_parameters_default_constructible" # sklearn has problems with model being a RF or other model
-            ],  
+                "check_parameters_default_constructible"  # sklearn has problems with model being a RF or other model
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

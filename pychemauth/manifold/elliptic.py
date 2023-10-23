@@ -38,10 +38,24 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
 
     def fit(self, X, y=None):
         """Fit the model."""
-        if y is not None: # Just so this passes sklearn api checks
-            X_, y_ = check_X_y(X, y, accept_sparse=False, dtype='numeric', ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if y is not None:  # Just so this passes sklearn api checks
+            X_, y_ = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype="numeric",
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=False,
+            )
         else:
-            X_ = check_array(X, accept_sparse=False, dtype='numeric', ensure_2d=True, force_all_finite=True)
+            X_ = check_array(
+                X,
+                accept_sparse=False,
+                dtype="numeric",
+                ensure_2d=True,
+                force_all_finite=True,
+            )
 
         self.n_features_in_ = X_.shape[1]
         self.is_fitted_ = True
@@ -50,11 +64,19 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
     def transform(self, X):
         """Transform the data."""
         check_is_fitted(self, "is_fitted_")
-        X_ = check_array(X, accept_sparse=False, dtype='numeric', ensure_2d=True, force_all_finite=True) # For the sake of sklearn estimator checks
+        X_ = check_array(
+            X,
+            accept_sparse=False,
+            dtype="numeric",
+            ensure_2d=True,
+            force_all_finite=True,
+        )  # For the sake of sklearn estimator checks
         if X_.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
-        
-        return X # Just return original object
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
+
+        return X  # Just return original object
 
     def fit_transform(self, X, y=None):
         """Fit and transform."""
@@ -63,27 +85,28 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
     def _get_tags(self):
         """For compatibility with scikit-learn >=0.21."""
         return {
-            "allow_nan": False, # Still enforce all to be finite
+            "allow_nan": False,  # Still enforce all to be finite
             "array_api_support": False,
             "binary_only": False,
             "multilabel": False,
             "multioutput": False,
             "multioutput_only": False,
-            "no_validation": True, # Just a passthrough
+            "no_validation": True,  # Just a passthrough
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
-    
+
+
 class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     r"""
     Train an EllipticManifold model for a target class.
@@ -148,7 +171,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
     and the model with the best efficiency is selected. [1]
 
     This resembles an "unequal class model" (UNEQ), but fits the elliptical
-    boundary after a (possibly non-linear) dimensionality reduction (DR) has taken 
+    boundary after a (possibly non-linear) dimensionality reduction (DR) has taken
     place. If no DR is used, then this is just an UNEQ model. [4] If PCA is used
     this resembles SIMCA, but uses the score distance only to determine class
     membership (some variants of SIMCA use only the error or "outer distance",
@@ -240,9 +263,17 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         must be part of the pipeline for those steps to work automatically.
         However, a user may manually provide only the data of interest.
         """
-        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+        )
         self.n_features_in_ = X.shape[1]
-        self.classes_ = [True, False] # For sklearn
+        self.classes_ = [True, False]  # For sklearn
 
         # Fit model to target data
         self.__model_ = EllipticManifold_Model(
@@ -254,9 +285,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             center=self.center,
         )
 
-        if self.target_class not in np.unique(
-            y
-        ):
+        if self.target_class not in np.unique(y):
             raise Exception("target_class not in training set")
         self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
         self.is_fitted_ = True
@@ -282,9 +311,17 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         This is necessary for scikit-learn compatibility.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         return self.__model_.transform(X)
 
     def fit_transform(self, X, y):
@@ -326,9 +363,17 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             Whether or not each point is an inlier.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         return self.__model_.predict(X)
 
     def predict_proba(self, X):
@@ -347,9 +392,17 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         return self.__model_.predict_proba(X)
 
     @property
@@ -392,9 +445,19 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         "better" model.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if self.use == "rigorous":
             # Make sure we have the target class to test on
@@ -441,9 +504,19 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         as a geometric mean of TSNS and TSPS.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         self.__alternatives_ = [
             c for c in sorted(np.unique(y)) if c != self.target_class
@@ -499,19 +572,20 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [], 
-            "poor_score" : True,
+            "preserves_dtype": [],
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_estimators_dtypes", # sklearn's example create singular matrices preventing fit
-            ],  
-            "_xfail_checks": False, 
+                "check_estimators_dtypes",  # sklearn's example create singular matrices preventing fit
+            ],
+            "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
+
 
 class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
     r"""
@@ -672,16 +746,34 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
     def _sanity(self, X, y, init=False):
         """Check data format and sanity."""
         if y is None:
-            X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+            X = check_array(
+                X,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                copy=False,
+            )
         else:
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=False)
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=False,
+                copy=False,
+            )
             y = self._column_y(y)
 
         if init:
             self.n_features_in_ = X.shape[1]
         else:
             if X.shape[1] != self.n_features_in_:
-                raise ValueError("The number of features in predict is different from the number of features in fit.")
+                raise ValueError(
+                    "The number of features in predict is different from the number of features in fit."
+                )
 
         return X, y
 
@@ -712,7 +804,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         # Sanity checks
         X, y = self._sanity(np.asarray(X, dtype=np.float64), y, init=True)
         self.classes_ = [True, False]
-        
+
         if y is None:
             self.__label_ = "Training Class"
         else:
@@ -1386,16 +1478,16 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [], 
-            "poor_score" : True,
+            "preserves_dtype": [],
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_estimators_dtypes" # sklearn passes multiple classes during training
-            ],  
-            "_xfail_checks": False, 
+                "check_estimators_dtypes"  # sklearn passes multiple classes during training
+            ],
+            "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }

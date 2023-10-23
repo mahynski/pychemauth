@@ -6,8 +6,8 @@ author: nam
 import numpy as np
 import scipy.signal
 from scipy.stats import iqr
-from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 
 class MSC(TransformerMixin, BaseEstimator):
@@ -90,9 +90,23 @@ class MSC(TransformerMixin, BaseEstimator):
         self : MSC
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
-        if y is not None: # Just so this passes sklearn api checks
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
+        if y is not None:  # Just so this passes sklearn api checks
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=True,
+            )
 
         if self.Xref is None:  # Use the mean from the training set
             self.Xref_ = np.mean(X, axis=0, dtype=np.float64)
@@ -102,7 +116,9 @@ class MSC(TransformerMixin, BaseEstimator):
         self.n_features_in_ = len(self.Xref_)
 
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         self.is_fitted_ = True
 
@@ -123,11 +139,18 @@ class MSC(TransformerMixin, BaseEstimator):
             Corrected feature matrix.
         """
         X = check_array(
-            X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
         )  # Force a copy
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         try:
             for row in range(X.shape[0]):
@@ -173,17 +196,18 @@ class MSC(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
+
 
 class SNV(TransformerMixin, BaseEstimator):
     """
@@ -311,9 +335,23 @@ class SNV(TransformerMixin, BaseEstimator):
         self : SNV
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
-        if y is not None: # Just so this passes sklearn api checks
-            X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
+        if y is not None:  # Just so this passes sklearn api checks
+            X, y = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=True,
+            )
 
         assert (0.0 < self.q) and (100.0 > self.q)
 
@@ -337,11 +375,18 @@ class SNV(TransformerMixin, BaseEstimator):
             Corrected feature matrix.
         """
         X = check_array(
-            X, accept_sparse=False, copy=True, dtype=np.float64, ensure_2d=True, force_all_finite=True
+            X,
+            accept_sparse=False,
+            copy=True,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
         )  # Force a copy
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         try:
             if not self.robust:
@@ -405,17 +450,18 @@ class SNV(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [],  
+            "_skip_test": [],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
+
 
 class SavGol(TransformerMixin, BaseEstimator):
     """
@@ -516,7 +562,13 @@ class SavGol(TransformerMixin, BaseEstimator):
         self : SavGol
             Fitted model.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
 
         try:
             _ = scipy.signal.savgol_filter(
@@ -555,10 +607,18 @@ class SavGol(TransformerMixin, BaseEstimator):
         X_filtered : ndarray(float, ndim=2)
             Filtered feature matrix.
         """
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+        )
         check_is_fitted(self, "is_fitted_")
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         X_filtered = scipy.signal.savgol_filter(
             X,
@@ -606,15 +666,15 @@ class SavGol(TransformerMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
             "_skip_test": [
-                "check_fit2d_1feature" # Needs to have multiple features to fit to
-            ],  
+                "check_fit2d_1feature"  # Needs to have multiple features to fit to
+            ],
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

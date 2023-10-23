@@ -16,7 +16,7 @@ from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
 
-class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
+class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
     """
     Create a Principal Components Analysis (PCA) model.
 
@@ -134,9 +134,18 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
         -------
         self : PCA
         """
-        if y is not None: # Just so this passes sklearn api checks
-            X, _ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=False)
-        
+        if y is not None:  # Just so this passes sklearn api checks
+            X, _ = check_X_y(
+                X,
+                y,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                y_numeric=False,
+                copy=False,
+            )
+
         def train(X, robust):
             """
             Train the model.
@@ -150,7 +159,14 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
                 "semi" = classical PCA + robust parameter estimation in [4];
                 otherwise = classical PCA + classical parameter estimation in [4];
             """
-            self.__X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+            self.__X_ = check_array(
+                X,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=True,
+                force_all_finite=True,
+                copy=True,
+            )
             self.n_features_in_ = self.__X_.shape[1]
 
             if robust == "full":
@@ -321,12 +337,19 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
-        if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
-        return self.__pca_.transform(
-            self.__x_scaler_.transform(X)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
         )
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
+        return self.__pca_.transform(self.__x_scaler_.transform(X))
 
     def fit_transform(self, X, y=None):
         """Fit and transform."""
@@ -336,9 +359,18 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
     def _h_q(self, X):
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         X_raw_std = self.__x_scaler_.transform(X)
         T = self.__pca_.transform(X_raw_std)
@@ -536,9 +568,18 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
         Both extreme points and outliers are considered "extremes" here.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         N_tot = X.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
@@ -601,9 +642,19 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        X, y = check_X_y(
+            X,
+            y,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            y_numeric=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
         assert np.all(
             [a in [True, False] for a in y]
         ), "y should contain only True or False labels"
@@ -702,9 +753,18 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        X = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=False,
+        )
         if X.shape[1] != self.n_features_in_:
-            raise ValueError("The number of features in predict is different from the number of features in fit.")
+            raise ValueError(
+                "The number of features in predict is different from the number of features in fit."
+            )
 
         if ax is None:
             fig = plt.figure()
@@ -827,15 +887,13 @@ class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "preserves_dtype": [np.float64], # Only for transformers
-            "poor_score" : True,
+            "preserves_dtype": [np.float64],  # Only for transformers
+            "poor_score": True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": [
-                "check_fit2d_1sample" # Can't fit 1D
-            ],  
+            "_skip_test": ["check_fit2d_1sample"],  # Can't fit 1D
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
