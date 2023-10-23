@@ -268,7 +268,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         }
 
 
-class JensenShannonDivergence:
+class JensenShannonDivergence(TransformerMixin, BaseEstimator):
     r"""
     Compute the Jensen-Shanon divergence (JSD).
 
@@ -414,7 +414,6 @@ class JensenShannonDivergence:
                 "robust": robust,
             }
         )
-        return
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -467,8 +466,8 @@ class JensenShannonDivergence:
         If `per_class` is True, then the ranking is done for each class
         and the `top_k` are chosen from each.
         """
-        self.__X_ = np.asarray(X, dtype=np.float64).copy()
-        self.__y_ = np.array(y).copy()
+        self.__X_, self.__y_ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=True)
+        self.n_features_in_ = self.__X_.shape[1]
 
         def compute_(column):
             if self.robust:
@@ -516,10 +515,10 @@ class JensenShannonDivergence:
             return div
 
         self.__divergence_ = {}
-        for i in range(X.shape[1]):
+        for i in range(self.n_features_in_):
             self.__divergence_[i] = compute_(i)
 
-        self.__mask_ = np.array([False] * self.__X_.shape[1])
+        self.__mask_ = np.array([False] * self.n_features_in_)
         if not self.per_class:
             # Just take top analytes regardless
             # Sort based on mean divergence across all classes
@@ -528,7 +527,7 @@ class JensenShannonDivergence:
                 key=lambda x: np.mean(list(x[1].values())),
                 reverse=True,
             )
-            for i in range(len(self.__divergence_)):
+            for i in range(self.n_features_in_):
                 divs = self.__divergence_[i][1]
                 if (
                     np.mean(list(divs.values())) > self.threshold
@@ -540,10 +539,10 @@ class JensenShannonDivergence:
 
             if self.feature_names is not None:
                 assert (
-                    len(self.feature_names) == self.__X_.shape[1]
+                    len(self.feature_names) == self.n_features_in_
                 ), "The size of feature_names disagrees with X"
                 tmp = []
-                for i in range(len(self.__divergence_)):
+                for i in range(self.n_features_in_):
                     tmp.append(
                         (
                             self.feature_names[self.__divergence_[i][0]],
@@ -570,7 +569,7 @@ class JensenShannonDivergence:
 
             if self.feature_names is not None:
                 assert (
-                    len(self.feature_names) == self.__X_.shape[1]
+                    len(self.feature_names) == self.n_features_in_
                 ), "The size of feature_names disagrees with X"
                 self.__divergence_ = {}
                 for class_ in top_class_div.keys():
@@ -588,6 +587,8 @@ class JensenShannonDivergence:
 
         # So this is compatible with sklearn.feature_selection.SelectFromModel
         self.feature_importances_ = np.asarray(self.__mask_, dtype=np.float64)
+
+        self.is_fitted_ = True
 
         return self
 
@@ -607,9 +608,10 @@ class JensenShannonDivergence:
         X_selected : ndarray(float, ndim=2)
             Matrix with only the features selected.
         """
-        X = np.array(X)
-        if X.shape[1] != len(self.__mask_):
-            raise ValueError("The shape of X has changed")
+        check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         return X[:, self.__mask_]
 
@@ -648,6 +650,7 @@ class JensenShannonDivergence:
         >>> _ = js.fit(X, y)
         >>> js.visualize(by_class=False, threshold=0.7)
         """
+        check_is_fitted(self, "is_fitted_")
         if by_class:  # Plot results sorted by class
             disp_classes = np.unique(self.__y_) if classes is None else classes
             if ax is None:
@@ -715,6 +718,7 @@ class JensenShannonDivergence:
         This will return a boolean mask if feature_names was not specified,
         otherwise they are converted to column names.
         """
+        check_is_fitted(self, "is_fitted_")
         if self.feature_names is not None:
             return np.array(self.feature_names)[self.__mask_]
         else:
@@ -729,6 +733,7 @@ class JensenShannonDivergence:
         support : ndarray(bool, ndim=1)
             Boolean array of columns that were selected.
         """
+        check_is_fitted(self, "is_fitted_")
         return self.__mask_
 
     @property
@@ -773,10 +778,34 @@ class JensenShannonDivergence:
                 ]
         }
         """
+        check_is_fitted(self, "is_fitted_")
         return self.__divergence_.copy()
 
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": True,
+            "requires_positive_y": False,
+            "_skip_test": [],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
 
-class BorutaSHAPFeatureSelector:
+class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
     r"""
     BorutaSHAP feature selector for use in pipelines.
 
@@ -861,7 +890,7 @@ class BorutaSHAPFeatureSelector:
         self,
         column_names=None,
         model=RF(
-            n_estimators=100,
+            n_estimators=10,
             criterion="entropy",
             random_state=0,
             class_weight="balanced",
@@ -882,7 +911,6 @@ class BorutaSHAPFeatureSelector:
                 "seed": seed,
             }
         )
-        return
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -919,6 +947,9 @@ class BorutaSHAPFeatureSelector:
         self : BorutaSHAPFeatureSelector
             Fitted model.
         """
+        X_, y_ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        self.n_features_in_ = X_.shape[1]
+
         # Convert X and y to pandas.DataFrame and series
         from BorutaShap import BorutaShap
 
@@ -930,29 +961,32 @@ class BorutaSHAPFeatureSelector:
             pvalue=self.pvalue,
         )
 
-        if self.column_names is None:
-            self.column_names = [str(i) for i in range(X.shape[1])]
+        self.column_names_ = self.column_names
+        if self.column_names_ is None:
+            self.column_names_ = [str(i) for i in range(self.n_features_in_)]
         else:
-            assert X.shape[1] == len(
-                self.column_names
+            assert self.n_features_in_ == len(
+                self.column_names_
             ), "X is not compatible \
             with column names provided."
+
         # BorutaSHAP is expensive so try to keep these to reasonable values.
         # If used in kfold CV the cost goes up very quickly.
         self.__boruta_.fit(
-            X=pd.DataFrame(data=X, columns=self.column_names),
-            y=pd.Series(data=y),
+            X=pd.DataFrame(data=X_, columns=self.column_names_),
+            y=pd.Series(data=y_),
             sample=False,
             train_or_test="train",
             normalize=True,
             verbose=False,
             random_state=self.seed,
-            stratify=(pd.Series(data=y) if self.classification else None),
+            stratify=(pd.Series(data=y_) if self.classification else None),
         )
+        self.is_fitted_ = True
 
         # For use with sklearn.feature_selection.SelectFromModel
         self.feature_importances_ = np.zeros(
-            len(self.column_names), dtype=np.float64
+            len(self.column_names_), dtype=np.float64
         )
         self.feature_importances_[self.get_support()] = 1
 
@@ -972,7 +1006,11 @@ class BorutaSHAPFeatureSelector:
         X_selected : array_like(float, ndim=2)
             Feature matrix with only the relevant columns.
         """
-        df = pd.DataFrame(data=X, columns=self.column_names)[
+        check_is_fitted(self, "is_fitted_")
+        X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True)
+        if X_.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        df = pd.DataFrame(data=X_, columns=self.column_names_)[
             self.get_feature_names_out()
         ]
         if isinstance(X, pd.DataFrame):
@@ -989,7 +1027,8 @@ class BorutaSHAPFeatureSelector:
         support : ndarray(str, ndim=1)
             Names of the columns that were selected.
         """
-        return np.asarray(self.column_names)[self.get_support()]
+        check_is_fitted(self, "is_fitted_")
+        return np.asarray(self.column_names_)[self.get_support()]
 
     def get_support(self):
         """
@@ -1000,7 +1039,34 @@ class BorutaSHAPFeatureSelector:
         support : ndarray(bool, ndim=1)
             Boolean array of columns that were selected.
         """
+        check_is_fitted(self, "is_fitted_")
         return np.array(
-            [column in self.__boruta_.accepted for column in self.column_names],
+            [column in self.__boruta_.accepted for column in self.column_names_],
             dtype=bool,
         )
+
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": True,
+            "requires_positive_y": False,
+            "_skip_test": [
+                "check_parameters_default_constructible" # sklearn has problems with model being a RF or other model
+            ],  
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }

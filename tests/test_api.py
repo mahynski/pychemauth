@@ -73,4 +73,38 @@ class EstimatorAPICompatibility(unittest.TestCase):
         from pychemauth.preprocessing.feature_selection import CollinearFeatureSelector
 
         check_estimator(CollinearFeatureSelector())
+
+    def test_jensenshannondivergence(self):
+        """Test JensenShannonDivergence"""
+        from pychemauth.preprocessing.feature_selection import JensenShannonDivergence
+
+        check_estimator(JensenShannonDivergence())
+        
+    def test_borutashapfeatureselector(self):
+        """Test BorutaSHAPFeatureSelector"""
+        from pychemauth.preprocessing.feature_selection import BorutaSHAPFeatureSelector
+
+        check_estimator(BorutaSHAPFeatureSelector())
+
+    def test_passthrough(self):
+        """Test BorutaSHAPFeatureSelector"""
+        from pychemauth.manifold.elliptic import _PassthroughDR
+
+        check_estimator(_PassthroughDR())
+
+    def test_ellipticmanifold_authenticator(self):
+        """Test EllipticManifold_Authenticator"""
+        from pychemauth.manifold.elliptic import EllipticManifold_Authenticator
+
+        check_estimator(EllipticManifold_Authenticator())
+
+    def test_ellipticmanifold_model(self):
+        """Test EllipticManifold_Model"""
+        from pychemauth.manifold.elliptic import EllipticManifold_Model
+
+        check_estimator(EllipticManifold_Model(0.05))
+        
+
+
+        
         
