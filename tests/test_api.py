@@ -12,8 +12,8 @@ import numpy as np
 from sklearn.utils.estimator_checks import check_estimator
 
 
-class EstimatorAPICompatibility(unittest.TestCase):
-    """Check compatibility of transformers and estimators with sklearn's API."""
+class EstimatorAPICompatibility_Transformers(unittest.TestCase):
+    """Check compatibility of transformers with sklearn's API."""
 
     @classmethod
     def setUpClass(self):
@@ -92,6 +92,9 @@ class EstimatorAPICompatibility(unittest.TestCase):
 
         check_estimator(_PassthroughDR())
 
+class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
+    """Check compatibility of classifiers with sklearn's API."""
+
     def test_ellipticmanifold_authenticator(self):
         """Test EllipticManifold_Authenticator"""
         from pychemauth.manifold.elliptic import EllipticManifold_Authenticator
@@ -103,8 +106,33 @@ class EstimatorAPICompatibility(unittest.TestCase):
         from pychemauth.manifold.elliptic import EllipticManifold_Model
 
         check_estimator(EllipticManifold_Model(0.05))
-        
 
+    def test_pca(self):
+        """Test PCA"""
+        from pychemauth.classifier.pca import PCA
 
-        
-        
+        check_estimator(PCA())
+
+    def test_plsda(self):
+        """Test PLSDA"""
+        from pychemauth.classifier.plsda import PLSDA
+
+        check_estimator(PLSDA())
+
+    def test_simca_authenticator(self):
+        """Test SIMCA_Authenticator"""
+        from pychemauth.classifier.simca import SIMCA_Authenticator
+
+        check_estimator(SIMCA_Authenticator())
+
+    def test_simca_model(self):
+        """Test SIMCA_Model"""
+        from pychemauth.classifier.simca import SIMCA_Model
+
+        check_estimator(SIMCA_Model(1))
+
+    def test_ddsimca_model(self):
+        """Test DDSIMCA_Model"""
+        from pychemauth.classifier.simca import DDSIMCA_Model
+
+        check_estimator(DDSIMCA_Model(1))

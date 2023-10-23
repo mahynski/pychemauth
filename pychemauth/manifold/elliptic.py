@@ -242,6 +242,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         """
         X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
         self.n_features_in_ = X.shape[1]
+        self.classes_ = [True, False] # For sklearn
 
         # Fit model to target data
         self.__model_ = EllipticManifold_Model(
@@ -710,7 +711,8 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         """
         # Sanity checks
         X, y = self._sanity(np.asarray(X, dtype=np.float64), y, init=True)
-
+        self.classes_ = [True, False]
+        
         if y is None:
             self.__label_ = "Training Class"
         else:

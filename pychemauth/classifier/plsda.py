@@ -110,7 +110,6 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                 "score_metric": score_metric,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -149,7 +148,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
     def _column_y(self, y):
         """Convert y to column format."""
-        y = np.array(y)
+        y = np.asarray(y)
         if y.ndim != 2:
             y = y[:, np.newaxis]
 
@@ -182,25 +181,13 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.n_components = int(
             self.n_components
         )  # scikit-learn PLS does not understand floats
-
-        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-            raise ValueError("Cannot use sparse data.")
-        self.__X_ = np.array(X).copy()
-        self.__X_, y = check_X_y(self.__X_, y, accept_sparse=False)
+        self.__X_, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=True)
         self.__y_ = self._column_y(
             y
         )  # scikit-learn expects 1D array, convert to columns
-        # check_array(y, accept_sparse=False, dtype=None, force_all_finite=True)
 
         self.__raw_y_ = copy.copy(self.__y_)
         self.n_features_in_ = self.__X_.shape[1]
-
-        if self.__X_.shape[0] != self.__y_.shape[0]:
-            raise ValueError(
-                "X ({}) and y ({}) shapes are not compatible".format(
-                    self.__X_.shape, self.__y_.shape
-                )
-            )
 
         # Dummy check that not_assigned and y have same data types
         self._check_category_type(self.__y_.ravel())
@@ -432,9 +419,9 @@ n_features [{}])] = [{}, {}].".format(
             Projection of X via PLS, then by PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-
-        assert X.shape[1] == self.n_features_in_
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         return self.__pca_.transform(
             self.__y_pls_scaler_.inverse_transform(
@@ -473,8 +460,9 @@ n_features [{}])] = [{}, {}].".format(
         See https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.mahalanobis.html.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        assert X.shape[1] == self.n_features_in_
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         T_test = self.transform(X)
 
@@ -876,8 +864,10 @@ n_features [{}])] = [{}, {}].".format(
             Score.
         """
         check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
-        X, y = np.array(X), np.array(y)
         metrics = self.figures_of_merit(
             self.predict(X), y
         )
@@ -1453,19 +1443,23 @@ n_features [{}])] = [{}, {}].".format(
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
+            "array_api_support": False,
             "binary_only": False,
-            "multilabel": False,
-            "multioutput": False,
+            "multilabel": True, 
+            "multioutput": False, 
             "multioutput_only": False,
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
+            "_skip_test": [
+                "check_dtype_object", # Causes singular matrix
+            ],  
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

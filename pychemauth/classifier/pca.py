@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import sklearn.decomposition
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.base import BaseEstimator
+from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
 
-class PCA(ClassifierMixin, BaseEstimator):
+class PCA(BaseEstimator): # Not a proper classifer by sklearn standards
     """
     Create a Principal Components Analysis (PCA) model.
 
@@ -99,7 +99,6 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "sft": sft,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -118,17 +117,6 @@ class PCA(ClassifierMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def _matrix_X(self, X):
-        """Check that observations are rows of X."""
-        X = np.array(X)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        assert (
-            X.shape[1] == self.n_features_in_
-        ), "Incorrect number of features given in X."
-
-        return X
-
     def fit(self, X, y=None):
         """
         Fit the PCA model.
@@ -139,16 +127,16 @@ class PCA(ClassifierMixin, BaseEstimator):
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array_like(int or str or float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
         self : PCA
         """
-        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-            raise ValueError("Cannot use sparse data.")
-
+        if y is not None: # Just so this passes sklearn api checks
+            X, _ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=False)
+        
         def train(X, robust):
             """
             Train the model.
@@ -162,8 +150,7 @@ class PCA(ClassifierMixin, BaseEstimator):
                 "semi" = classical PCA + robust parameter estimation in [4];
                 otherwise = classical PCA + classical parameter estimation in [4];
             """
-            self.__X_ = np.array(X).copy()
-            self.__X_ = check_array(self.__X_, accept_sparse=False)
+            self.__X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
             self.n_features_in_ = self.__X_.shape[1]
 
             if robust == "full":
@@ -241,7 +228,7 @@ class PCA(ClassifierMixin, BaseEstimator):
             train(X, robust=self.robust)
             self.__sft_history_ = {}
         else:
-            X_tmp = np.array(X).copy()
+            X_tmp = np.asarray(X, dtype=np.float64).copy()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
             outer_iters = 0
@@ -314,6 +301,7 @@ class PCA(ClassifierMixin, BaseEstimator):
     @property
     def sft_history(self):
         """Return the sequential focused trimming history."""
+        check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__sft_history_)
 
     def transform(self, X):
@@ -333,8 +321,11 @@ class PCA(ClassifierMixin, BaseEstimator):
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         return self.__pca_.transform(
-            self.__x_scaler_.transform(self._matrix_X(X))
+            self.__x_scaler_.transform(X)
         )
 
     def fit_transform(self, X, y=None):
@@ -345,9 +336,9 @@ class PCA(ClassifierMixin, BaseEstimator):
     def _h_q(self, X):
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
-        X = check_array(X, accept_sparse=False)
-        X = self._matrix_X(X)
-        assert X.shape[1] == self.n_features_in_
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         X_raw_std = self.__x_scaler_.transform(X)
         T = self.__pca_.transform(X_raw_std)
@@ -545,8 +536,10 @@ class PCA(ClassifierMixin, BaseEstimator):
         Both extreme points and outliers are considered "extremes" here.
         """
         check_is_fitted(self, "is_fitted_")
-        X_ = check_array(X, accept_sparse=False)
-        N_tot = X_.shape[0]
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        N_tot = X.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
@@ -608,7 +601,9 @@ class PCA(ClassifierMixin, BaseEstimator):
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         check_is_fitted(self, "is_fitted_")
-        assert len(X) == len(y)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         assert np.all(
             [a in [True, False] for a in y]
         ), "y should contain only True or False labels"
@@ -707,6 +702,9 @@ class PCA(ClassifierMixin, BaseEstimator):
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         if ax is None:
             fig = plt.figure()
@@ -821,6 +819,7 @@ class PCA(ClassifierMixin, BaseEstimator):
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
+            "array_api_support": False,
             "binary_only": False,
             "multilabel": False,
             "multioutput": False,
@@ -828,12 +827,15 @@ class PCA(ClassifierMixin, BaseEstimator):
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
+            "_skip_test": [
+                "check_fit2d_1sample" # Can't fit 1D
+            ],  
             "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],

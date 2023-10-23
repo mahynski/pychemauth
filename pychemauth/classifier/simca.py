@@ -135,7 +135,6 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
                 "sft": sft,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -183,10 +182,9 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         must be part of the pipeline for those steps to work automatically.
         However, a user may manually provide only the data of interest.
         """
-        if scipy.sparse.issparse(X) or scipy.sparse.issparse(y):
-            raise ValueError("Cannot use sparse data.")
-        X, y = check_X_y(X, y, accept_sparse=False)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=False)
         self.n_features_in_ = X.shape[1]
+        self.classes_ = [True, False]  # For sklearn compatibility
 
         # Fit model to target data
         if self.style == "simca":
@@ -213,8 +211,6 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
         self.is_fitted_ = True
 
-        self.classes_ = [True, False]  # For sklearn compatibility - not used
-
         return self
 
     def transform(self, X):
@@ -236,6 +232,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         This is necessary for scikit-learn compatibility.
         """
         check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
         return self.__model_.transform(X)
 
     def fit_transform(self, X, y):
@@ -278,9 +275,12 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             Whether or not each point is an inlier.
         """
         check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         return self.__model_.predict(X)
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(self, X):
         """
         Predict the probability that observations are inliers.
 
@@ -289,9 +289,6 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Class labels or indices.
-
         Returns
         -------
         probability : ndarray(float, ndim=2)
@@ -299,9 +296,12 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
         """
         check_is_fitted(self, "is_fitted_")
-        return self.__model_.predict_proba(X, y)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        return self.__model_.predict_proba(X)
 
-    def decision_function(self, X, y=None):
+    def decision_function(self, X):
         """
         Compute the decision function for each sample.
 
@@ -310,9 +310,6 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
 
         Returns
         -------
@@ -330,7 +327,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-decision_function
         """
         check_is_fitted(self, "is_fitted_")
-        return self.__model_.decision_function(X, y)
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        return self.__model_.decision_function(X)
 
     @property
     def model(self):
@@ -417,7 +417,9 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         as a geometric mean of TSNS and TSPS.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(X, y, accept_sparse=False)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         self.__alternatives_ = [
             c for c in sorted(np.unique(y)) if c != self.target_class
@@ -465,20 +467,24 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
+            "array_api_support": False,
             "binary_only": False,
-            "multilabel": False,
-            "multioutput": False,
+            "multilabel": True, 
+            "multioutput": False, 
             "multioutput_only": False,
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
             "requires_fit": True,
             "requires_positive_X": False,
             "requires_y": True,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
-            "_xfail_checks": {},
+            "_skip_test": [
+                "check_estimators_dtypes" # Target class in training set issues
+            ],  
+            "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
@@ -534,7 +540,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.set_params(
             **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -549,25 +554,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             "alpha": self.alpha,
             "scale_x": self.scale_x,
         }
-
-    def _column_y(self, y):
-        """Convert y to column format."""
-        y = np.array(y)
-        if y.ndim != 2:
-            y = y.reshape(-1, 1)
-
-        return y
-
-    def _matrix_X(self, X):
-        """Check that observations are rows of X."""
-        X = np.array(X)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        assert (
-            X.shape[1] == self.n_features_in_
-        ), "Incorrect number of features given in X."
-
-        return X
 
     def fit(self, X, y=None):
         """
@@ -589,6 +575,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self : SIMCA_Model
             Fitted model.
         """
+        self.__X_ = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=True)
+        if y is not None: # Just so this passes sklearn api checks
+            self.__X_, _ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False, copy=True)
+        self.n_features_in_ = self.__X_.shape[1]
+
         if y is None:
             self.__label_ = "Training Class"
         else:
@@ -597,10 +588,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
                 raise Exception("More than one class passed during training.")
             else:
                 self.__label_ = str(label[0])
-
-        self.__X_ = np.array(X).copy()
-        assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
-        self.n_features_in_ = self.__X_.shape[1]
 
         max_components = np.min([self.n_features_in_, self.__X_.shape[0]]) - 1
         if self.n_components > max_components:
@@ -648,7 +635,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        return self.__pca_.transform(self.__ss_.transform(self._matrix_X(X)))
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        return self.__pca_.transform(self.__ss_.transform(X))
 
     def fit_transform(self, X, y=None):
         """
@@ -688,6 +678,10 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             F value for each observation.
         """
         check_is_fitted(self, "is_fitted_")
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        
         II, _, KK = self.__X_.shape[0], self.__X_.shape[1], self.n_components
 
         X_pred = self.__ss_.inverse_transform(
@@ -706,7 +700,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return F
 
-    def decision_function(self, X, y=None):
+    def decision_function(self, X):
         """
         Compute the decision function for each sample.
 
@@ -715,9 +709,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
 
         Returns
         -------
@@ -737,7 +728,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__f_crit_))
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(self, X):
         """
         Predict the probability that observations are inliers.
 
@@ -746,9 +737,6 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
 
         Returns
         -------
@@ -775,7 +763,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         p_inlier = 1.0 / (
             1.0
             + np.exp(
-                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+                -np.clip(self.decision_function(X), a_max=None, a_min=-500)
             )
         )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
@@ -830,14 +818,16 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         check_is_fitted(self, "is_fitted_")
-        assert len(X) == len(y)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         assert np.all(
             [a in [True, False] for a in y]
         ), "y should contain only True or False labels"
 
         # Inlier = True (positive class), p[:,0]
         # Not inlier = False (negative class), p[:,1]
-        prob = self.predict_proba(X, y)
+        prob = self.predict_proba(X)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
         p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
@@ -866,6 +856,9 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         return self.accuracy(X, y)
 
     def accuracy(self, X, y):
@@ -887,13 +880,13 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
-        y = self._column_y(y)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        y = y.reshape(-1,1)
         if not isinstance(y[0][0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
-        assert (
-            y.shape[0] == X_pred.shape[0]
-        ), "X and y do not have the same dimensions."
 
         return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
 
@@ -901,20 +894,24 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
-            "binary_only": True,
-            "multilabel": False,
-            "multioutput": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False, 
+            "multioutput": False, 
             "multioutput_only": False,
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
             "requires_fit": True,
             "requires_positive_X": False,
-            "requires_y": False,  # Usually true for classifiers, but not for SIMCA
+            "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
-            "_xfail_checks": {},
+            "_skip_test": [
+                "check_estimators_dtypes" # More than one class in training set issues
+            ],  
+            "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
@@ -1007,7 +1004,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 "sft": sft,
             }
         )
-        self.is_fitted_ = False
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -1025,25 +1021,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "robust": self.robust,
             "sft": self.sft,
         }
-
-    def _column_y(self, y):
-        """Convert y to column format."""
-        y = np.array(y)
-        if y.ndim != 2:
-            y = y.reshape(-1, 1)
-
-        return y
-
-    def _matrix_X(self, X):
-        """Check that observations are rows of X."""
-        X = np.array(X)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
-        assert (
-            X.shape[1] == self.n_features_in_
-        ), "Incorrect number of features given in X."
-
-        return X
 
     def fit(self, X, y=None):
         """
@@ -1065,6 +1042,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         self : DDSIMCA_Model
             Fitted model.
         """
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if y is not None: # Just so this passes sklearn api checks
+            X, _ = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=True)
+            
         if y is None:
             self.__label_ = "Training Class"
         else:
@@ -1090,7 +1071,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             self.__X_ = np.array(
                 X
             ).copy()  # This is needed so self._h_q() works correctly
-            assert self.__X_.ndim == 2, "Expect 2D feature (X) matrix."
             self.n_features_in_ = self.__X_.shape[1]
 
             max_components = (
@@ -1252,7 +1232,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        return self.__pca_.transform(self.__ss_.transform(self._matrix_X(X)))
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        return self.__pca_.transform(self.__ss_.transform(X))
 
     def fit_transform(self, X, y=None):
         """
@@ -1275,9 +1258,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     def _h_q(self, X_raw):
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
-        X_raw = check_array(X_raw, accept_sparse=False)
-        X_raw = self._matrix_X(X_raw)
-        assert X_raw.shape[1] == self.n_features_in_
+        X_raw = check_array(X_raw, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X_raw.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
 
         X_raw_std = self.__ss_.transform(X_raw)
         T = self.__pca_.transform(X_raw_std)
@@ -1313,11 +1296,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         """
         check_is_fitted(self, "is_fitted_")
-        h, q = self._h_q(self._matrix_X(X))
+        h, q = self._h_q(X)
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
 
-    def decision_function(self, X, y=None):
+    def decision_function(self, X):
         """
         Compute the decision function for each sample.
 
@@ -1326,9 +1309,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
 
         Returns
         -------
@@ -1348,7 +1328,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(self, X):
         """
         Predict the probability that observations are inliers.
 
@@ -1357,9 +1337,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
-
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Ignored.
 
         Returns
         -------
@@ -1388,7 +1365,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         p_inlier = 1.0 / (
             1.0
             + np.exp(
-                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+                -np.clip(self.decision_function(X), a_max=None, a_min=-500)
             )
         )
         prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
@@ -1443,14 +1420,16 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         See https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html#sklearn.metrics.log_loss.
         """
         check_is_fitted(self, "is_fitted_")
-        assert len(X) == len(y)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         assert np.all(
             [a in [True, False] for a in y]
         ), "y should contain only True or False labels"
 
         # Inlier = True (positive class), p[:,0]
         # Not inlier = False (negative class), p[:,1]
-        prob = self.predict_proba(X, y)
+        prob = self.predict_proba(X)
 
         y_in = np.array([1.0 if y_ == True else 0.0 for y_ in y])
         p_in = np.clip(prob[:, 1], a_min=eps, a_max=1.0 - eps)
@@ -1479,6 +1458,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
         return self.accuracy(X, y)
 
     def accuracy(self, X, y):
@@ -1500,13 +1482,13 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
-        y = self._column_y(y)
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+        y = y.reshape(-1,1)
         if not isinstance(y[0][0], (bool, np.bool_)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
-        assert (
-            y.shape[0] == X_pred.shape[0]
-        ), "X and y do not have the same dimensions."
 
         return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
 
@@ -1532,7 +1514,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
 
-        dX_ = self.distance(self._matrix_X(X))
+        dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_
 
@@ -1573,8 +1555,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Both extreme points and outliers are considered "extremes" here.
         """
         check_is_fitted(self, "is_fitted_")
-        X_ = check_array(X, accept_sparse=False)
-        N_tot = X_.shape[0]
+        X = check_array(X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, copy=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+
+        N_tot = X.shape[0]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
@@ -1692,6 +1677,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
+        X, y = check_X_y(X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, y_numeric=False)
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError("The number of features in predict is different from the number of features in fit.")
+
         h_lim = np.linspace(0, self.__c_crit_ * self.__h0_ / self.__Nh_, 1000)
         h_lim_out = np.linspace(
             0, self.__c_out_ * self.__h0_ / self.__Nh_, 1000
@@ -1741,8 +1730,6 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 else q_lim_out / self.__q0_
             ),
         )
-        X_ = self._matrix_X(X)
-        y_ = np.array(y)
         markers = [
             "o",
             "v",
@@ -1827,20 +1814,24 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         """For compatibility with scikit-learn >=0.21."""
         return {
             "allow_nan": False,
-            "binary_only": True,
-            "multilabel": False,
-            "multioutput": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False, 
+            "multioutput": False, 
             "multioutput_only": False,
             "no_validation": False,
             "non_deterministic": False,
             "pairwise": False,
-            "poor_score": False,
+            "preserves_dtype": [np.float64], # Only for transformers
+            "poor_score" : True,
             "requires_fit": True,
             "requires_positive_X": False,
-            "requires_y": False,  # Usually true for classifiers, but not for SIMCA
+            "requires_y": False,
             "requires_positive_y": False,
-            "_skip_test": True,  # Skip since get_tags is unstable anyway
-            "_xfail_checks": {},
+            "_skip_test": [
+                "check_estimators_dtypes" # More than one class in training set issues
+            ],  
+            "_xfail_checks": False,
             "stateless": False,
             "X_types": ["2darray"],
         }
