@@ -1175,7 +1175,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                 dtype=np.float64,
                 ensure_2d=True,
                 force_all_finite=True,
-                y_numeric=True,
+                y_numeric=False,
             )
 
         if y is None:

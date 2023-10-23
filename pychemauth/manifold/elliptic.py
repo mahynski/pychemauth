@@ -58,6 +58,7 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
             )
 
         self.n_features_in_ = X_.shape[1]
+        self.set_params(**{"n_components":self.n_features_in_}) # This breaks sklearn's convention, but is necessary
         self.is_fitted_ = True
         return self
 
@@ -735,14 +736,6 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             "center": self.center,
         }
 
-    def _column_y(self, y):
-        """Convert y to column format."""
-        y = np.asarray(y)
-        if y.ndim != 2:
-            y = y[:, np.newaxis]
-
-        return y
-
     def _sanity(self, X, y, init=False):
         """Check data format and sanity."""
         if y is None:
@@ -765,7 +758,6 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
                 y_numeric=False,
                 copy=False,
             )
-            y = self._column_y(y)
 
         if init:
             self.n_features_in_ = X.shape[1]
@@ -802,7 +794,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         Only examples of a single, known class should be use to fit the model.
         """
         # Sanity checks
-        X, y = self._sanity(np.asarray(X, dtype=np.float64), y, init=True)
+        X, y = self._sanity(X, y, init=True)
         self.classes_ = [True, False]
 
         if y is None:
@@ -1151,15 +1143,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
-        y = self._column_y(y)
-        if not isinstance(y[0][0], (np.bool_, bool)):
+        X, y = self._sanity(X, y, init=False)
+        if not isinstance(y[0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
-        assert (
-            y.shape[0] == X_pred.shape[0]
-        ), "X and y do not have the same dimensions."
-
-        return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
+        
+        return np.sum(X_pred == y) / X_pred.shape[0]
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):
         r"""

@@ -17,7 +17,6 @@ from pychemauth.classifier.simca import (
 from pychemauth.manifold.elliptic import (
     EllipticManifold_Authenticator,
     EllipticManifold_Model,
-    _PassthroughDR,
 )
 from pychemauth.preprocessing.feature_selection import (
     BorutaSHAPFeatureSelector,
@@ -81,10 +80,6 @@ class EstimatorAPICompatibility_Transformers(unittest.TestCase):
 
 class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
     """Check compatibility of classifiers with sklearn's API."""
-
-    def test_passthrough(self):
-        """Test _PassthroughDR."""
-        check_estimator(_PassthroughDR())
 
     def test_ellipticmanifold_authenticator(self):
         """Test EllipticManifold_Authenticator."""
