@@ -1944,10 +1944,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "3",
             "4",
         ]
-        for i, class_ in enumerate(sorted(np.unique(y_))):
-            h_, q_ = self._h_q(X_[y_ == class_])
-            in_mask = self.predict(X_[y_ == class_])
-            ext_mask, out_mask = self.check_outliers(X_[y_ == class_])
+        for i, class_ in enumerate(sorted(np.unique(y))):
+            h_, q_ = self._h_q(X[y == class_])
+            in_mask = self.predict(X[y == class_])
+            ext_mask, out_mask = self.check_outliers(X[y == class_])
             for c, mask, label in [
                 (
                     "g",

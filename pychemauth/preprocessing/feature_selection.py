@@ -932,7 +932,7 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         self,
         column_names=None,
         model=RF(
-            n_estimators=10,
+            n_estimators=100,
             criterion="entropy",
             random_state=0,
             class_weight="balanced",
