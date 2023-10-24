@@ -3,7 +3,7 @@ Load all modules.
 
 author: nam
 """
-__version__ = "0.0.0-beta3"
+__version__ = "0.0.0-beta4"
 
 __all__ = [
     "analysis",
