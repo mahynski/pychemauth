@@ -30,29 +30,35 @@ def color_spectrum(
 
     Parameters
     ----------
-    x : array-like
+    x : array_like(float, ndim=1)
         Wavelengths (channel) measured at.
-    y : array-like
+
+    y : array_like(float, ndim=1)
         Spectral (signal) intensities.
-    importance_values : ndarray
+
+    importance_values : array_like(float, ndim=1)
         Importance value assigned to each feature.
-    cmap : str
+
+    cmap : str, optional(default="coolwarm")
         Name of colormap to use (https://matplotlib.org/stable/gallery/color/colormap_reference.html).
-    figsize : tuple
+
+    figsize : tuple(int, int), optional(default=None)
         Size of figure to plot.
-    bounds : tuple
+
+    bounds : tuple(float, float), optional(default=None)
         Bounds to color based on; if unspecified uses min/max of importance_values.
-    background : bool
+
+    background : scalar(bool), optional(default=True)
         Whether or not to plot the uncolored (gray) spectrum behind the colored points.
 
     Returns
     -------
-    axes : matplotlib.pyplot.Axes
+    axes : matplotlib.pyplot.axes
         Axes the result is plotted on.
     """
-    x = np.array(x).ravel()
-    y = np.array(y).ravel()
-    importance_values = np.array(importance_values).ravel()
+    x = np.asarray(x, dtype=np.float64).ravel()
+    y = np.asarray(y, dtype=np.float64).ravel()
+    importance_values = np.asarray(importance_values, dtype=np.float64).ravel()
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=figsize)
 
     # https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
@@ -89,20 +95,24 @@ def bokeh_color_spectrum(
 
     Parameters
     ----------
-    x : array-like
+    x : array_like(float, ndim=1)
         Wavelengths (channel) measured at.
-    y : array-like
+
+    y : array_like(float, ndim=1)
         Spectral (signal) intensities.
-    importance_values : ndarray
+
+    importance_values : array_like(float, ndim=1)
         Importance value assigned to each feature.
-    palette : str
-        Name of colormap to use (https://docs.bokeh.org/en/latest/docs/reference/palettes.html).
-    y_axis_type : str
+
+    palette : bokeh.palettes, optional(default=Spectral10)
+        Color palette to use (https://docs.bokeh.org/en/latest/docs/reference/palettes.html).
+
+    y_axis_type : str, optional(default=None)
         Optional transformation of y axis, e.g., y_axis_type="log".
     """
-    x = np.array(x).ravel()
-    y = np.array(y).ravel()
-    importance_values = np.array(importance_values).ravel()
+    x = np.asarray(x, dtype=np.float64).ravel()
+    y = np.asarray(y, dtype=np.float64).ravel()
+    importance_values = np.asarray(importance_values, dtype=np.float64).ravel()
 
     spectrum_df = pd.DataFrame(
         np.vstack((x, y, importance_values)).T,
@@ -166,6 +176,25 @@ def bokeh_color_spectrum(
 def estimate_dof(u_vals, robust=True, initial_guess=None):
     """
     Estimate the degrees of freedom for projection-based modeling.
+
+    Parameters
+    ----------
+    u_vals : array_like(float, ndim=1)
+        Observation values.
+
+    robust : scalar(bool), optional(default=True)
+        Whether to use a statistically robust approach or not.
+
+    initial_guess : scalar(float or None), optional(default=None)
+        Initial guess for the degrees of freedom.
+
+    Returns
+    -------
+    Nu : scalar(int)
+        Number of degrees of freedom.
+
+    u0 : scalar(float)
+        Associated scaling factor.
 
     References
     ----------
@@ -257,19 +286,21 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
 
     Parameters
     ----------
-    S : ndarray
+    S : array_like(float, ndim=2)
         2D square, symmetric matrix to make positive definite.
-    inner_max : int
-        Number of iterations at a fixed tolerance to try
-    outer_max : int
-        Number of iterations at a fixed tolerance to try
+
+    inner_max : scalar(int), optional(default=10)
+        Number of iterations at a fixed tolerance to try.
+
+    outer_max : scalar(int), optional(default=100)
+        Number of different tolerances to try.
 
     Returns
     -------
-    recon : ndarray
+    recon : ndarray(float, ndim=2)
         Symmetric, positive definite matrix approximation of S.
     """
-    S = np.asarray(S, np.float64)
+    S = np.asarray(S, dtype=np.float64)
     assert S.shape[0] == S.shape[1]  # Check square
     assert np.allclose(S, (S + S.T) / 2.0)  # Check symmetric
 

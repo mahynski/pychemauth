@@ -3,6 +3,7 @@ Filter data.
 
 author: nam
 """
+import copy
 import numpy as np
 import scipy.signal
 from scipy.stats import iqr
@@ -69,7 +70,7 @@ class MSC(TransformerMixin, BaseEstimator):
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
-            "Xref": self.Xref,
+            "Xref": copy.copy(self.Xref),
         }
 
     def fit(self, X, y=None):

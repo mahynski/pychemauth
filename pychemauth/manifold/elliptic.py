@@ -58,7 +58,9 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
             )
 
         self.n_features_in_ = X_.shape[1]
-        self.set_params(**{"n_components":self.n_features_in_}) # This breaks sklearn's convention, but is necessary
+        self.set_params(
+            **{"n_components": self.n_features_in_}
+        )  # This breaks sklearn's convention, but is necessary
         self.is_fitted_ = True
         return self
 
@@ -227,9 +229,9 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
+        params = {
             "alpha": self.alpha,
-            "dr_model": copy.deepcopy(self.dr_model) if deep else self.dr_model,
+            "dr_model": copy.deepcopy(self.dr_model),
             "kwargs": self.kwargs,
             "ndims": self.ndims,
             "robust": self.robust,
@@ -237,6 +239,14 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             "target_class": self.target_class,
             "use": self.use,
         }
+        if deep:
+            params.update(
+                {
+                    f"dr_model__{k}": v
+                    for k, v in self.dr_model.get_params().items()
+                }
+            )
+        return params
 
     def fit(self, X, y):
         """
@@ -727,14 +737,22 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
+        params = {
             "alpha": self.alpha,
-            "dr_model": self.dr_model,
+            "dr_model": copy.deepcopy(self.dr_model),
             "kwargs": self.kwargs,
             "ndims": self.ndims,
             "robust": self.robust,
             "center": self.center,
         }
+        if deep:
+            params.update(
+                {
+                    f"dr_model__{k}": v
+                    for k, v in self.dr_model.get_params().items()
+                }
+            )
+        return params
 
     def _sanity(self, X, y, init=False):
         """Check data format and sanity."""
@@ -814,7 +832,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         # Compute (squared) Mahalanobis critical distance
         if not (self.ndims in self.model_.get_params()):
             raise ValueError(
-                "Cannot determined score space dimensionality, {} not in dr_model.get_params().".format(
+                "Cannot determine score space dimensionality, {} not in dr_model.get_params().".format(
                     self.ndims
                 )
             )
@@ -1147,7 +1165,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         if not isinstance(y[0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
-        
+
         return np.sum(X_pred == y) / X_pred.shape[0]
 
     def extremes_plot(self, X, upper_frac=0.25, ax=None):

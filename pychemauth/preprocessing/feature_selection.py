@@ -3,7 +3,7 @@ Feature selection algorithms.
 
 author: nam
 """
-
+import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -91,7 +91,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
+        params = {
             "t": self.t,
             "seed": self.seed,
             "minimize_label_entropy": self.minimize_label_entropy,
@@ -191,7 +191,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
                 cluster_id_to_feature_ids=cluster_id_to_feature_ids,
                 X=pd.DataFrame(data=X, columns=np.arange(X.shape[1])),
                 seed=self.seed,
-                **self.kwargs
+                **self.kwargs,
             )
 
             for idx in best_choices:
@@ -962,14 +962,19 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
+        params = {
             "column_names": self.column_names,
-            "model": self.model,
+            "model": copy.deepcopy(self.model),
             "classification": self.classification,
             "percentile": self.percentile,
             "pvalue": self.pvalue,
             "seed": self.seed,
         }
+        if deep:
+            params.update(
+                {f"model__{k}": v for k, v in self.model.get_params().items()}
+            )
+        return params
 
     def fit(self, X, y):
         """
