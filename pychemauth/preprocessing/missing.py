@@ -116,15 +116,31 @@ class LOD(TransformerMixin, BaseEstimator):
         if self.lod is None:
             self.lod_ = np.array([0] * X.shape[1], dtype=np.float64)
         else:
+            # Allow NaN at first
             self.lod_ = check_array(
                 self.lod,
                 accept_sparse=False,
                 dtype=np.float64,
-                force_all_finite=True,
+                force_all_finite="allow-nan",
                 ensure_2d=False,
                 copy=True,
             )
             self.lod_ = self.lod_.ravel()
+
+            # Check NaN not in any columns we are not skipping
+            if self.skip_columns is not None:
+                mask = np.array([True] * self.lod_.shape[0], dtype=bool)
+                for index in self.skip_columns:
+                    mask[index] = False
+                if np.sum(mask) > 0:
+                    _ = check_array(
+                        self.lod_[mask],
+                        accept_sparse=False,
+                        dtype=np.float64,
+                        force_all_finite=True,
+                        ensure_2d=False,
+                        copy=False,
+                    )
 
         self.n_features_in_ = X.shape[1]
         if len(self.lod_) != self.n_features_in_:
