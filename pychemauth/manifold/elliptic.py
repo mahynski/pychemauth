@@ -127,7 +127,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         no dimensionality reduction.
 
     kwargs : dict, optional(default={})
-        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs).
+        Keyword arguments to instantiate dr_model(**kwargs).
 
     ndims : str, optional(default="n_components")
         Keyword in that corresponds to the dimensionality of the final space.
@@ -239,13 +239,6 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             "target_class": self.target_class,
             "use": self.use,
         }
-        if deep:
-            params.update(
-                {
-                    f"dr_model__{k}": v
-                    for k, v in self.dr_model.get_params().items()
-                }
-            )
         return params
 
     def fit(self, X, y):
@@ -615,7 +608,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         no dimensionality reduction.
 
     kwargs : dict, optional(default={})
-        Keyword arguments for model; EllipticManifold_Model.model = model(**kwargs).
+        Keyword arguments to instantiate dr_model(**kwargs).
 
     ndims : str, optional(default="n_components")
         Keyword in that corresponds to the dimensionality of the final space.
@@ -745,13 +738,6 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             "robust": self.robust,
             "center": self.center,
         }
-        if deep:
-            params.update(
-                {
-                    f"dr_model__{k}": v
-                    for k, v in self.dr_model.get_params().items()
-                }
-            )
         return params
 
     def _sanity(self, X, y, init=False):
