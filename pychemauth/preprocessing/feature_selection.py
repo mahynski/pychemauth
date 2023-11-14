@@ -91,7 +91,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        params = {
+        return {
             "t": self.t,
             "seed": self.seed,
             "minimize_label_entropy": self.minimize_label_entropy,
