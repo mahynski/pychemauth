@@ -1826,22 +1826,22 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax.plot(a[:, 0], a[:, 1], "o")
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
-        for i, label in zip(range(len(a), feature_names)):
+        for i, label in zip(range(len(a)), feature_names):
             ax.text(a[i, 0], a[i, 1], label)
         ax.set_xlabel(
             "PC 1 ({}%)".format(
-                "%.4f" % self.__pca_.explained_variance_ratio_[0] * 100.0
+                "%.4f" % (self.__pca_.explained_variance_ratio_[0] * 100.0)
             )
         )
         ax.set_ylabel(
             "PC 2 ({}%)".format(
-                "%.4f" % self.__pca_.explained_variance_ratio_[1] * 100.0
+                "%.4f" % (self.__pca_.explained_variance_ratio_[1] * 100.0)
             )
         )
 
         return ax
 
-    def visualize(self, X, y, ax=None, log=True):
+    def visualize(self, X, y, ax=None, log=True, outlier_curve=True):
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
@@ -1859,6 +1859,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         log : scalar(bool), optional(default=True)
             Whether or not to transform the axes using a natural logarithm.
+
+        outlier_curve : scalar(bool), optional(default=True)
+            Whether or not to display the outlier threshold curve.
 
         Returns
         -------
@@ -1906,15 +1909,16 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
-        axis.plot(
-            np.log(1.0 + h_lim_out / self.__h0_)
-            if log
-            else h_lim_out / self.__h0_,
-            np.log(1.0 + q_lim_out / self.__q0_)
-            if log
-            else q_lim_out / self.__q0_,
-            "r-",
-        )
+        if outlier_curve:
+            axis.plot(
+                np.log(1.0 + h_lim_out / self.__h0_)
+                if log
+                else h_lim_out / self.__h0_,
+                np.log(1.0 + q_lim_out / self.__q0_)
+                if log
+                else q_lim_out / self.__q0_,
+                "r-",
+            )
         xlim, ylim = (
             1.1
             * np.max(
