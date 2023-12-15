@@ -754,7 +754,8 @@ class InspectData:
 
         Returns
         -------
-        None
+        pair : PairGrid
+            Seaborn PairGrid instance from seaborn.pairplot().
 
         Note
         ----
@@ -778,6 +779,8 @@ class InspectData:
         >>> InspectData.pairplot(df, vars=df.columns[0:5], hue="target",
         ... diag_kind="auto")
         """
-        sns.pairplot(df, **kwargs)
+        pair = sns.pairplot(df, **kwargs)
         if figname is not None:
             plt.savefig(figname, dpi=300, bbox_inches="tight")
+
+        return pair

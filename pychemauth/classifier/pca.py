@@ -527,6 +527,12 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             Boolean mask of X if each point falls beyond the outlier threshold.
         """
         check_is_fitted(self, "is_fitted_")
+    
+        if self.__c_out_ < self.__c_crit_:
+            warnings.warn(
+                "Outlier threshold < inlier threshold; increase alpha value or decrease gamma value."
+            )
+
         dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_

@@ -1694,6 +1694,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         """
         check_is_fitted(self, "is_fitted_")
 
+        if self.__c_out_ < self.__c_crit_:
+            warnings.warn(
+                    "Outlier threshold < inlier threshold; increase alpha value or decrease gamma value."
+            )
+
         dX_ = self.distance(X)
         extremes = (self.__c_crit_ <= dX_) & (dX_ < self.__c_out_)
         outliers = dX_ >= self.__c_out_
@@ -1784,7 +1789,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def plot_loadings(self, feature_names=None, ax=None):
+    def plot_loadings(self, feature_names=None, ax=None, fontsize=None, feature_offset=(0,0)):
         """
         Make a 2D loadings plot.
 
@@ -1795,6 +1800,12 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot on.
+
+        fontsize : scalar(int), optional(default=None)
+            Fontsize to use for features.
+
+        feature_offset : tuple(float, float), optional(default=(0,0))
+            Label offset for each feature.
 
         Returns
         -------
@@ -1827,7 +1838,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
         for i, label in zip(range(len(a)), feature_names):
-            ax.text(a[i, 0], a[i, 1], label)
+            ax.text(a[i, 0]+feature_offset[0], a[i, 1]+feature_offset[1], label, fontsize=fontsize)
         ax.set_xlabel(
             "PC 1 ({}%)".format(
                 "%.4f" % (self.__pca_.explained_variance_ratio_[0] * 100.0)
@@ -1861,7 +1872,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             Whether or not to transform the axes using a natural logarithm.
 
         outlier_curve : scalar(bool), optional(default=True)
-            Whether or not to display the outlier threshold curve.
+            Whether or not to display the outlier threshold curve and characterize
+            any points as "extreme."  If False, then all points will be labeled as
+            inliers vs. outliers only.
 
         Returns
         -------
@@ -1952,23 +1965,40 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             h_, q_ = self._h_q(X[y == class_])
             in_mask = self.predict(X[y == class_])
             ext_mask, out_mask = self.check_outliers(X[y == class_])
-            for c, mask, label in [
-                (
-                    "g",
-                    in_mask,
-                    "{} = Inlier ({})".format(class_, np.sum(in_mask)),
-                ),
-                (
-                    "orange",
-                    ext_mask,
-                    "{} = Extreme ({})".format(class_, np.sum(ext_mask)),
-                ),
-                (
-                    "r",
-                    out_mask,
-                    "{} = Outlier ({})".format(class_, np.sum(out_mask)),
-                ),
-            ]:
+
+            if not outlier_curve:
+                categories_ = [
+                    (
+                        "g",
+                        in_mask,
+                        "{} = Inlier ({})".format(class_, np.sum(in_mask)),
+                    ),
+                    (
+                        "r",
+                        (ext_mask | out_mask),
+                        "{} = Outlier ({})".format(class_, np.sum(out_mask)+np.sum(ext_mask)),
+                    )
+                ]
+            else:
+                categories_ = [
+                    (
+                        "g",
+                        in_mask,
+                        "{} = Inlier ({})".format(class_, np.sum(in_mask)),
+                    ),
+                    (
+                        "orange",
+                        ext_mask,
+                        "{} = Extreme ({})".format(class_, np.sum(ext_mask)),
+                    ),
+                    (
+                        "r",
+                        out_mask,
+                        "{} = Outlier ({})".format(class_, np.sum(out_mask)),
+                    )
+                ]
+
+            for c, mask, label in categories_:
                 if np.sum(mask) > 0:
                     axis.plot(
                         np.log(1.0 + h_[mask] / self.__h0_)
