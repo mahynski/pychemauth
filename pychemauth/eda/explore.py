@@ -474,6 +474,11 @@ class InspectData:
         corr = (corr + corr.T) / 2.0  # To make it perfectly symmetric
         np.fill_diagonal(corr, 1)
 
+        # This creates distances as if between fictitious points in a Euclidean
+        # space, where the pairwise distances are defined by this correlation.
+        # Subsequent agglomeration in heirarchy.ward assumes these are 
+        # Euclidean distances to perform clustering.
+        # See: https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
         distance_matrix = 1 - np.abs(corr)
         dist_linkage = hierarchy.ward(squareform(distance_matrix))
 
