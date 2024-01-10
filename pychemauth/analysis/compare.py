@@ -482,7 +482,7 @@ class Compare:
             * (np.std(perf_diffs, ddof=1) ** 2)
         )
 
-        return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=n - 1)  # 1-sided test
+        return 1.0 - scipy.stats.t.cdf(x=corrected_t, df=np.sum(mask) - 1)  # 1-sided test
 
     @staticmethod
     def _check_scores(scores1, scores2, ignore):
