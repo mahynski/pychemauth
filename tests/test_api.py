@@ -9,6 +9,7 @@ from sklearn.utils.estimator_checks import check_estimator
 
 from pychemauth.classifier.pca import PCA
 from pychemauth.classifier.plsda import PLSDA
+from pychemauth.classifier.osr import OpenSetClassifier
 from pychemauth.classifier.simca import (
     DDSIMCA_Model,
     SIMCA_Authenticator,
@@ -108,6 +109,22 @@ class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
     def test_ddsimca_model(self):
         """Test DDSIMCA_Model."""
         check_estimator(DDSIMCA_Model(1))
+        
+    def test_opensetclassifier(self):
+        from sklearn.ensemble import RandomForestClassifier as RF
+        from sklearn.ensemble import IsolationForest as IF
+        check_estimator(
+            OpenSetClassifier(
+                clf_model=RF,
+                outlier_model=IF,
+                known_classes=[0, 1],
+                inlier_value=1,
+                unknown_class=-1,
+                score_metric='TEFF',
+                clf_style='hard',
+                score_using="all"
+            )
+        )
 
 
 class EstimatorAPICompatibility_Regressors(unittest.TestCase):

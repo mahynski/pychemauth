@@ -3,6 +3,8 @@ Open Set Recognition models.
 
 author: nam
 """
+import sys
+
 import numpy as np
 
 import pandas as pd
@@ -17,7 +19,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     
     Parameters
     ----------
-    clf_model : object
+    clf_model : object, optional(default=None)
         Unfitted classification model. Must support `.fit()` and `.predict()` methods.
     
     outlier_model : object, optional(default=None)
@@ -76,7 +78,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     
     def __init__(
         self, 
-        clf_model, 
+        clf_model=None, 
         outlier_model=None, 
         clf_kwargs={}, 
         outlier_kwargs={}, 
@@ -102,7 +104,6 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 "score_using": score_using
             }
         )
-        self.is_fitted_ = False
     
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -532,3 +533,26 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             )))
             
         return fom
+    
+    def _get_tags(self):
+        """For compatibility with scikit-learn >=0.21."""
+        return {
+            "allow_nan": False,
+            "array_api_support": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "pairwise": False,
+            "poor_score": True,
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_y": True,
+            "requires_positive_y": False,
+            "_skip_test": ["check_estimators_dtypes"], 
+            "_xfail_checks": False,
+            "stateless": False,
+            "X_types": ["2darray"],
+        }
