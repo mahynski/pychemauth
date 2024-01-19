@@ -199,7 +199,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         self.__raw_y_ = copy.copy(self.__y_)
         self.n_features_in_ = self.__X_.shape[1]
 
-        if (self.style.lower() not in ["soft", "hard"]):
+        if self.style.lower() not in ["soft", "hard"]:
             raise ValueError("PLSDA style should be either 'soft' or 'hard'.")
 
         # Dummy check that not_assigned and y have same data types

@@ -109,10 +109,12 @@ class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
     def test_ddsimca_model(self):
         """Test DDSIMCA_Model."""
         check_estimator(DDSIMCA_Model(1))
-        
+
     def test_opensetclassifier(self):
+        """Test OSC."""
         from sklearn.ensemble import RandomForestClassifier as RF
         from sklearn.ensemble import IsolationForest as IF
+
         check_estimator(
             OpenSetClassifier(
                 clf_model=RF,
@@ -120,9 +122,9 @@ class EstimatorAPICompatibility_Classifiers(unittest.TestCase):
                 known_classes=[0, 1],
                 inlier_value=1,
                 unknown_class=-1,
-                score_metric='TEFF',
-                clf_style='hard',
-                score_using="all"
+                score_metric="TEFF",
+                clf_style="hard",
+                score_using="all",
             )
         )
 

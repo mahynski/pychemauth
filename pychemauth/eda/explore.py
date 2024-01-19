@@ -476,7 +476,7 @@ class InspectData:
 
         # This creates distances as if between fictitious points in a Euclidean
         # space, where the pairwise distances are defined by this correlation.
-        # Subsequent agglomeration in heirarchy.ward assumes these are 
+        # Subsequent agglomeration in heirarchy.ward assumes these are
         # Euclidean distances to perform clustering.
         # See: https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
         distance_matrix = 1 - np.abs(corr)

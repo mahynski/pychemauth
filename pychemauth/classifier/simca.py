@@ -1696,7 +1696,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         if self.__c_out_ < self.__c_crit_:
             warnings.warn(
-                    "Outlier threshold < inlier threshold; increase alpha value or decrease gamma value."
+                "Outlier threshold < inlier threshold; increase alpha value or decrease gamma value."
             )
 
         dX_ = self.distance(X)
@@ -1789,7 +1789,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def plot_loadings(self, feature_names=None, ax=None, fontsize=None, feature_offset=(0,0)):
+    def plot_loadings(
+        self, feature_names=None, ax=None, fontsize=None, feature_offset=(0, 0)
+    ):
         """
         Make a 2D loadings plot.
 
@@ -1838,7 +1840,12 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         ax.axvline(0, ls="--", color="k")
         ax.axhline(0, ls="--", color="k")
         for i, label in zip(range(len(a)), feature_names):
-            ax.text(a[i, 0]+feature_offset[0], a[i, 1]+feature_offset[1], label, fontsize=fontsize)
+            ax.text(
+                a[i, 0] + feature_offset[0],
+                a[i, 1] + feature_offset[1],
+                label,
+                fontsize=fontsize,
+            )
         ax.set_xlabel(
             "PC 1 ({}%)".format(
                 "%.4f" % (self.__pca_.explained_variance_ratio_[0] * 100.0)
@@ -1976,8 +1983,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                     (
                         "r",
                         (ext_mask | out_mask),
-                        "{} = Outlier ({})".format(class_, np.sum(out_mask)+np.sum(ext_mask)),
-                    )
+                        "{} = Outlier ({})".format(
+                            class_, np.sum(out_mask) + np.sum(ext_mask)
+                        ),
+                    ),
                 ]
             else:
                 categories_ = [
@@ -1995,7 +2004,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                         "r",
                         out_mask,
                         "{} = Outlier ({})".format(class_, np.sum(out_mask)),
-                    )
+                    ),
                 ]
 
             for c, mask, label in categories_:
