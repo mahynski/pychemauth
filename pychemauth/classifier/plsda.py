@@ -40,7 +40,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
 
-    not_assigned : scalar(int) or str, optional(default="-1")
+    not_assigned : scalar(int) or str, optional(default=-1)
         Category to give a point in soft version if not assigned to any
         known class.
 
@@ -131,20 +131,21 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
     def _check_category_type(self, y):
         """Check that categories are same type as "not_assigned" variable."""
-        t_ = None
-        for t_ in [(int, np.int32, np.int64), (str,)]:
-            if isinstance(self.not_assigned, t_):
-                use_type = t_
-                break
-        if t_ is None:
-            raise TypeError("not_assigned must be an integer or string")
-        if not np.all([isinstance(y_, use_type) for y_ in y]):
-            raise ValueError(
-                "You must set the 'not_assigned' variable type ({}) the same \
-                as y, e.g., both must be int or str".format(
-                    [type(y_) for y_ in y]
+        if self.style.lower() == "soft":
+            t_ = None
+            for t_ in [(int, np.int32, np.int64), (str,)]:
+                if isinstance(self.not_assigned, t_):
+                    use_type = t_
+                    break
+            if t_ is None:
+                raise TypeError("not_assigned must be an integer or string")
+            if not np.all([isinstance(y_, use_type) for y_ in y]):
+                raise ValueError(
+                    "You must set the 'not_assigned' variable type ({}) the same \
+                    as y, e.g., both must be int or str".format(
+                        [type(y_) for y_ in y]
+                    )
                 )
-            )
 
     def _column_y(self, y):
         """Convert y to column format."""
@@ -197,6 +198,9 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         self.__raw_y_ = copy.copy(self.__y_)
         self.n_features_in_ = self.__X_.shape[1]
+
+        if (self.style.lower() not in ["soft", "hard"]):
+            raise ValueError("PLSDA style should be either 'soft' or 'hard'.")
 
         # Dummy check that not_assigned and y have same data types
         self._check_category_type(self.__y_.ravel())

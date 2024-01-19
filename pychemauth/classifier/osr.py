@@ -4,6 +4,7 @@ Open Set Recognition models.
 author: nam
 """
 import sys
+import copy
 
 import numpy as np
 
@@ -15,7 +16,7 @@ from sklearn.preprocessing import LabelEncoder
 
 class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     """
-    Train a classifier with a reject option to work under open-set conditions.
+    Train a composite classifier with a reject option to work under open-set conditions.
     
     Parameters
     ----------
@@ -48,7 +49,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         `outlier_model`.
     
     score_metric : scalar(str), optional(default="TEFF")
-        Default scoring metric to use.
+        Default scoring metric to use. See `figures_of_merit` outputs for options.
         
     clf_style : scalar(str), optional(default="hard")
         Style of classification model; "hard" models assign each point to a single category, while
@@ -65,7 +66,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     ----
     This is composed of an outlier model, which is called first to determine which points
     are considered inliers and which are outliers, and a classification model, which is
-    resposible for classifying the inliers (closed-world).  
+    resposible for classifying the inliers (closed set).  
     
     The type of `unknown_class` should mimic that of the raw data; i.e., if classes in y are
     strings unknown_class should be a string (default="Unknown"). Integers may also be used.
@@ -167,6 +168,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             y
         ), "unknown_class value is already taken"
         
+        if not (self.clf_style in ['soft', 'hard']):
+            raise ValueError("clf_style should be either 'hard' or 'soft'.")
+        
         # Remove any classes the classification model should not be responsible for 
         # learning.
         if self.known_classes is None:
@@ -174,6 +178,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             self.knowns_ = np.unique(y)
         else:
             self.knowns_ = np.unique(self.known_classes)
+            
+        # For sklearn compatibility - not used
+        self.classes_ = self.knowns_.tolist() + [self.unknown_class]
             
         known_mask = np.array([y_ in self.knowns_ for y_ in y], dtype=bool)
         
@@ -240,12 +247,12 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         # 2. Predict on points considered inliers
         if np.sum(inlier_mask) > 0:
             pred = self.clf_.predict(X[inlier_mask, :])
-        
+            
         predictions = [[]]*len(X)
         j = 0
         for i in range(X.shape[0]):
             if not inlier_mask[i]:
-                predictions[i] = self.unknown_class
+                predictions[i] = [self.unknown_class] if self.clf_style == 'soft' else self.unknown_class
             else:
                 predictions[i] = pred[j]
                 j += 1
@@ -306,6 +313,16 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         else:
             return metrics[self.score_metric.upper()]
         
+    @property
+    def fitted_classification_model(self):
+        check_is_fitted(self, "is_fitted_")
+        return copy.deepcopy(self.clf_)
+    
+    @property
+    def fitted_outlier_model(self):
+        check_is_fitted(self, "is_fitted_")
+        return copy.deepcopy(self.od_)
+        
     def figures_of_merit(self, predictions, actual):
         """
         Compute figures of merit.
@@ -351,6 +368,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
             TEFF : scalar(float)
                 Total efficiency.
+                
+            ACC : scalar(float)
+                Accuracy.
 
         Note
         ----
@@ -387,7 +407,16 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 if self.clf_style.lower() == 'hard':
                     raise Exception("Found multiple class assignments - perhaps you are using a soft model?")
                 for entry in row:
-                    ll = encoder.transform([entry])[0]
+                    try:
+                        ll = encoder.transform([entry])[0]
+                    except:
+                        # Assume that if the encoder does not recognize the entry it is
+                        # from the model returning an "unknown" assignment.  This string/value
+                        # won't be in the data and is usually specified when the model
+                        # is trained so it is difficult to build consistently into this
+                        # workflow; this seems to be the best approach.
+                        assert(len(row) == 1) # If "unknown" then this should be the only assignment made
+                        ll = encoder.transform([self.unknown_class])[0]
                     n[kk, ll] += 1
             else:
                 if self.clf_style.lower() == 'soft':
@@ -400,7 +429,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         )
         df = df[
             df.index != self.unknown_class
-        ]  # Trim off final row of "NOT_ASSIGNED" since these are real inputs
+        ] # Trim off row of "UNKNOWN"
         Itot = pd.Series(
             [np.sum(np.array(actual) == kk) for kk in use_classes],
             index=use_classes,
@@ -408,6 +437,15 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         assert np.sum(Itot) == len(actual)
         
         if self.score_using.lower() == "all":
+            correct_ = 0.0
+            for class_ in df.index: # All input classes 
+                if class_ in self.knowns_: # Things to classifier knows about (TP)
+                    correct_ += df[class_][class_]
+                else:
+                    # Consider an assignment as "unknown" a correct assignment (TN)
+                    correct_ += df[self.unknown_class][class_]
+            ACC = correct_ / df.sum().sum()
+            
             # Class-wise FoM
             # Sensitivity is "true positive" rate and is only defined for
             # trained/known classes
@@ -475,7 +513,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             # previously unseen samples).
             TEFF = np.sqrt(TSPS * TSNS)
             
-            fom = dict(zip(['CM', 'I', 'CSNS', 'CSPS', 'CEFF', 'TSNS', 'TSPS', 'TEFF'], (
+            fom = dict(zip(['CM', 'I', 'CSNS', 'CSPS', 'CEFF', 'TSNS', 'TSPS', 'TEFF', 'ACC'], (
                 df[
                     [c for c in df.columns if c in self.knowns_]
                     + [self.unknown_class]
@@ -489,14 +527,25 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 TSNS,
                 TSPS,
                 TEFF,
+                ACC
             )))
         else:
             # Evaluate as a OCC where the score_using class is the target class.
             alternatives = [class_ for class_ in df.index if class_ != self.score_using]
-
+            
+            correct_ = df[self.score_using][self.score_using] # (TP)
+            for class_ in alternatives: # All "negative" classes
+                # Number of times an observation NOT from score_using was correctly not assigned to score_using 
+                # Assigning to multiple alternatives does not influence this in the spirit of OCC
+                correct_ += (Itot[class_] - df[self.score_using][class_]) # (TN)
+            ACC = correct_ / float(Itot.sum())
+            
             CSPS = {}
             for class_ in alternatives:
-                CSPS[class_] = 1.0 - df[class_][self.score_using] / np.sum(Itot[class_])
+                if np.sum(Itot[class_]) > 0:
+                    CSPS[class_] = 1.0 - df[class_][self.score_using] / np.sum(Itot[class_])
+                else:
+                    CSPS[class_] = np.nan
 
             if np.all(actual == self.score_using):
                 # Testing on nothing but the target class, can't evaluate TSPS
@@ -518,7 +567,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             else:
                 TEFF = np.sqrt(TSNS * TSPS)
             
-            fom = dict(zip(['CM', 'I', 'CSPS', 'TSNS', 'TSPS', 'TEFF'], (
+            fom = dict(zip(['CM', 'I', 'CSPS', 'TSNS', 'TSPS', 'TEFF', 'ACC'], (
                 df[
                     [c for c in df.columns if c in self.knowns_]
                     + [self.unknown_class]
@@ -530,6 +579,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 TSNS,
                 TSPS,
                 TEFF,
+                ACC
             )))
             
         return fom
