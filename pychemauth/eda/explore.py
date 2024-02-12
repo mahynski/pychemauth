@@ -531,18 +531,20 @@ class InspectData:
             ax1.set_ylabel('Distance')
 
             dendro_idx = np.arange(0, len(dendro["ivl"]))
-            ax2.imshow(corr[dendro["leaves"], :][:, dendro["leaves"]])
+            corr_ = ax2.imshow(corr[dendro["leaves"], :][:, dendro["leaves"]])
             _ = ax2.set_xticks(dendro_idx)
             _ = ax2.set_yticks(dendro_idx)
             _ = ax2.set_xticklabels(dendro["ivl"], rotation="vertical")
             _ = ax2.set_yticklabels(dendro["ivl"])
             _ = ax2.set_title("Spearman Rank-Order Correlations")
 
+            # Add space for color bar
+            fig.subplots_adjust(right=0.85)
+            cbar_ax = fig.add_axes([0.88, 0.1, 0.03, 0.8])
+            fig.colorbar(corr_, cax=cbar_ax)
+
             if figname is not None:
-                fig.tight_layout()
                 plt.savefig(figname, dpi=300, bbox_inches="tight")
-            else:
-                fig.tight_layout()
 
         return (
             selected_features,
