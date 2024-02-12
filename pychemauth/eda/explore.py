@@ -393,7 +393,8 @@ class InspectData:
 
     @staticmethod
     def cluster_collinear(
-        X, feature_names=None, figsize=None, t=None, display=True, figname=None
+        X, feature_names=None, figsize=None, t=None, display=True, figname=None,
+        highlight=True
     ):
         """
         Identify collinear features using the Spearman rank order correlation.
@@ -418,6 +419,10 @@ class InspectData:
 
         figname : str, optional(default=None)
             If display is True, can also save to this file.
+        
+        highlight : scalar(bool), optiona(defaul=True)
+            If True, highlight the features selected on the output by adding
+            asterisks and capitalization.
 
         Returns
         -------
@@ -503,7 +508,10 @@ class InspectData:
             ax1.axhline(guess, color="k")
 
             def decorate(x):
-                return "***" + str(x).upper() + "***"
+                if highlight:
+                    return "***" + str(x).upper() + "***"
+                else:
+                    return str(x)
 
             if feature_names:
                 labels = list(feature_names)
@@ -520,6 +528,7 @@ class InspectData:
                 leaf_rotation=90,
                 color_threshold=guess,
             )
+            ax1.set_ylabel('Distance')
 
             dendro_idx = np.arange(0, len(dendro["ivl"]))
             ax2.imshow(corr[dendro["leaves"], :][:, dendro["leaves"]])
