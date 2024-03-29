@@ -14,7 +14,7 @@ from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
 from bokeh.palettes import Spectral10
 from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
-
+from sklearn.cross_decomposition import PLSRegression
 
 def color_spectrum(
     x,
@@ -338,3 +338,47 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
             return recon
 
     raise Exception("Unable to create a symmetric, positive definite matrix")
+
+def pls_vip(pls: PLSRegression, mode='weights'):
+    """
+    Compute the variable importance in projection (VIP) in a PLS model.
+
+    Parameters
+    ----------
+    pls : sklearn.cross_decomposition.PLSRegression
+        Trained PLS model.
+
+    mode : scalar(str), optional(default='weights')
+        Whether to use the weights or the rotations to compute the VIP.
+
+    Returns
+    -------
+    vip : ndarray(float, ndim=1)
+        Variable importances.
+
+    Note
+    ----
+    Often, both VIP and the PLS coefficients are used to remove features. [1]
+
+    References
+    ----------
+    [1] Wold, S., Sjoestroem, M., & Eriksson, L. (2001). PLS-regression: a basic tool of 
+    chemometrics. Chemometrics and intelligent laboratory systems, 58(2), 109-130. 
+
+    [2] Chong, I.-G., Jun, C.-H. (2005). Performance of some variable selection methods 
+    when multicollinearity is present. Chemometrics and intelligent laboratory systems, 
+    78(1), 103-112.
+    """
+    t = pls.x_scores_
+    q = pls.y_loadings_
+
+    if mode == 'weights':
+      w = pls.x_weights_
+    else:
+      w = pls.x_rotations_
+    w /= np.linalg.norm(w, axis=0)
+
+    n, _ = w.shape
+    s = np.diag(t.T @ t @ q.T @ q)
+
+    return np.sqrt(n*(w**2 @ s)/ np.sum(s))
