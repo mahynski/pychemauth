@@ -341,7 +341,7 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
 
 def pls_vip(pls: PLSRegression, mode='weights'):
     """
-    Compute the variable importance in projection (VIP) in a PLS model.
+    Compute the variable importance in projection (VIP) in a PLS(1) model.
 
     Parameters
     ----------
