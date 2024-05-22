@@ -6,7 +6,7 @@ API Examples
 
    jupyter/api/eda
    jupyter/api/pipelines
-   jupyter/api/imputing_examples
+   jupyter/api/imputing
    jupyter/api/imbalanced_classes
    jupyter/api/pca
    jupyter/api/pls
