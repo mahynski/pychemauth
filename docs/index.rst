@@ -36,7 +36,7 @@ Core Capabilities
 
 Exploratory Data Analysis
 *************************
-You should always perform `exploratory data analysis <https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm>`_ to understand your data.  For example, understanding missing values, NaN, inf and basic `descriptive statistics <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html>`_.  While python libraries like `Pandas <https://pandas.pydata.org/>`_ and `DTale <https://github.com/man-group/dtale>`_ are excellent pre-existing tools, the :py:mod:`eda` package herein contains additional methods.
+You should always perform `exploratory data analysis <https://www.itl.nist.gov/div898/handbook/eda/section1/eda11.htm>`_ to understand your data.  For example, understanding missing values, NaN, inf and basic `descriptive statistics <https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html>`_.  While python packages like `Pandas <https://pandas.pydata.org/>`_ and `DTale <https://github.com/man-group/dtale>`_ are excellent pre-existing tools, the :py:mod:`eda` package herein contains additional methods.
 
 Preprocessors
 *************

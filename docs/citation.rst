@@ -6,7 +6,7 @@ If you use PyChemAuth in a publication, please cite the appropriate version (mos
 .. image:: https://zenodo.org/badge/331207062.svg
    :target: https://zenodo.org/badge/latestdoi/331207062
 
-PyChemAuth contains both original code and wrappers around other libraries and thus relies on contributions from many other sources.
+PyChemAuth contains both original code and wrappers around other packages and thus relies on contributions from many other sources.
 If you use these tools be sure to cite the original authors.
 
 Code
