@@ -15,13 +15,10 @@ class ScaledSMOTEENN:
 
     Parameters
     ----------
-    sampling_strategy_smoteenn : str, optional(default="not majority")
-        Sampling strategy for SMOTEENN.
-
     sampling_strategy_smote : str, optional(default="not majority")
         Sampling strategy for SMOTE.
 
-    sampling_strategy_enn : str, optional(default="not majority")
+    sampling_strategy_enn : str, optional(default="not minority")
         Sampling strategy for ENN.
 
     k_smote : scalar(int), optional(default=5)
@@ -87,9 +84,8 @@ class ScaledSMOTEENN:
 
     def __init__(
         self,
-        sampling_strategy_smoteenn="not majority",
         sampling_strategy_smote="not majority",
-        sampling_strategy_enn="not majority",
+        sampling_strategy_enn="not minority",
         k_smote=5,
         k_enn=3,
         kind_sel_enn="all",
@@ -99,7 +95,6 @@ class ScaledSMOTEENN:
         """Instantiate the class."""
         self.set_params(
             **{
-                "sampling_strategy_smoteenn": sampling_strategy_smoteenn,
                 "sampling_strategy_smote": sampling_strategy_smote,
                 "sampling_strategy_enn": sampling_strategy_enn,
                 "k_smote": k_smote,
@@ -119,7 +114,6 @@ class ScaledSMOTEENN:
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
-            "sampling_strategy_smoteenn": self.sampling_strategy_smoteenn,
             "sampling_strategy_smote": self.sampling_strategy_smote,
             "sampling_strategy_enn": self.sampling_strategy_enn,
             "k_smote": self.k_smote,
@@ -157,8 +151,6 @@ class ScaledSMOTEENN:
         X_std = self.scaler.fit_transform(X)
 
         sm = SMOTEENN(
-            sampling_strategy=self.sampling_strategy_smoteenn,
-            random_state=self.random_state,
             smote=SMOTE(
                 random_state=self.random_state,
                 k_neighbors=self.k_smote,
