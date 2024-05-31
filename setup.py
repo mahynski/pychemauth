@@ -25,7 +25,7 @@ setup(
     ],
     install_requires=[
         "baycomp==1.0.3",
-        "bokeh==3.2.2",
+        "bokeh",
         "BorutaShap @ git+https://github.com/Ekeany/Boruta-Shap.git@38af879",
         "imbalanced-learn==0.11.0",
         "IPython",
