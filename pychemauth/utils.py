@@ -218,7 +218,7 @@ class OneDimLimits(ControlBoundary):
 
         return self
 
-    def visualize(self, ax, x, alpha=0.05, ellipse_kwargs={'alpha':0.3}):
+    def visualize(self, ax, x, alpha=0.05, rectangle_kwargs={'alpha':0.3}):
         """
         Draw a covariance boundary as a rectangle at a certain threshold.
 
