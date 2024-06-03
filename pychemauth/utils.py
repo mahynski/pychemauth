@@ -98,7 +98,7 @@ class CovarianceEllipse(ControlBoundary):
         )
         if X_.shape[1] < 2:
             raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
-        X_ = self.__X_[:,:2]
+        X_ = X_[:,:2]
         if self.method.lower() == 'empirical':
             cov = EmpiricalCovariance(assume_centered=False, random_state=42).fit(X_)
         elif self.method.lower() == 'mcd':
@@ -253,7 +253,7 @@ class OneDimLimits(ControlBoundary):
         ax.add_artist(rect)
 
         return ax
-        
+
 def color_spectrum(
     x,
     y,
