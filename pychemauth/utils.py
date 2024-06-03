@@ -100,7 +100,7 @@ class CovarianceEllipse(ControlBoundary):
             raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
         X_ = X_[:,:2]
         if self.method.lower() == 'empirical':
-            cov = EmpiricalCovariance(assume_centered=False, random_state=42).fit(X_)
+            cov = EmpiricalCovariance(assume_centered=False).fit(X_)
         elif self.method.lower() == 'mcd':
             cov = MinCovDet(assume_centered=False, random_state=42).fit(X_)
         else:
@@ -207,7 +207,7 @@ class OneDimLimits(ControlBoundary):
         if X_.shape[1] != 1:
             raise Exception("Can only draw one dimensional boundary if there is a single feature.")
         if self.method.lower() == 'empirical':
-            cov = EmpiricalCovariance(assume_centered=False, random_state=42).fit(X_)
+            cov = EmpiricalCovariance(assume_centered=False).fit(X_)
         elif self.method.lower() == 'mcd':
             cov = MinCovDet(assume_centered=False, random_state=42).fit(X_)
         else:
