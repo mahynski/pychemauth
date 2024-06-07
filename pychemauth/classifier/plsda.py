@@ -1484,8 +1484,12 @@ n_features [{}])] = [{}, {}].".format(
                 ).fit(
                     self.__T_train_[mask,:2],
                 )
-                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3})
 
+                # Plot the inlier boundary
+                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'color':f'C{i}'})
+
+                # Plot the outlier boundary
+                _ = ellipse.visualize(ax=ax, alpha=1.0+(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), ellipse_kwargs={'alpha':0.0, 'ls':'--', 'linecolor':f'C{i}'})
 
         if "hard" in styles:
             lines = hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05)
