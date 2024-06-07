@@ -243,7 +243,7 @@ class OneDimLimits(ControlBoundary):
 
         return self
 
-    def visualize(self, ax, x, alpha=0.05, rectangle_kwargs={'alpha':0.3}):
+    def visualize(self, ax, x, alpha=0.05, rectangle_kwargs={'alpha':0.3}, vertical=True):
         """
         Draw a covariance boundary as a rectangle at a certain threshold.
 
@@ -253,7 +253,8 @@ class OneDimLimits(ControlBoundary):
             Axes object to plot the ellipse on.
 
         x : float
-            X coordinate to center the covariance "bar" on.
+            X coordinate to center the covariance "bar" on. If `vertical` is True, this is
+            a y coordinate instead.
 
         alpha : float, optional(default=0.05)
             Significance level (Type I error rate).
@@ -262,6 +263,9 @@ class OneDimLimits(ControlBoundary):
             Dictionary of formatting arguments for the rectangle_kwargs.  
             See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html.
 
+        vertical : scalar(bool), optional(default=True)
+            Whether or not to plot the boundary vertically (True) or horizontally (False).
+
         Returns
         -------
         ax : matplotlib.Axes.axes
@@ -269,12 +273,20 @@ class OneDimLimits(ControlBoundary):
         """
         d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
 
-        rect = Rectangle(
-            xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
-            width=0.6, 
-            height=2*np.sqrt(d_crit*self.__S_[0][0]), 
-            **rectangle_kwargs
-        )
+        if vertical:
+            rect = Rectangle(
+                xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
+                width=0.6, 
+                height=2*np.sqrt(d_crit*self.__S_[0][0]), 
+                **rectangle_kwargs
+            )
+        else:
+            rect = Rectangle(
+                xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x], 
+                width=2*np.sqrt(d_crit*self.__S_[0][0]), 
+                height=0.6, 
+                **rectangle_kwargs
+            )
         ax.add_artist(rect)
 
         return ax

@@ -1214,6 +1214,23 @@ n_features [{}])] = [{}, {}].".format(
                     linestyle="--",
                     color="C{}".format(i),
                 )
+
+            # for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+            #     mask = self.__raw_y_.ravel() == c_
+            #     ellipse = OneDimLimits(
+            #         method='empirical',
+            #         center=self.__class_centers_[i]
+            #     ).fit(
+            #         self.__T_train_[mask,:1],
+            #     )
+
+            #     # Plot the inlier boundary
+            #     _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0})
+
+            #     # Plot the outlier boundary
+            #     _ = ellipse.visualize(ax=ax, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), 
+            #     ellipse_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+
         if "hard" in styles:
             t0 = hard_boundaries_1d()
             ax.axvline(t0, color="k")
