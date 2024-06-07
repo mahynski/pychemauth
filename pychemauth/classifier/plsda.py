@@ -1224,6 +1224,8 @@ n_features [{}])] = [{}, {}].".format(
                     self.__T_train_[mask]
                 )
 
+                return rect
+
                 # Plot the inlier boundary
                 _ = rect.visualize(ax=ax, x=i, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
 

@@ -273,8 +273,6 @@ class OneDimLimits(ControlBoundary):
         """
         d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
 
-        print(d_crit, self.__S_[0][0])
-
         if vertical:
             rect = Rectangle(
                 xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
