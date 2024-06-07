@@ -41,6 +41,33 @@ class ControlBoundary:
         """Plot the control boundary."""
         raise NotImplementedError
 
+def _adjusted_covariance(X, method, center, dim):
+    """Compute the covariance of data around a fixed center."""
+    if center is None:
+        # Not forcing the center, leave
+        adjust = np.array([0.0 for i in range(dim)])
+    else:
+        adjust = check_array(
+            self.center,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=False,
+            force_all_finite=True,
+            copy=True,
+        )
+    if adjust.shape != (dim,):
+        raise Exception("Invalid center.")
+
+    X = X[:,:dim] - adjust
+    if method.lower() == 'empirical':
+        cov = EmpiricalCovariance(assume_centered=False if center is None else True).fit(X)
+    elif method.lower() == 'mcd':
+        cov = MinCovDet(assume_centered=False if center is None else True, random_state=42).fit(X)
+    else:
+        raise ValueError("Unrecognized method for determining the covariance.")
+        
+    return cov.covariance_ + adjust, cov.location_
+
 class CovarianceEllipse(ControlBoundary):
     """
     Draw chi-squared limits of a two dimensional distribution as an ellipse.
@@ -56,7 +83,7 @@ class CovarianceEllipse(ControlBoundary):
             empirical covariance, if 'mcd' the minimum covariance determinant
             is computed.
 
-        center : array_like(ndim=1), optional(default=None)
+        center : array_like(float, ndim=1), optional(default=None)
             Shifts the training data to make this the center.  If None, no shifting
             is done, and the data is not assumed to be centered when the ellipse is
             calculated.
@@ -105,32 +132,8 @@ class CovarianceEllipse(ControlBoundary):
         )
         if X_.shape[1] < 2:
             raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
-        
-        if self.center is None:
-            # Not forcing the center, leave
-            self.__center_adj_ = np.array([0.0, 0.0])
-        else:
-            self.__center_adj_ = check_array(
-                self.center,
-                accept_sparse=False,
-                dtype=np.float64,
-                ensure_2d=False,
-                force_all_finite=True,
-                copy=True,
-            )
-        if self.__center_adj_.shape != (2,):
-            raise Exception("Invalid center.")
 
-        X_ = X_[:,:2] - self.__center_adj_
-        if self.method.lower() == 'empirical':
-            cov = EmpiricalCovariance(assume_centered=False if self.center is None else True).fit(X_)
-        elif self.method.lower() == 'mcd':
-            cov = MinCovDet(assume_centered=False if self.center is None else True, random_state=42).fit(X_)
-        else:
-            raise ValueError("Unrecognized method for determining the covariance.")
-        
-        self.__S_ = cov.covariance_
-        self.__class_center_ = cov.location_ + self.__center_adj_
+        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=2)
 
         evals, evecs = np.linalg.eig(self.__S_)
         ordered = sorted(zip(evals, evecs.T), key=lambda x:x[0], reverse=True)
@@ -177,7 +180,7 @@ class OneDimLimits(ControlBoundary):
     """
     Draw chi-squared limits of a one dimensional distribution as a rectangle.
     """
-    def __init__(self, method='empirical'):
+    def __init__(self, method='empirical', center=None):
         """
         Instantiate the class.
 
@@ -187,17 +190,24 @@ class OneDimLimits(ControlBoundary):
             How to compute the covariance matrix.  The default 'empirical' uses the 
             empirical covariance, if 'mcd' the minimum covariance determinant
             is computed.
+        
+        center : array_like(float, ndim=1), optional(default=None)
+            Shifts the training data to make this the center.  If None, no shifting
+            is done, and the data is not assumed to be centered when the ellipse is
+            calculated.
         """
         self.set_params(
             **{
                 "method": method,
+                "center": center
             }
         )
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
-            "method": self.method
+            "method": self.method,
+            "center": self.center
         }
 
     def fit(self, X):
@@ -228,15 +238,8 @@ class OneDimLimits(ControlBoundary):
         )
         if X_.shape[1] != 1:
             raise Exception("Can only draw one dimensional boundary if there is a single feature.")
-        if self.method.lower() == 'empirical':
-            cov = EmpiricalCovariance(assume_centered=False).fit(X_)
-        elif self.method.lower() == 'mcd':
-            cov = MinCovDet(assume_centered=False, random_state=42).fit(X_)
-        else:
-            raise ValueError("Unrecognized method for determining the covariance.")
-        
-        self.__S_ = cov.covariance_
-        self.__class_center_ = cov.location_
+
+        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=1)
 
         return self
 
