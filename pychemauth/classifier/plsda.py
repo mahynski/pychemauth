@@ -17,8 +17,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import pos_def_mat
-
+from pychemauth.utils import pos_def_mat, CovarianceEllipse
 
 class PLSDA(ClassifierMixin, BaseEstimator):
     """
