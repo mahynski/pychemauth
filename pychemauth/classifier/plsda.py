@@ -1478,9 +1478,11 @@ n_features [{}])] = [{}, {}].".format(
 
             for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
                 mask = self.__raw_y_.ravel() == c_
-                ellipse = CovarianceEllipse(method='empirical').fit(
-                    self.__T_train_[mask,:2],
+                ellipse = CovarianceEllipse(
+                    method='empirical',
                     center=self.__class_centers_[i]
+                ).fit(
+                    self.__T_train_[mask,:2],
                 )
                 _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3})
 
