@@ -1476,6 +1476,16 @@ n_features [{}])] = [{}, {}].".format(
                     linestyle="--",
                     color="C{}".format(i),
                 )
+
+            for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+                mask = self.__raw_y_.ravel() == c_
+                ellipse = CovarianceEllipse(method='empirical').fit(
+                    self.__T_train_[mask,:2],
+                    center=self.__class_centers_[i]
+                )
+                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3})
+
+
         if "hard" in styles:
             lines = hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05)
             for k in lines.keys():

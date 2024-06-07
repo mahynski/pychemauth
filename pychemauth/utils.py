@@ -45,7 +45,7 @@ class CovarianceEllipse(ControlBoundary):
     """
     Draw chi-squared limits of a two dimensional distribution as an ellipse.
     """
-    def __init__(self, method='empirical'):
+    def __init__(self, method='empirical', center=None):
         """
         Instantiate the class.
 
@@ -59,13 +59,15 @@ class CovarianceEllipse(ControlBoundary):
         self.set_params(
             **{
                 "method": method,
+                "center": center
             }
         )
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
-            "method": self.method
+            "method": self.method,
+            "center": self.center
         }
 
     def fit(self, X):
@@ -98,16 +100,32 @@ class CovarianceEllipse(ControlBoundary):
         )
         if X_.shape[1] < 2:
             raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
-        X_ = X_[:,:2]
+        
+        if self.center is None:
+            # Not forcing the center, leave
+            self.__center_adj_ = np.array([0.0, 0.0])
+        else:
+            self.__center_adj_ = check_array(
+                X,
+                accept_sparse=False,
+                dtype=np.float64,
+                ensure_2d=False,
+                force_all_finite=True,
+                copy=True,
+            )
+        if self.__center_adj_.shape != (1, 2):
+            raise Exception("Invalid center.")
+
+        X_ = X_[:,:2] - self.__center_adj_
         if self.method.lower() == 'empirical':
-            cov = EmpiricalCovariance(assume_centered=False).fit(X_)
+            cov = EmpiricalCovariance(assume_centered=False if self.center is None else True).fit(X_)
         elif self.method.lower() == 'mcd':
-            cov = MinCovDet(assume_centered=False, random_state=42).fit(X_)
+            cov = MinCovDet(assume_centered=False if self.center is None else True, random_state=42).fit(X_)
         else:
             raise ValueError("Unrecognized method for determining the covariance.")
         
         self.__S_ = cov.covariance_
-        self.__class_center_ = cov.location_
+        self.__class_center_ = cov.location_ + self.__center_adj_
 
         evals, evecs = np.linalg.eig(self.__S_)
         ordered = sorted(zip(evals, evecs.T), key=lambda x:x[0], reverse=True)
@@ -138,7 +156,6 @@ class CovarianceEllipse(ControlBoundary):
         ax : matplotlib.Axes.axes
             Axes object with ellipse plotted on it.
         """
-        # d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 2)
         k = np.sqrt(-2*np.log(alpha)) # https://www.kalmanfilter.net/background2.html
         ell = Ellipse(
             xy=self.__class_center_, 
