@@ -55,6 +55,11 @@ class CovarianceEllipse(ControlBoundary):
             How to compute the covariance matrix.  The default 'empirical' uses the 
             empirical covariance, if 'mcd' the minimum covariance determinant
             is computed.
+
+        center : array_like(ndim=1), optional(default=None)
+            Shifts the training data to make this the center.  If None, no shifting
+            is done, and the data is not assumed to be centered when the ellipse is
+            calculated.
         """
         self.set_params(
             **{
@@ -106,14 +111,14 @@ class CovarianceEllipse(ControlBoundary):
             self.__center_adj_ = np.array([0.0, 0.0])
         else:
             self.__center_adj_ = check_array(
-                X,
+                self.center,
                 accept_sparse=False,
                 dtype=np.float64,
                 ensure_2d=False,
                 force_all_finite=True,
                 copy=True,
             )
-        if self.__center_adj_.shape != (1, 2):
+        if self.__center_adj_.shape != (2,):
             raise Exception("Invalid center.")
 
         X_ = X_[:,:2] - self.__center_adj_
