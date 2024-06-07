@@ -1063,63 +1063,63 @@ n_features [{}])] = [{}, {}].".format(
                 "Can only do 1D visualization with systems trained on 2 classes."
             )
 
-        def soft_boundaries_1d(rmax=10.0, rbins=1000):
-            """
-            Compute the bounding ellipse around for "soft" classification.
+        # def soft_boundaries_1d(rmax=10.0, rbins=1000):
+        #     """
+        #     Compute the bounding ellipse around for "soft" classification.
 
-            Parameters
-            ----------
-            rmax : scalar(float), optional(default=10.0)
-                Radius to go from class center to look for boundary.
-                Since these are in normalized score space (projection of OHE
-                simplex) one order of magnitude higher (i.e., 10) is usually a
-                good bound.
+        #     Parameters
+        #     ----------
+        #     rmax : scalar(float), optional(default=10.0)
+        #         Radius to go from class center to look for boundary.
+        #         Since these are in normalized score space (projection of OHE
+        #         simplex) one order of magnitude higher (i.e., 10) is usually a
+        #         good bound.
 
-            rbins : scalar(int), optional(default=1000)
-                Number of points to seach from class center (r=0 to r=rmax) for
-                boundary.
+        #     rbins : scalar(int), optional(default=1000)
+        #         Number of points to seach from class center (r=0 to r=rmax) for
+        #         boundary.
 
-            Returns
-            -------
-            cutoff : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the extremes boundary.
+        #     Returns
+        #     -------
+        #     cutoff : list(ndarray)
+        #         2D array of points for each class (ordered according to
+        #         class_centers) delineating the extremes boundary.
 
-            outlier : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the outlier boundary.
-            """
+        #     outlier : list(ndarray)
+        #         2D array of points for each class (ordered according to
+        #         class_centers) delineating the outlier boundary.
+        #     """
 
-            def estimate_boundary(rmax, rbins, style="cutoff"):
-                cutoff = []
-                for i in range(len(self.__class_centers_)):
-                    cutoff.append([])
-                    c = self.__class_centers_[i]
-                    # For each center, choose a systematic orientation
-                    for direction in [+1, -1]:
-                        # Walk "outward" until you meet the threshold
-                        for r in np.linspace(0, rmax, rbins):
-                            sPC = c + r * direction
-                            d = np.matmul(
-                                np.matmul(
-                                    (sPC - c),
-                                    np.linalg.inv(self.__S_[i]),
-                                ),
-                                (sPC - c).reshape(-1, 1),
-                            )[0]
-                            if d > (
-                                self.__d_crit_
-                                if style == "cutoff"
-                                else self.__d_out_[i]
-                            ):
-                                cutoff[i].append(sPC)
-                                break
-                return [np.array(x) for x in cutoff]
+        #     def estimate_boundary(rmax, rbins, style="cutoff"):
+        #         cutoff = []
+        #         for i in range(len(self.__class_centers_)):
+        #             cutoff.append([])
+        #             c = self.__class_centers_[i]
+        #             # For each center, choose a systematic orientation
+        #             for direction in [+1, -1]:
+        #                 # Walk "outward" until you meet the threshold
+        #                 for r in np.linspace(0, rmax, rbins):
+        #                     sPC = c + r * direction
+        #                     d = np.matmul(
+        #                         np.matmul(
+        #                             (sPC - c),
+        #                             np.linalg.inv(self.__S_[i]),
+        #                         ),
+        #                         (sPC - c).reshape(-1, 1),
+        #                     )[0]
+        #                     if d > (
+        #                         self.__d_crit_
+        #                         if style == "cutoff"
+        #                         else self.__d_out_[i]
+        #                     ):
+        #                         cutoff[i].append(sPC)
+        #                         break
+        #         return [np.array(x) for x in cutoff]
 
-            cutoff = estimate_boundary(rmax=rmax, rbins=rbins, style="cutoff")
-            outlier = estimate_boundary(rmax=rmax, rbins=rbins, style="outlier")
+        #     cutoff = estimate_boundary(rmax=rmax, rbins=rbins, style="cutoff")
+        #     outlier = estimate_boundary(rmax=rmax, rbins=rbins, style="outlier")
 
-            return cutoff, outlier
+        #     return cutoff, outlier
 
         def hard_boundaries_1d():
             """
@@ -1190,30 +1190,30 @@ n_features [{}])] = [{}, {}].".format(
         ax.set_xlabel("sPC1")
 
         if "soft" in styles:
-            cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
-            for i in range(len(cutoff)):
-                ax.plot(
-                    [cutoff[i][0]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    color="C{}".format(i),
-                )
-                ax.plot(
-                    [cutoff[i][1]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    color="C{}".format(i),
-                )
-                ax.plot(
-                    [outlier[i][0]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    linestyle="--",
-                    color="C{}".format(i),
-                )
-                ax.plot(
-                    [outlier[i][1]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    linestyle="--",
-                    color="C{}".format(i),
-                )
+            # cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
+            # for i in range(len(cutoff)):
+            #     ax.plot(
+            #         [cutoff[i][0]] * 100,
+            #         np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+            #         color="C{}".format(i),
+            #     )
+            #     ax.plot(
+            #         [cutoff[i][1]] * 100,
+            #         np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+            #         color="C{}".format(i),
+            #     )
+            #     ax.plot(
+            #         [outlier[i][0]] * 100,
+            #         np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+            #         linestyle="--",
+            #         color="C{}".format(i),
+            #     )
+            #     ax.plot(
+            #         [outlier[i][1]] * 100,
+            #         np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
+            #         linestyle="--",
+            #         color="C{}".format(i),
+            #     )
 
             for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
                 mask = self.__raw_y_.ravel() == c_
