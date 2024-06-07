@@ -281,7 +281,7 @@ class OneDimLimits(ControlBoundary):
                 **rectangle_kwargs
             )
         else:
-            dy = 0.6
+            dy = 2.0/3.0
             rect = Rectangle(
                 xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x-0.5*dy], 
                 width=2*np.sqrt(d_crit*self.__S_[0][0]), 
