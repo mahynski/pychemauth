@@ -17,7 +17,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import pos_def_mat, CovarianceEllipse
+from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
 
 class PLSDA(ClassifierMixin, BaseEstimator):
     """
@@ -1221,15 +1221,14 @@ n_features [{}])] = [{}, {}].".format(
                     method='empirical',
                     center=self.__class_centers_[i]
                 ).fit(
-                    self.__T_train_[mask,:1],
+                    self.__T_train_[mask,:1]
                 )
 
                 # Plot the inlier boundary
                 _ = ellipse.visualize(ax=ax, x=i, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
 
                 # Plot the outlier boundary
-                _ = ellipse.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i]), vertical=False), 
-                ellipse_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+                _ = ellipse.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i]), vertical=False), ellipse_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
 
         if "hard" in styles:
             t0 = hard_boundaries_1d()
