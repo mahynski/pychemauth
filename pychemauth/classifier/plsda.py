@@ -1486,7 +1486,7 @@ n_features [{}])] = [{}, {}].".format(
                 )
 
                 # Plot the inlier boundary
-                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}'})
+                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0})
 
                 # Plot the outlier boundary
                 _ = ellipse.visualize(ax=ax, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), 
