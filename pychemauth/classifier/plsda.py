@@ -1253,74 +1253,6 @@ n_features [{}])] = [{}, {}].".format(
                 "Can only do 2D visualization with systems trained on 3 classes."
             )
 
-        def soft_boundaries_2d(rmax=10.0, rbins=1000, tbins=90):
-            """
-            Compute the bounding ellipse around for "soft" classification.
-
-            Parameters
-            ----------
-            rmax : scalar(float), optional(default=10.0)
-                Radius to g from class center to look for boundary.
-                Since these are in normalized score space (projection of OHE
-                simplex) one order of magnitude higher (i.e., 10) is usually a
-                good bound.
-
-            rbins : scalar(int), optional(default=1000)
-                Number of points to seach from class center (r=0 to r=rmax) for
-                boundary.
-
-            tbins : scalar(int), optional(default=90)
-                Number of bins to split [0, 2*pi) into around the class center.
-
-            Returns
-            -------
-            cutoff : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the extremes boundary.
-
-            outlier : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the outlier boundary.
-            """
-
-            def estimate_boundary(rmax, rbins, tbins, style="cutoff"):
-                cutoff = []
-                for i in range(len(self.__class_centers_)):
-                    cutoff.append([])
-                    c = self.__class_centers_[i]
-                    # For each center, choose a systematic orientation
-                    for theta in np.linspace(0, 2 * np.pi, tbins):
-                        # Walk "outward" until you meet the threshold
-                        for r in np.linspace(0, rmax, rbins):
-                            sPC = c + r * np.array(
-                                [np.cos(theta), np.sin(theta)]
-                            )
-
-                            d = np.matmul(
-                                np.matmul(
-                                    (sPC - c),
-                                    np.linalg.inv(self.__S_[i]),
-                                ),
-                                (sPC - c).reshape(-1, 1),
-                            )[0]
-                            if d > (
-                                self.__d_crit_
-                                if style == "cutoff"
-                                else self.__d_out_[i]
-                            ):
-                                cutoff[i].append(sPC)
-                                break
-                return [np.array(x) for x in cutoff]
-
-            cutoff = estimate_boundary(
-                rmax=rmax, rbins=rbins, tbins=tbins, style="cutoff"
-            )
-            outlier = estimate_boundary(
-                rmax=rmax, rbins=rbins, tbins=tbins, style="outlier"
-            )
-
-            return cutoff, outlier
-
         def hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05):
             """
             Obtain points along the hard boundaries between classes.
@@ -1464,18 +1396,6 @@ n_features [{}])] = [{}, {}].".format(
         ax.set_ylabel("sPC2")
 
         if "soft" in styles:
-            cutoff, outlier = soft_boundaries_2d(
-                rmax=10.0, rbins=1000, tbins=90
-            )
-            for i in range(len(cutoff)):
-                ax.plot(cutoff[i][:, 0], cutoff[i][:, 1], color="C{}".format(i))
-                ax.plot(
-                    outlier[i][:, 0],
-                    outlier[i][:, 1],
-                    linestyle="--",
-                    color="C{}".format(i),
-                )
-
             for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
                 mask = self.__raw_y_.ravel() == c_
                 ellipse = CovarianceEllipse(
