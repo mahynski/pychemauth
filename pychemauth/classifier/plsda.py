@@ -985,7 +985,7 @@ n_features [{}])] = [{}, {}].".format(
         else:
             return ax
 
-    def visualize(self, styles=None, ax=None):
+    def visualize(self, styles=None, ax=None, show_training=True):
         """
         Plot training results in 1D or 2D automatically.
 
@@ -999,6 +999,9 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
+
         Returns
         -------
         ax : matplotlib.pyplot.axes
@@ -1007,17 +1010,19 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         ndim = len(self.__class_centers_) - 1
         if ndim == 1:
-            return self.visualize_1d(styles=styles, ax=ax)
+            ax = self.visualize_1d(styles=styles, ax=ax, show_training=show_training)
         elif ndim == 2:
-            return self.visualize_2d(styles=styles, ax=ax)
+            ax = self.visualize_2d(styles=styles, ax=ax, show_training=show_training)
         else:
             raise Exception(
                 "Unable to visualize {} class results ({} dimensions).".format(
                     ndim + 1, ndim
                 )
             )
+            
+        return ax
 
-    def visualize_1d(self, styles=None, ax=None):
+    def visualize_1d(self, styles=None, ax=None, show_training=True):
         """
         Plot 1D training results.
 
@@ -1030,6 +1035,9 @@ n_features [{}])] = [{}, {}].".format(
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
+
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
 
         Returns
         -------
@@ -1163,15 +1171,16 @@ n_features [{}])] = [{}, {}].".format(
             ax = fig.gca()
 
         for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
-            mask = self.__raw_y_.ravel() == c_
-            ax.plot(
-                self.__T_train_[mask],
-                [i] * np.sum(mask),
-                "o",
-                alpha=0.5,
-                color="C{}".format(i),
-                label=str(c_) + " (Training)",
-            )
+            if show_training:
+                mask = self.__raw_y_.ravel() == c_
+                ax.plot(
+                    self.__T_train_[mask],
+                    [i] * np.sum(mask),
+                    "o",
+                    alpha=0.5,
+                    color="C{}".format(i),
+                    label=str(c_) + " (Training)",
+                )
             ax.plot(
                 self.__class_centers_[i],
                 [i],
@@ -1215,7 +1224,7 @@ n_features [{}])] = [{}, {}].".format(
 
         return ax
 
-    def visualize_2d(self, styles=None, ax=None):
+    def visualize_2d(self, styles=None, ax=None, show_training=True):
         """
         Plot 2D training data results.
 
@@ -1228,6 +1237,9 @@ n_features [{}])] = [{}, {}].".format(
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
+
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
 
         Returns
         -------
@@ -1375,15 +1387,16 @@ n_features [{}])] = [{}, {}].".format(
             ax = fig.gca()
 
         for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
-            mask = self.__raw_y_.ravel() == c_
-            ax.plot(
-                self.__T_train_[mask, 0],
-                self.__T_train_[mask, 1],
-                "o",
-                alpha=0.5,
-                color="C{}".format(i),
-                label=str(c_) + " (Training)",
-            )
+            if show_training:
+                mask = self.__raw_y_.ravel() == c_
+                ax.plot(
+                    self.__T_train_[mask, 0],
+                    self.__T_train_[mask, 1],
+                    "o",
+                    alpha=0.5,
+                    color="C{}".format(i),
+                    label=str(c_) + " (Training)",
+                )
         ax.plot(
             self.__class_centers_[:, 0],
             self.__class_centers_[:, 1],
