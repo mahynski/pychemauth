@@ -66,7 +66,7 @@ def _adjusted_covariance(X, method, center, dim):
     else:
         raise ValueError("Unrecognized method for determining the covariance.")
         
-    return cov.covariance_ + adjust, cov.location_
+    return cov.covariance_, cov.location_ + adjust
 
 class CovarianceEllipse(ControlBoundary):
     """
