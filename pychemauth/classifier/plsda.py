@@ -1215,20 +1215,20 @@ n_features [{}])] = [{}, {}].".format(
                     color="C{}".format(i),
                 )
 
-            for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
-                mask = self.__raw_y_.ravel() == c_
-                rect = OneDimLimits(
-                    method='empirical',
-                    center=self.__class_centers_[i]
-                ).fit(
-                    self.__T_train_[mask]
-                )
+            # for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+            #     mask = self.__raw_y_.ravel() == c_
+            #     rect = OneDimLimits(
+            #         method='empirical',
+            #         center=self.__class_centers_[i]
+            #     ).fit(
+            #         self.__T_train_[mask]
+            #     )
 
-                # Plot the inlier boundary
-                _ = rect.visualize(ax=ax, x=i, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
+            #     # Plot the inlier boundary
+            #     _ = rect.visualize(ax=ax, x=i, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
 
-                # Plot the outlier boundary
-                # _ = rect.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), vertical=False, rectangle_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+            #     # Plot the outlier boundary
+            #     _ = rect.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), vertical=False, rectangle_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
 
         if "hard" in styles:
             t0 = hard_boundaries_1d()
