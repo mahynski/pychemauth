@@ -48,7 +48,7 @@ def _adjusted_covariance(X, method, center, dim):
         adjust = np.array([0.0 for i in range(dim)])
     else:
         adjust = check_array(
-            self.center,
+            center,
             accept_sparse=False,
             dtype=np.float64,
             ensure_2d=False,
