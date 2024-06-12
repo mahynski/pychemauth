@@ -17,8 +17,7 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import pos_def_mat
-
+from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
 
 class PLSDA(ClassifierMixin, BaseEstimator):
     """
@@ -986,7 +985,7 @@ n_features [{}])] = [{}, {}].".format(
         else:
             return ax
 
-    def visualize(self, styles=None, ax=None):
+    def visualize(self, styles=None, ax=None, show_training=True):
         """
         Plot training results in 1D or 2D automatically.
 
@@ -1000,6 +999,9 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
+
         Returns
         -------
         ax : matplotlib.pyplot.axes
@@ -1008,17 +1010,19 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         ndim = len(self.__class_centers_) - 1
         if ndim == 1:
-            return self.visualize_1d(styles=styles, ax=ax)
+            ax = self.visualize_1d(styles=styles, ax=ax, show_training=show_training)
         elif ndim == 2:
-            return self.visualize_2d(styles=styles, ax=ax)
+            ax = self.visualize_2d(styles=styles, ax=ax, show_training=show_training)
         else:
             raise Exception(
                 "Unable to visualize {} class results ({} dimensions).".format(
                     ndim + 1, ndim
                 )
             )
+            
+        return ax
 
-    def visualize_1d(self, styles=None, ax=None):
+    def visualize_1d(self, styles=None, ax=None, show_training=True):
         """
         Plot 1D training results.
 
@@ -1031,6 +1035,9 @@ n_features [{}])] = [{}, {}].".format(
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
+
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
 
         Returns
         -------
@@ -1055,64 +1062,6 @@ n_features [{}])] = [{}, {}].".format(
             raise Exception(
                 "Can only do 1D visualization with systems trained on 2 classes."
             )
-
-        def soft_boundaries_1d(rmax=10.0, rbins=1000):
-            """
-            Compute the bounding ellipse around for "soft" classification.
-
-            Parameters
-            ----------
-            rmax : scalar(float), optional(default=10.0)
-                Radius to go from class center to look for boundary.
-                Since these are in normalized score space (projection of OHE
-                simplex) one order of magnitude higher (i.e., 10) is usually a
-                good bound.
-
-            rbins : scalar(int), optional(default=1000)
-                Number of points to seach from class center (r=0 to r=rmax) for
-                boundary.
-
-            Returns
-            -------
-            cutoff : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the extremes boundary.
-
-            outlier : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the outlier boundary.
-            """
-
-            def estimate_boundary(rmax, rbins, style="cutoff"):
-                cutoff = []
-                for i in range(len(self.__class_centers_)):
-                    cutoff.append([])
-                    c = self.__class_centers_[i]
-                    # For each center, choose a systematic orientation
-                    for direction in [+1, -1]:
-                        # Walk "outward" until you meet the threshold
-                        for r in np.linspace(0, rmax, rbins):
-                            sPC = c + r * direction
-                            d = np.matmul(
-                                np.matmul(
-                                    (sPC - c),
-                                    np.linalg.inv(self.__S_[i]),
-                                ),
-                                (sPC - c).reshape(-1, 1),
-                            )[0]
-                            if d > (
-                                self.__d_crit_
-                                if style == "cutoff"
-                                else self.__d_out_[i]
-                            ):
-                                cutoff[i].append(sPC)
-                                break
-                return [np.array(x) for x in cutoff]
-
-            cutoff = estimate_boundary(rmax=rmax, rbins=rbins, style="cutoff")
-            outlier = estimate_boundary(rmax=rmax, rbins=rbins, style="outlier")
-
-            return cutoff, outlier
 
         def hard_boundaries_1d():
             """
@@ -1164,15 +1113,16 @@ n_features [{}])] = [{}, {}].".format(
             ax = fig.gca()
 
         for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
-            mask = self.__raw_y_.ravel() == c_
-            ax.plot(
-                self.__T_train_[mask],
-                [i] * np.sum(mask),
-                "o",
-                alpha=0.5,
-                color="C{}".format(i),
-                label=str(c_) + " (Training)",
-            )
+            if show_training:
+                mask = self.__raw_y_.ravel() == c_
+                ax.plot(
+                    self.__T_train_[mask],
+                    [i] * np.sum(mask),
+                    "o",
+                    alpha=0.5,
+                    color="C{}".format(i),
+                    label=str(c_) + " (Training)",
+                )
             ax.plot(
                 self.__class_centers_[i],
                 [i],
@@ -1182,30 +1132,21 @@ n_features [{}])] = [{}, {}].".format(
         ax.set_xlabel("sPC1")
 
         if "soft" in styles:
-            cutoff, outlier = soft_boundaries_1d(rmax=10.0, rbins=1000)
-            for i in range(len(cutoff)):
-                ax.plot(
-                    [cutoff[i][0]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    color="C{}".format(i),
+            for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+                mask = self.__raw_y_.ravel() == c_
+                rect = OneDimLimits(
+                    method='empirical',
+                    center=self.__class_centers_[i]
+                ).fit(
+                    self.__T_train_[mask]
                 )
-                ax.plot(
-                    [cutoff[i][1]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    color="C{}".format(i),
-                )
-                ax.plot(
-                    [outlier[i][0]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    linestyle="--",
-                    color="C{}".format(i),
-                )
-                ax.plot(
-                    [outlier[i][1]] * 100,
-                    np.linspace(-1 / 3.0 + i, 1 / 3.0 + i, 100),
-                    linestyle="--",
-                    color="C{}".format(i),
-                )
+
+                # Plot the inlier boundary
+                _ = rect.visualize(ax=ax, x=i, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
+
+                # Plot the outlier boundary
+                _ = rect.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), vertical=False, rectangle_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+
         if "hard" in styles:
             t0 = hard_boundaries_1d()
             ax.axvline(t0, color="k")
@@ -1216,7 +1157,7 @@ n_features [{}])] = [{}, {}].".format(
 
         return ax
 
-    def visualize_2d(self, styles=None, ax=None):
+    def visualize_2d(self, styles=None, ax=None, show_training=True):
         """
         Plot 2D training data results.
 
@@ -1229,6 +1170,9 @@ n_features [{}])] = [{}, {}].".format(
 
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
+
+        show_training : scalar(bool), optional(default=True)
+            If True, plot the training set points.
 
         Returns
         -------
@@ -1253,74 +1197,6 @@ n_features [{}])] = [{}, {}].".format(
             raise Exception(
                 "Can only do 2D visualization with systems trained on 3 classes."
             )
-
-        def soft_boundaries_2d(rmax=10.0, rbins=1000, tbins=90):
-            """
-            Compute the bounding ellipse around for "soft" classification.
-
-            Parameters
-            ----------
-            rmax : scalar(float), optional(default=10.0)
-                Radius to g from class center to look for boundary.
-                Since these are in normalized score space (projection of OHE
-                simplex) one order of magnitude higher (i.e., 10) is usually a
-                good bound.
-
-            rbins : scalar(int), optional(default=1000)
-                Number of points to seach from class center (r=0 to r=rmax) for
-                boundary.
-
-            tbins : scalar(int), optional(default=90)
-                Number of bins to split [0, 2*pi) into around the class center.
-
-            Returns
-            -------
-            cutoff : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the extremes boundary.
-
-            outlier : list(ndarray)
-                2D array of points for each class (ordered according to
-                class_centers) delineating the outlier boundary.
-            """
-
-            def estimate_boundary(rmax, rbins, tbins, style="cutoff"):
-                cutoff = []
-                for i in range(len(self.__class_centers_)):
-                    cutoff.append([])
-                    c = self.__class_centers_[i]
-                    # For each center, choose a systematic orientation
-                    for theta in np.linspace(0, 2 * np.pi, tbins):
-                        # Walk "outward" until you meet the threshold
-                        for r in np.linspace(0, rmax, rbins):
-                            sPC = c + r * np.array(
-                                [np.cos(theta), np.sin(theta)]
-                            )
-
-                            d = np.matmul(
-                                np.matmul(
-                                    (sPC - c),
-                                    np.linalg.inv(self.__S_[i]),
-                                ),
-                                (sPC - c).reshape(-1, 1),
-                            )[0]
-                            if d > (
-                                self.__d_crit_
-                                if style == "cutoff"
-                                else self.__d_out_[i]
-                            ):
-                                cutoff[i].append(sPC)
-                                break
-                return [np.array(x) for x in cutoff]
-
-            cutoff = estimate_boundary(
-                rmax=rmax, rbins=rbins, tbins=tbins, style="cutoff"
-            )
-            outlier = estimate_boundary(
-                rmax=rmax, rbins=rbins, tbins=tbins, style="outlier"
-            )
-
-            return cutoff, outlier
 
         def hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05):
             """
@@ -1444,15 +1320,16 @@ n_features [{}])] = [{}, {}].".format(
             ax = fig.gca()
 
         for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
-            mask = self.__raw_y_.ravel() == c_
-            ax.plot(
-                self.__T_train_[mask, 0],
-                self.__T_train_[mask, 1],
-                "o",
-                alpha=0.5,
-                color="C{}".format(i),
-                label=str(c_) + " (Training)",
-            )
+            if show_training:
+                mask = self.__raw_y_.ravel() == c_
+                ax.plot(
+                    self.__T_train_[mask, 0],
+                    self.__T_train_[mask, 1],
+                    "o",
+                    alpha=0.5,
+                    color="C{}".format(i),
+                    label=str(c_) + " (Training)",
+                )
         ax.plot(
             self.__class_centers_[:, 0],
             self.__class_centers_[:, 1],
@@ -1465,17 +1342,22 @@ n_features [{}])] = [{}, {}].".format(
         ax.set_ylabel("sPC2")
 
         if "soft" in styles:
-            cutoff, outlier = soft_boundaries_2d(
-                rmax=10.0, rbins=1000, tbins=90
-            )
-            for i in range(len(cutoff)):
-                ax.plot(cutoff[i][:, 0], cutoff[i][:, 1], color="C{}".format(i))
-                ax.plot(
-                    outlier[i][:, 0],
-                    outlier[i][:, 1],
-                    linestyle="--",
-                    color="C{}".format(i),
+            for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
+                mask = self.__raw_y_.ravel() == c_
+                ellipse = CovarianceEllipse(
+                    method='empirical',
+                    center=self.__class_centers_[i]
+                ).fit(
+                    self.__T_train_[mask,:2],
                 )
+
+                # Plot the inlier boundary
+                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0})
+
+                # Plot the outlier boundary
+                _ = ellipse.visualize(ax=ax, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), 
+                ellipse_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+
         if "hard" in styles:
             lines = hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05)
             for k in lines.keys():

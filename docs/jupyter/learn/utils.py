@@ -68,11 +68,11 @@ def visualize_data(X, mean=[0, 0]):
     for i, (comp, var) in enumerate(
         zip(pca.components_, pca.explained_variance_)
     ):
-        comp = comp * var  # scale component by its variance explanation power
+        comp = comp * np.sqrt(var)  # scale component to get loading
         axes[0].plot(
             [mean[0], comp[0] + mean[0]],
             [mean[1], comp[1] + mean[1]],
-            label=f"Principal Component {i+1}",
+            label=f"Principal Component {i+1} (Loaded)",
             linewidth=3,
             color=f"C{i + 2}",
         )

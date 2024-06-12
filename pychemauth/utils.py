@@ -4,17 +4,293 @@ General utility functions.
 author: nam
 """
 import copy
-
 import bokeh
+import scipy
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
+
 from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper
 from bokeh.palettes import Spectral10
 from bokeh.plotting import figure, show
+
 from matplotlib.collections import LineCollection
+
 from sklearn.cross_decomposition import PLSRegression
+from sklearn.covariance import EmpiricalCovariance, MinCovDet
+from sklearn.utils.validation import check_array
+
+from matplotlib.patches import Ellipse, Rectangle
+
+class ControlBoundary:
+    """
+    Base class for plotting statistical control boundaries.
+    """
+    def set_params(self, **parameters):
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        raise NotImplementedError
+    
+    def visualize(self, *args, **kwargs):
+        """Plot the control boundary."""
+        raise NotImplementedError
+
+def _adjusted_covariance(X, method, center, dim):
+    """Compute the covariance of data around a fixed center."""
+    if center is None:
+        # Not forcing the center, leave
+        adjust = np.array([0.0 for i in range(dim)])
+    else:
+        adjust = check_array(
+            center,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=False,
+            force_all_finite=True,
+            copy=True,
+        )
+    if adjust.shape != (dim,):
+        raise Exception("Invalid center.")
+
+    X = X[:,:dim] - adjust
+    if method.lower() == 'empirical':
+        cov = EmpiricalCovariance(assume_centered=False if center is None else True).fit(X)
+    elif method.lower() == 'mcd':
+        cov = MinCovDet(assume_centered=False if center is None else True, random_state=42).fit(X)
+    else:
+        raise ValueError("Unrecognized method for determining the covariance.")
+        
+    return cov.covariance_, cov.location_ + adjust
+
+class CovarianceEllipse(ControlBoundary):
+    """
+    Draw chi-squared limits of a two dimensional distribution as an ellipse.
+    """
+    def __init__(self, method='empirical', center=None):
+        """
+        Instantiate the class.
+
+        Parameters
+        ----------
+        method : str, optional(default='empirical')
+            How to compute the covariance matrix.  The default 'empirical' uses the 
+            empirical covariance, if 'mcd' the minimum covariance determinant
+            is computed.
+
+        center : array_like(float, ndim=1), optional(default=None)
+            Shifts the training data to make this the center.  If None, no shifting
+            is done, and the data is not assumed to be centered when the ellipse is
+            calculated.
+        """
+        self.set_params(
+            **{
+                "method": method,
+                "center": center
+            }
+        )
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "method": self.method,
+            "center": self.center
+        }
+
+    def fit(self, X):
+        """
+        Fit the covariance ellipse to the data.
+
+        Only the first 2 dimensions, or columns, of the data will be used.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix with at least 2 features (columns).
+
+        Returns
+        -------
+        self
+
+        Raises
+        ------
+        Exception if X has less than 2 columns.
+        ValueError if the covariance method is unrecognized.
+        """
+        X_ = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
+        if X_.shape[1] < 2:
+            raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
+
+        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=2)
+
+        evals, evecs = np.linalg.eig(self.__S_)
+        ordered = sorted(zip(evals, evecs.T), key=lambda x:x[0], reverse=True)
+        self.__l1_, self.__l2_ = ordered[0][0], ordered[1][0]
+        largest_evec = ordered[0][1]
+        self.__angle_ = np.arctan2(largest_evec[1], largest_evec[0])*180.0/np.pi
+
+        return self
+
+    def visualize(self, ax, alpha=0.05, ellipse_kwargs={'alpha':0.3}):
+        """
+        Draw a covariance ellipse boundary at a certain threshold.
+
+        Parameters
+        ----------
+        ax : matplotlib.Axes.axes
+            Axes object to plot the ellipse on.
+
+        alpha : float, optional(default=0.05)
+            Significance level (Type I error rate).
+
+        ellipse_kwargs: dict, optional(default={'alpha':0.3})
+            Dictionary of formatting arguments for the ellipse.  
+            See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Ellipse.html.
+
+        Returns
+        -------
+        ax : matplotlib.Axes.axes
+            Axes object with ellipse plotted on it.
+        """
+        k = np.sqrt(-2*np.log(alpha)) # https://www.kalmanfilter.net/background2.html
+        ell = Ellipse(
+            xy=self.__class_center_, 
+            width=np.sqrt(self.__l1_)*k*2, 
+            height=np.sqrt(self.__l2_)*k*2, 
+            angle=self.__angle_,
+            **ellipse_kwargs
+        )
+        ax.add_artist(ell)
+
+        return ax
+        
+class OneDimLimits(ControlBoundary):
+    """
+    Draw chi-squared limits of a one dimensional distribution as a rectangle.
+    """
+    def __init__(self, method='empirical', center=None):
+        """
+        Instantiate the class.
+
+        Parameters
+        ----------
+        method : str, optional(default='empirical')
+            How to compute the covariance matrix.  The default 'empirical' uses the 
+            empirical covariance, if 'mcd' the minimum covariance determinant
+            is computed.
+        
+        center : array_like(float, ndim=1), optional(default=None)
+            Shifts the training data to make this the center.  If None, no shifting
+            is done, and the data is not assumed to be centered when the ellipse is
+            calculated.
+        """
+        self.set_params(
+            **{
+                "method": method,
+                "center": center
+            }
+        )
+
+    def get_params(self, deep=True):
+        """Get parameters; for consistency with scikit-learn's estimator API."""
+        return {
+            "method": self.method,
+            "center": self.center
+        }
+
+    def fit(self, X):
+        """
+        Fit the covariance to the data.
+
+        Parameters
+        ----------
+        X : array_like(float, ndim=2)
+            Feature matrix with a single feature (column).
+
+        Returns
+        -------
+        self
+
+        Raises
+        ------
+        Exception if X has more than 1 column.
+        ValueError if the covariance method is unrecognized.
+        """
+        X_ = check_array(
+            X,
+            accept_sparse=False,
+            dtype=np.float64,
+            ensure_2d=True,
+            force_all_finite=True,
+            copy=True,
+        )
+        if X_.shape[1] != 1:
+            raise Exception("Can only draw one dimensional boundary if there is a single feature.")
+
+        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=1)
+
+        return self
+
+    def visualize(self, ax, x, alpha=0.05, rectangle_kwargs={'alpha':0.3}, vertical=True):
+        """
+        Draw a covariance boundary as a rectangle at a certain threshold.
+
+        Parameters
+        ----------
+        ax : matplotlib.Axes.axes
+            Axes object to plot the ellipse on.
+
+        x : float
+            X coordinate to center the covariance "bar" on. If `vertical` is True, this is
+            a y coordinate instead.
+
+        alpha : float, optional(default=0.05)
+            Significance level (Type I error rate).
+
+        rectangle_kwargs: dict, optional(default={'alpha':0.3})
+            Dictionary of formatting arguments for the rectangle_kwargs.  
+            See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html.
+
+        vertical : scalar(bool), optional(default=True)
+            Whether or not to plot the boundary vertically (True) or horizontally (False).
+
+        Returns
+        -------
+        ax : matplotlib.Axes.axes
+            Axes object with rectangle plotted on it.
+        """
+        d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
+
+        if vertical:
+            rect = Rectangle(
+                xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
+                width=0.6, 
+                height=2*np.sqrt(d_crit*self.__S_[0][0]), 
+                **rectangle_kwargs
+            )
+        else:
+            dy = 2.0/3.0
+            rect = Rectangle(
+                xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x-0.5*dy], 
+                width=2*np.sqrt(d_crit*self.__S_[0][0]), 
+                height=dy, 
+                **rectangle_kwargs
+            )
+        ax.add_artist(rect)
+
+        return ax
 
 def color_spectrum(
     x,
