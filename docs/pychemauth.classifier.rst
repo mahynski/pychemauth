@@ -4,6 +4,14 @@ pychemauth.classifier package
 Submodules
 ----------
 
+pychemauth.classifier.osr module
+--------------------------------
+
+.. automodule:: pychemauth.classifier.osr
+      :members:
+      :undoc-members:
+      :show-inheritance:
+
 pychemauth.classifier.pca module
 --------------------------------
 
