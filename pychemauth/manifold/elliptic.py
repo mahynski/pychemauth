@@ -849,13 +849,13 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             cov = EmpiricalCovariance(assume_centered=True).fit(t)
         self.__S_ = cov.covariance_
 
-        if self.ndims == 2:
+        if self.model_.get_params()[self.ndims] == 2:
             self.__boundary_ = CovarianceEllipse( # Centered appropriately already
                 method='empirical',
             ).fit(
                 t
             )
-        elif self.ndims == 1:
+        elif self.model_.get_params()[self.ndims] == 1:
             self.__boundary_ = OneDimLimits( # Centered appropriately already
                 method='empirical',
             ).fit(
