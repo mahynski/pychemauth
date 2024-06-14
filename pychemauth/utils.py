@@ -27,6 +27,9 @@ class ControlBoundary:
     """
     Base class for plotting statistical control boundaries.
     """
+    def __init__(self):
+        self.__boundary_ = None
+
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
@@ -40,6 +43,11 @@ class ControlBoundary:
     def visualize(self, *args, **kwargs):
         """Plot the control boundary."""
         raise NotImplementedError
+
+    @property
+    def boundary(self):
+        """Return the boundary."""
+        return copy.deepcopy(self.__boundary_)
 
 def _adjusted_covariance(X, method, center, dim):
     """Compute the covariance of data around a fixed center."""
@@ -88,6 +96,7 @@ class CovarianceEllipse(ControlBoundary):
             is done, and the data is not assumed to be centered when the ellipse is
             calculated.
         """
+        super(CovarianceEllipse, self).__init__()
         self.set_params(
             **{
                 "method": method,
@@ -165,14 +174,14 @@ class CovarianceEllipse(ControlBoundary):
             Axes object with ellipse plotted on it.
         """
         k = np.sqrt(-2*np.log(alpha)) # https://www.kalmanfilter.net/background2.html
-        ell = Ellipse(
+        self.__boundary_ = Ellipse(
             xy=self.__class_center_, 
             width=np.sqrt(self.__l1_)*k*2, 
             height=np.sqrt(self.__l2_)*k*2, 
             angle=self.__angle_,
             **ellipse_kwargs
         )
-        ax.add_artist(ell)
+        ax.add_artist(self.__boundary_)
 
         return ax
         
@@ -196,6 +205,7 @@ class OneDimLimits(ControlBoundary):
             is done, and the data is not assumed to be centered when the ellipse is
             calculated.
         """
+        super(OneDimLimits, self).__init__()
         self.set_params(
             **{
                 "method": method,
@@ -274,7 +284,7 @@ class OneDimLimits(ControlBoundary):
         d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
 
         if vertical:
-            rect = Rectangle(
+            self.__boundary_ = Rectangle(
                 xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
                 width=0.6, 
                 height=2*np.sqrt(d_crit*self.__S_[0][0]), 
@@ -282,13 +292,13 @@ class OneDimLimits(ControlBoundary):
             )
         else:
             dy = 2.0/3.0
-            rect = Rectangle(
+            self.__boundary_ = Rectangle(
                 xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x-0.5*dy], 
                 width=2*np.sqrt(d_crit*self.__S_[0][0]), 
                 height=dy, 
                 **rectangle_kwargs
             )
-        ax.add_artist(rect)
+        ax.add_artist(self.__boundary_)
 
         return ax
 

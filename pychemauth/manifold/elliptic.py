@@ -1410,48 +1410,48 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         if len(labels) != len(X_mats):
             raise ValueError("Must provide a label for each set of X")
 
-        def soft_boundary_1d(rmax=10.0, rbins=1000):
-            """
-            Compute the bounding ellipse around for "soft" classification.
+        # def soft_boundary_1d(rmax=10.0, rbins=1000):
+        #     """
+        #     Compute the bounding ellipse around for "soft" classification.
 
-            Parameters
-            ----------
-            rmax : float
-                Radius to go from class center to look for boundary.
-            rbins : int
-                Number of points to search from class center (r=0 to r=rmax) for
-                boundary.
+        #     Parameters
+        #     ----------
+        #     rmax : float
+        #         Radius to go from class center to look for boundary.
+        #     rbins : int
+        #         Number of points to search from class center (r=0 to r=rmax) for
+        #         boundary.
 
-            Returns
-            -------
-            ndarray
-                [high, low] boundary values.
-            """
+        #     Returns
+        #     -------
+        #     ndarray
+        #         [high, low] boundary values.
+        #     """
 
-            def estimate_boundary(rmax, rbins):
-                cutoff = []
-                c = self.__class_center_
-                # For each center, choose a systematic orientation
-                for direction in [+1, -1]:
-                    # Walk "outward" until you meet the threshold
-                    for r in np.linspace(0, rmax, rbins):
-                        sPC = c + r * direction
-                        d = np.matmul(
-                            np.matmul(
-                                (sPC - c),
-                                np.linalg.inv(self.__S_),
-                            ),
-                            (sPC - c).reshape(-1, 1),
-                        )[0]
-                        if d > self.__d_crit_:
-                            cutoff.append(sPC)
-                            break
+        #     def estimate_boundary(rmax, rbins):
+        #         cutoff = []
+        #         c = self.__class_center_
+        #         # For each center, choose a systematic orientation
+        #         for direction in [+1, -1]:
+        #             # Walk "outward" until you meet the threshold
+        #             for r in np.linspace(0, rmax, rbins):
+        #                 sPC = c + r * direction
+        #                 d = np.matmul(
+        #                     np.matmul(
+        #                         (sPC - c),
+        #                         np.linalg.inv(self.__S_),
+        #                     ),
+        #                     (sPC - c).reshape(-1, 1),
+        #                 )[0]
+        #                 if d > self.__d_crit_:
+        #                     cutoff.append(sPC)
+        #                     break
 
-                return np.array(cutoff)
+        #         return np.array(cutoff)
 
-            cutoff = estimate_boundary(rmax=rmax, rbins=rbins)
+        #     cutoff = estimate_boundary(rmax=rmax, rbins=rbins)
 
-            return cutoff
+        #     return cutoff
 
         if axes is None:
             fig = plt.figure()
@@ -1459,15 +1459,17 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         else:
             ax = axes
 
-        cutoff = soft_boundary_1d(
-            rmax=np.sqrt(self.__d_crit_ * np.max(np.diag(self.__S_))) * 1.2,
-            rbins=1000,
-        )
-        ax.axvline(cutoff[0], color="k")
-        ax.axvline(cutoff[1], color="k")
+        # cutoff = soft_boundary_1d(
+        #     rmax=np.sqrt(self.__d_crit_ * np.max(np.diag(self.__S_))) * 1.2,
+        #     rbins=1000,
+        # )
+        # ax.axvline(cutoff[0], color="k")
+        # ax.axvline(cutoff[1], color="k")
 
         # Plot the inlier boundary
         _ = self.__boundary_.visualize(ax=ax, x=0, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0}, vertical=False)
+        ax.axvline(self.__boundary_.boundary.get_x(), color='C0', ls='--')
+        ax.axvline(self.__boundary_.boundary.get_x() + self.__boundary_.boundary.get_width(), color='C0', ls='--')
 
         for i, (X, l) in enumerate(zip(X_mats, labels)):
             T = self.transform(X)
