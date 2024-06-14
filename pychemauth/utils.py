@@ -28,7 +28,7 @@ class ControlBoundary:
     Base class for plotting statistical control boundaries.
     """
     def __init__(self):
-        self.__boundary_ = None
+        self.boundary_ = None
 
     def set_params(self, **parameters):
         """Set parameters; for consistency with scikit-learn's estimator API."""
@@ -47,7 +47,7 @@ class ControlBoundary:
     @property
     def boundary(self):
         """Return the boundary."""
-        return copy.deepcopy(self.__boundary_)
+        return copy.deepcopy(self.boundary_)
 
 def _adjusted_covariance(X, method, center, dim):
     """Compute the covariance of data around a fixed center."""
@@ -174,14 +174,14 @@ class CovarianceEllipse(ControlBoundary):
             Axes object with ellipse plotted on it.
         """
         k = np.sqrt(-2*np.log(alpha)) # https://www.kalmanfilter.net/background2.html
-        self.__boundary_ = Ellipse(
+        self.boundary_ = Ellipse(
             xy=self.__class_center_, 
             width=np.sqrt(self.__l1_)*k*2, 
             height=np.sqrt(self.__l2_)*k*2, 
             angle=self.__angle_,
             **ellipse_kwargs
         )
-        ax.add_artist(self.__boundary_)
+        ax.add_artist(self.boundary_)
 
         return ax
         
@@ -284,7 +284,7 @@ class OneDimLimits(ControlBoundary):
         d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
 
         if vertical:
-            self.__boundary_ = Rectangle(
+            self.boundary_ = Rectangle(
                 xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
                 width=0.6, 
                 height=2*np.sqrt(d_crit*self.__S_[0][0]), 
@@ -292,13 +292,13 @@ class OneDimLimits(ControlBoundary):
             )
         else:
             dy = 2.0/3.0
-            self.__boundary_ = Rectangle(
+            self.boundary_ = Rectangle(
                 xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x-0.5*dy], 
                 width=2*np.sqrt(d_crit*self.__S_[0][0]), 
                 height=dy, 
                 **rectangle_kwargs
             )
-        ax.add_artist(self.__boundary_)
+        ax.add_artist(self.boundary_)
 
         return ax
 
