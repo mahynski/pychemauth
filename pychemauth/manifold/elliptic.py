@@ -12,6 +12,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
+from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
 
 class _PassthroughDR(TransformerMixin, BaseEstimator):
     """Allow data to pass through without modification."""
@@ -848,6 +849,19 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             cov = EmpiricalCovariance(assume_centered=True).fit(t)
         self.__S_ = cov.covariance_
 
+        if self.ndims == 2:
+            self.__boundary_ = CovarianceEllipse( # Centered appropriately already
+                method='empirical',
+            ).fit(
+                t
+            )
+        elif self.ndims == 1:
+            self.__boundary_ = OneDimLimits( # Centered appropriately already
+                method='empirical',
+            ).fit(
+                t
+            )
+
         return self
 
     def transform(self, X):
@@ -1337,6 +1351,9 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             tbins=90,
         )
         ax.plot(cutoff[:, 0], cutoff[:, 1], color="k")
+
+        # Plot the inlier boundary
+        _ = self.__boundary_.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0})
 
         for i, (X, l) in enumerate(zip(X_mats, labels)):
             T = self.transform(X)
