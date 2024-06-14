@@ -1301,50 +1301,50 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         if len(labels) != len(X_mats):
             raise ValueError("Must provide a label for each set of X")
 
-        def soft_boundary_2d(rmax=10.0, rbins=1000, tbins=180):
-            """
-            Compute the bounding ellipse.
+        # def soft_boundary_2d(rmax=10.0, rbins=1000, tbins=180):
+        #     """
+        #     Compute the bounding ellipse.
 
-            Parameters
-            ----------
-            rmax : float
-                Radius to g from class center to look for boundary.
-            rbins : int
-                Number of points to search from class center (r=0 to r=rmax) for
-                boundary.
-            tbins : int
-                Number of bins to split [0, 2*pi) into around the class center.
+        #     Parameters
+        #     ----------
+        #     rmax : float
+        #         Radius to g from class center to look for boundary.
+        #     rbins : int
+        #         Number of points to search from class center (r=0 to r=rmax) for
+        #         boundary.
+        #     tbins : int
+        #         Number of bins to split [0, 2*pi) into around the class center.
 
-            Returns
-            -------
-            ndarray
-                Cutoff boundary.
-            """
+        #     Returns
+        #     -------
+        #     ndarray
+        #         Cutoff boundary.
+        #     """
 
-            def estimate_boundary(rmax, rbins, tbins):
-                cutoff = []
-                c = self.__class_center_
-                for theta in np.linspace(0, 2 * np.pi, tbins):
-                    # Walk "outward" until you meet the threshold
-                    for r in np.linspace(0, rmax, rbins):
-                        sPC = c + r * np.array([np.cos(theta), np.sin(theta)])
+        #     def estimate_boundary(rmax, rbins, tbins):
+        #         cutoff = []
+        #         c = self.__class_center_
+        #         for theta in np.linspace(0, 2 * np.pi, tbins):
+        #             # Walk "outward" until you meet the threshold
+        #             for r in np.linspace(0, rmax, rbins):
+        #                 sPC = c + r * np.array([np.cos(theta), np.sin(theta)])
 
-                        d = np.matmul(
-                            np.matmul(
-                                (sPC - c),
-                                np.linalg.inv(self.__S_),
-                            ),
-                            (sPC - c).reshape(-1, 1),
-                        )[0]
-                        if d > self.__d_crit_:
-                            cutoff.append(sPC)
-                            break
+        #                 d = np.matmul(
+        #                     np.matmul(
+        #                         (sPC - c),
+        #                         np.linalg.inv(self.__S_),
+        #                     ),
+        #                     (sPC - c).reshape(-1, 1),
+        #                 )[0]
+        #                 if d > self.__d_crit_:
+        #                     cutoff.append(sPC)
+        #                     break
 
-                return np.array(cutoff)
+        #         return np.array(cutoff)
 
-            cutoff = estimate_boundary(rmax=rmax, rbins=rbins, tbins=tbins)
+        #     cutoff = estimate_boundary(rmax=rmax, rbins=rbins, tbins=tbins)
 
-            return cutoff
+        #     return cutoff
 
         if axes is None:
             fig = plt.figure()
@@ -1352,12 +1352,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         else:
             ax = axes
 
-        cutoff = soft_boundary_2d(
-            rmax=np.sqrt(self.__d_crit_ * np.max(np.diag(self.__S_))) * 1.2,
-            rbins=1000,
-            tbins=90,
-        )
-        ax.plot(cutoff[:, 0], cutoff[:, 1], color="k")
+        # cutoff = soft_boundary_2d(
+        #     rmax=np.sqrt(self.__d_crit_ * np.max(np.diag(self.__S_))) * 1.2,
+        #     rbins=1000,
+        #     tbins=90,
+        # )
+        # ax.plot(cutoff[:, 0], cutoff[:, 1], color="k")
 
         # Plot the inlier boundary
         _ = self.__boundary_.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0})
