@@ -840,29 +840,34 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             self.__class_center_ = np.mean(t_train, axis=0)
         t = t_train - self.__class_center_
 
-        # See https://scikit-learn.org/stable/auto_examples/\
-        # covariance/plot_mahalanobis_distances.html?highlight=outlier%20detection
-        # Do NOT perform additional centering to respect the decision above.
-        if self.robust:
-            cov = MinCovDet(assume_centered=True, random_state=42).fit(t)
-        else:
-            cov = EmpiricalCovariance(assume_centered=True).fit(t)
-        self.__S_ = cov.covariance_
-
         if self.model_.get_params()[self.ndims] == 2:
-            self.__boundary_ = CovarianceEllipse( # Centered appropriately already
+            # Get covariance from boundary calculation
+            self.__boundary_ = CovarianceEllipse( 
                 method='mcd' if self.robust else 'empirical',
                 center=self.__class_center_
             ).fit(
                 t_train
             )
+            self.__S_ = self.__boundary_._CovarianceEllipse__S_
         elif self.model_.get_params()[self.ndims] == 1:
-            self.__boundary_ = OneDimLimits( # Centered appropriately already
+            # Get covariance from boundary calculation
+            self.__boundary_ = OneDimLimits( 
                 method='mcd' if self.robust else 'empirical',
                 center=self.__class_center_
             ).fit(
                 t_train
             )
+            self.__S_ = self.__boundary_._OneDimLimits__S_
+        else:
+            # No visualization possible so directly calculate covariance matrix
+            # See https://scikit-learn.org/stable/auto_examples/\
+            # covariance/plot_mahalanobis_distances.html?highlight=outlier%20detection
+            # Do NOT perform additional centering to respect the decision above.
+            if self.robust:
+                cov = MinCovDet(assume_centered=True, random_state=42).fit(t)
+            else:
+                cov = EmpiricalCovariance(assume_centered=True).fit(t)
+            self.__S_ = cov.covariance_
 
         return self
 
