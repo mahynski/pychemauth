@@ -1360,7 +1360,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         # ax.plot(cutoff[:, 0], cutoff[:, 1], color="k")
 
         # Plot the inlier boundary
-        _ = self.__boundary_.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0})
+        ax = self.__boundary_.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0})
 
         for i, (X, l) in enumerate(zip(X_mats, labels)):
             T = self.transform(X)
@@ -1467,9 +1467,9 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         # ax.axvline(cutoff[1], color="k")
 
         # Plot the inlier boundary
-        _ = self.__boundary_.visualize(ax=ax, x=0, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0}, vertical=False)
-        _ = ax.axvline(self.__boundary_.boundary.get_x(), color='C0', ls='--')
-        _ = ax.axvline(self.__boundary_.boundary.get_x() + self.__boundary_.boundary.get_width(), color='C0', ls='--')
+        ax = self.__boundary_.visualize(ax=ax, x=0, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0}, vertical=False)
+        # _ = ax.axvline(self.__boundary_.boundary.get_x(), color='C0', ls='--')
+        # _ = ax.axvline(self.__boundary_.boundary.get_x() + self.__boundary_.boundary.get_width(), color='C0', ls='--')
 
         for i, (X, l) in enumerate(zip(X_mats, labels)):
             T = self.transform(X)
