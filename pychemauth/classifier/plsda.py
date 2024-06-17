@@ -1128,6 +1128,7 @@ n_features [{}])] = [{}, {}].".format(
                 [i],
                 "ks",
                 alpha=1,
+                label="Training Class Centers",
             )
         ax.set_xlabel("sPC1")
 
