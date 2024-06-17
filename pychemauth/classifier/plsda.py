@@ -1128,7 +1128,7 @@ n_features [{}])] = [{}, {}].".format(
                 [i],
                 "ks",
                 alpha=1,
-                label="Training Class Centers",
+                label=f"Training Class ({c_}) Center",
             )
         ax.set_xlabel("sPC1")
 
@@ -1331,13 +1331,13 @@ n_features [{}])] = [{}, {}].".format(
                     color="C{}".format(i),
                     label=str(c_) + " (Training)",
                 )
-        ax.plot(
-            self.__class_centers_[:, 0],
-            self.__class_centers_[:, 1],
-            "ks",
-            alpha=1,
-            label="Training Class Centers",
-        )
+            ax.plot(
+                [self.__class_centers_[i, 0]],
+                [self.__class_centers_[i, 1]],
+                "ks",
+                alpha=1,
+                label=f"Training Class ({c_}) Center",
+            )
         ax.axis("equal")
         ax.set_xlabel("sPC1")
         ax.set_ylabel("sPC2")
