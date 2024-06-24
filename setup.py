@@ -38,7 +38,7 @@ setup(
         "scikit-learn==1.3.0",
         "scipy==1.11.1",
         "seaborn==0.12.2",
-        "shap==0.42.1",
+        "shap==0.45.1",
         "tqdm==4.66.1",
         "umap-learn==0.5.3",
         "watermark==2.4.3",
