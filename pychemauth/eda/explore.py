@@ -394,7 +394,7 @@ class InspectData:
     @staticmethod
     def cluster_collinear(
         X, feature_names=None, figsize=None, t=None, display=True, figname=None,
-        highlight=True
+        highlight=True, return_linkage=False
     ):
         """
         Identify collinear features using the Spearman rank order correlation.
@@ -420,9 +420,12 @@ class InspectData:
         figname : str, optional(default=None)
             If display is True, can also save to this file.
         
-        highlight : scalar(bool), optiona(defaul=True)
+        highlight : scalar(bool), optiona(default=True)
             If True, highlight the features selected on the output by adding
             asterisks and capitalization.
+
+        return_linkage : scalar(bool), optional(default=False)
+            If True, return the linkage matrix.
 
         Returns
         -------
@@ -434,7 +437,11 @@ class InspectData:
             Dictinary of {cluster id: features that belong}.
 
         fig : matplotlib.pyplot.figure or None
-            Figure the result is plotted on if display = True, otherwise None.
+            Figure the result is plotted on if `display` is True, otherwise None.
+
+        dist_linkage : scipy.cluster.hierarchy.linkage
+            If `return_linkage` is True then return the linkage used for hierarchical 
+            clustering.
 
         Note
         ----
@@ -546,11 +553,15 @@ class InspectData:
             if figname is not None:
                 plt.savefig(figname, dpi=300, bbox_inches="tight")
 
-        return (
+        results = [
             selected_features,
             cluster_id_to_feature_ids,
             fig if display else None,
-        )
+        ]
+        if return_linkage:
+            results += [dist_linkage]
+
+        return results
 
     def minimize_cluster_label_entropy(
         cluster_id_to_feature_ids,
