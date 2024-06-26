@@ -431,8 +431,8 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(chi-squared distance) shifted by the cutoff distance,
-        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        extreme or outlier while f > 0 implies an inlier.
 
         References
         ----------
@@ -457,12 +457,12 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         Returns
         -------
         probabilities : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). First column
+            2D array as logistic function of the decision_function(). First column
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
 
         Note
         ----
-        Computes the sigmoid(decision_function(X, y)) as the
+        Computes the logistic(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
         outlier or extreme.

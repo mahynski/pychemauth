@@ -1058,12 +1058,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function(). First column
+            2D array as logistic function of the decision_function(). First column
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
 
         Note
         ----
-        Computes the sigmoid(decision_function(X, y)) as the
+        Computes the logistic(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X, y) > 0.5 means inlier, < 0.5 means
         outlier.

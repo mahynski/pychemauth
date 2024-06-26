@@ -353,8 +353,8 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
-        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies 
+        an extreme or outlier while f > 0 implies an inlier.
 
         References
         ----------
@@ -805,8 +805,8 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(OD^2) shifted by the cutoff distance (sqrt(F_crit)),
-        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        extreme or outlier while f > 0 implies an inlier.
 
         References
         ----------
@@ -828,13 +828,13 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function().
+            2D array as logistic function of the decision_function().
             Probability that each point is an inlier.  First column
             is NOT inlier, 1-p(x), second column is inlier probability, p(x).
 
         Note
         ----
-        Computes the sigmoid(decision_function(X, y)) as the
+        Computes the logistic(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
         outlier or extreme.
@@ -1468,8 +1468,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(chi-squared distance) shifted by the cutoff distance,
-        so f < 0 implies an extreme or outlier while f > 0 implies an inlier.
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        extreme or outlier while f > 0 implies an inlier.
 
         References
         ----------
@@ -1491,13 +1491,13 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as sigmoid function of the decision_function().
+            2D array as logistic function of the decision_function().
             First column is NOT inlier, 1-p(x), second column is inlier
             probability, p(x).
 
         Note
         ----
-        Computes the sigmoid(decision_function(X, y)) as the
+        Computes the logistic(decision_function(X, y)) as the
         transformation of the decision function.  This function is > 0
         for inliers so predict_proba(X) > 0.5 means inlier, < 0.5 means
         outlier or extreme.
