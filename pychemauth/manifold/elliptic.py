@@ -1083,13 +1083,6 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return _logistic_proba(self.decision_function(X))
 
-        # p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
-        # prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        # prob[:, 1] = p_inlier
-        # prob[:, 0] = 1.0 - p_inlier
-
-        # return prob
-
     def loss(self, X, y, eps=1.0e-15):
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
