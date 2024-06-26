@@ -431,7 +431,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an
         extreme or outlier while f > 0 implies an inlier.
 
         References
@@ -475,7 +475,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
         check_is_fitted(self, "is_fitted_")
-        
+
         return _logistic_proba(self.decision_function(X, y))
 
         # p_inlier = p_inlier = 1.0 / (

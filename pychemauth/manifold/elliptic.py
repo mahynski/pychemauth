@@ -12,7 +12,13 @@ from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits, _logistic_proba
+from pychemauth.utils import (
+    pos_def_mat,
+    CovarianceEllipse,
+    OneDimLimits,
+    _logistic_proba,
+)
+
 
 class _PassthroughDR(TransformerMixin, BaseEstimator):
     """Allow data to pass through without modification."""
@@ -842,21 +848,17 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         if self.model_.get_params()[self.ndims] == 2:
             # Get covariance from boundary calculation
-            self.__boundary_ = CovarianceEllipse( 
-                method='mcd' if self.robust else 'empirical',
-                center=self.__class_center_
-            ).fit(
-                t_train
-            )
+            self.__boundary_ = CovarianceEllipse(
+                method="mcd" if self.robust else "empirical",
+                center=self.__class_center_,
+            ).fit(t_train)
             self.__S_ = self.__boundary_._CovarianceEllipse__S_
         elif self.model_.get_params()[self.ndims] == 1:
             # Get covariance from boundary calculation
-            self.__boundary_ = OneDimLimits( 
-                method='mcd' if self.robust else 'empirical',
-                center=self.__class_center_
-            ).fit(
-                t_train
-            )
+            self.__boundary_ = OneDimLimits(
+                method="mcd" if self.robust else "empirical",
+                center=self.__class_center_,
+            ).fit(t_train)
             self.__S_ = self.__boundary_._OneDimLimits__S_
         else:
             # No visualization possible so directly calculate covariance matrix
@@ -1311,7 +1313,11 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             ax = axes
 
         # Plot the inlier boundary
-        ax = self.__boundary_.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0})
+        ax = self.__boundary_.visualize(
+            ax=ax,
+            alpha=self.alpha,
+            ellipse_kwargs={"alpha": 0.3, "facecolor": "C0", "linewidth": 0.0},
+        )
 
         for i, (X, l) in enumerate(zip(X_mats, labels)):
             T = self.transform(X)
@@ -1368,7 +1374,17 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             ax = axes
 
         # Plot the inlier boundary
-        ax = self.__boundary_.visualize(ax=ax, x=0, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':'C0', 'linewidth':0.0}, vertical=False)
+        ax = self.__boundary_.visualize(
+            ax=ax,
+            x=0,
+            alpha=self.alpha,
+            rectangle_kwargs={
+                "alpha": 0.3,
+                "facecolor": "C0",
+                "linewidth": 0.0,
+            },
+            vertical=False,
+        )
         # _ = ax.axvline(self.__boundary_.boundary.get_x(), color='C0', ls='--')
         # _ = ax.axvline(self.__boundary_.boundary.get_x() + self.__boundary_.boundary.get_width(), color='C0', ls='--')
 

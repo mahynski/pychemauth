@@ -23,11 +23,12 @@ from sklearn.utils.validation import check_array
 
 from matplotlib.patches import Ellipse, Rectangle
 
+
 class ControlBoundary:
-    """
-    Base class for plotting statistical control boundaries.
-    """
+    """Base class for plotting statistical control boundaries."""
+
     def __init__(self):
+        """Initialize class."""
         self.boundary_ = None
 
     def set_params(self, **parameters):
@@ -39,7 +40,7 @@ class ControlBoundary:
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
         raise NotImplementedError
-    
+
     def visualize(self, *args, **kwargs):
         """Plot the control boundary."""
         raise NotImplementedError
@@ -48,6 +49,7 @@ class ControlBoundary:
     def boundary(self):
         """Return the boundary."""
         return copy.deepcopy(self.boundary_)
+
 
 def _adjusted_covariance(X, method, center, dim):
     """Compute the covariance of data around a fixed center."""
@@ -66,28 +68,32 @@ def _adjusted_covariance(X, method, center, dim):
     if adjust.shape != (dim,):
         raise Exception("Invalid center.")
 
-    X = X[:,:dim] - adjust
-    if method.lower() == 'empirical':
-        cov = EmpiricalCovariance(assume_centered=False if center is None else True).fit(X)
-    elif method.lower() == 'mcd':
-        cov = MinCovDet(assume_centered=False if center is None else True, random_state=42).fit(X)
+    X = X[:, :dim] - adjust
+    if method.lower() == "empirical":
+        cov = EmpiricalCovariance(
+            assume_centered=False if center is None else True
+        ).fit(X)
+    elif method.lower() == "mcd":
+        cov = MinCovDet(
+            assume_centered=False if center is None else True, random_state=42
+        ).fit(X)
     else:
         raise ValueError("Unrecognized method for determining the covariance.")
-        
+
     return cov.covariance_, cov.location_ + adjust
 
+
 class CovarianceEllipse(ControlBoundary):
-    """
-    Draw chi-squared limits of a two dimensional distribution as an ellipse.
-    """
-    def __init__(self, method='empirical', center=None):
+    """Draw chi-squared limits of a two dimensional distribution as an ellipse."""
+
+    def __init__(self, method="empirical", center=None):
         """
         Instantiate the class.
 
         Parameters
         ----------
         method : str, optional(default='empirical')
-            How to compute the covariance matrix.  The default 'empirical' uses the 
+            How to compute the covariance matrix.  The default 'empirical' uses the
             empirical covariance, if 'mcd' the minimum covariance determinant
             is computed.
 
@@ -97,19 +103,11 @@ class CovarianceEllipse(ControlBoundary):
             calculated.
         """
         super(CovarianceEllipse, self).__init__()
-        self.set_params(
-            **{
-                "method": method,
-                "center": center
-            }
-        )
+        self.set_params(**{"method": method, "center": center})
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
-            "method": self.method,
-            "center": self.center
-        }
+        return {"method": self.method, "center": self.center}
 
     def fit(self, X):
         """
@@ -140,19 +138,25 @@ class CovarianceEllipse(ControlBoundary):
             copy=True,
         )
         if X_.shape[1] < 2:
-            raise Exception("Can only draw 2D covariance ellipse if there are at least 2 features.")
+            raise Exception(
+                "Can only draw 2D covariance ellipse if there are at least 2 features."
+            )
 
-        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=2)
+        self.__S_, self.__class_center_ = _adjusted_covariance(
+            X_, self.method, self.center, dim=2
+        )
 
         evals, evecs = np.linalg.eig(self.__S_)
-        ordered = sorted(zip(evals, evecs.T), key=lambda x:x[0], reverse=True)
+        ordered = sorted(zip(evals, evecs.T), key=lambda x: x[0], reverse=True)
         self.__l1_, self.__l2_ = ordered[0][0], ordered[1][0]
         largest_evec = ordered[0][1]
-        self.__angle_ = np.arctan2(largest_evec[1], largest_evec[0])*180.0/np.pi
+        self.__angle_ = (
+            np.arctan2(largest_evec[1], largest_evec[0]) * 180.0 / np.pi
+        )
 
         return self
 
-    def visualize(self, ax, alpha=0.05, ellipse_kwargs={'alpha':0.3}):
+    def visualize(self, ax, alpha=0.05, ellipse_kwargs={"alpha": 0.3}):
         """
         Draw a covariance ellipse boundary at a certain threshold.
 
@@ -165,7 +169,7 @@ class CovarianceEllipse(ControlBoundary):
             Significance level (Type I error rate).
 
         ellipse_kwargs: dict, optional(default={'alpha':0.3})
-            Dictionary of formatting arguments for the ellipse.  
+            Dictionary of formatting arguments for the ellipse.
             See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Ellipse.html.
 
         Returns
@@ -173,52 +177,46 @@ class CovarianceEllipse(ControlBoundary):
         ax : matplotlib.Axes.axes
             Axes object with ellipse plotted on it.
         """
-        k = np.sqrt(-2*np.log(alpha)) # https://www.kalmanfilter.net/background2.html
+        k = np.sqrt(
+            -2 * np.log(alpha)
+        )  # https://www.kalmanfilter.net/background2.html
         self.boundary_ = Ellipse(
-            xy=self.__class_center_, 
-            width=np.sqrt(self.__l1_)*k*2, 
-            height=np.sqrt(self.__l2_)*k*2, 
+            xy=self.__class_center_,
+            width=np.sqrt(self.__l1_) * k * 2,
+            height=np.sqrt(self.__l2_) * k * 2,
             angle=self.__angle_,
             **ellipse_kwargs
         )
         ax.add_artist(self.boundary_)
 
         return ax
-        
+
+
 class OneDimLimits(ControlBoundary):
-    """
-    Draw chi-squared limits of a one dimensional distribution as a rectangle.
-    """
-    def __init__(self, method='empirical', center=None):
+    """Draw chi-squared limits of a one dimensional distribution as a rectangle."""
+
+    def __init__(self, method="empirical", center=None):
         """
         Instantiate the class.
 
         Parameters
         ----------
         method : str, optional(default='empirical')
-            How to compute the covariance matrix.  The default 'empirical' uses the 
+            How to compute the covariance matrix.  The default 'empirical' uses the
             empirical covariance, if 'mcd' the minimum covariance determinant
             is computed.
-        
+
         center : array_like(float, ndim=1), optional(default=None)
             Shifts the training data to make this the center.  If None, no shifting
             is done, and the data is not assumed to be centered when the ellipse is
             calculated.
         """
         super(OneDimLimits, self).__init__()
-        self.set_params(
-            **{
-                "method": method,
-                "center": center
-            }
-        )
+        self.set_params(**{"method": method, "center": center})
 
     def get_params(self, deep=True):
         """Get parameters; for consistency with scikit-learn's estimator API."""
-        return {
-            "method": self.method,
-            "center": self.center
-        }
+        return {"method": self.method, "center": self.center}
 
     def fit(self, X):
         """
@@ -247,13 +245,19 @@ class OneDimLimits(ControlBoundary):
             copy=True,
         )
         if X_.shape[1] != 1:
-            raise Exception("Can only draw one dimensional boundary if there is a single feature.")
+            raise Exception(
+                "Can only draw one dimensional boundary if there is a single feature."
+            )
 
-        self.__S_, self.__class_center_ = _adjusted_covariance(X_, self.method, self.center, dim=1)
+        self.__S_, self.__class_center_ = _adjusted_covariance(
+            X_, self.method, self.center, dim=1
+        )
 
         return self
 
-    def visualize(self, ax, x, alpha=0.05, rectangle_kwargs={'alpha':0.3}, vertical=True):
+    def visualize(
+        self, ax, x, alpha=0.05, rectangle_kwargs={"alpha": 0.3}, vertical=True
+    ):
         """
         Draw a covariance boundary as a rectangle at a certain threshold.
 
@@ -270,7 +274,7 @@ class OneDimLimits(ControlBoundary):
             Significance level (Type I error rate).
 
         rectangle_kwargs: dict, optional(default={'alpha':0.3})
-            Dictionary of formatting arguments for the rectangle_kwargs.  
+            Dictionary of formatting arguments for the rectangle_kwargs.
             See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html.
 
         vertical : scalar(bool), optional(default=True)
@@ -285,22 +289,29 @@ class OneDimLimits(ControlBoundary):
 
         if vertical:
             self.boundary_ = Rectangle(
-                xy=[x, self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0])], 
-                width=0.6, 
-                height=2*np.sqrt(d_crit*self.__S_[0][0]), 
+                xy=[
+                    x,
+                    self.__class_center_[0] - np.sqrt(d_crit * self.__S_[0][0]),
+                ],
+                width=0.6,
+                height=2 * np.sqrt(d_crit * self.__S_[0][0]),
                 **rectangle_kwargs
             )
         else:
-            dy = 2.0/3.0
+            dy = 2.0 / 3.0
             self.boundary_ = Rectangle(
-                xy=[self.__class_center_[0] - np.sqrt(d_crit*self.__S_[0][0]), x-0.5*dy], 
-                width=2*np.sqrt(d_crit*self.__S_[0][0]), 
-                height=dy, 
+                xy=[
+                    self.__class_center_[0] - np.sqrt(d_crit * self.__S_[0][0]),
+                    x - 0.5 * dy,
+                ],
+                width=2 * np.sqrt(d_crit * self.__S_[0][0]),
+                height=dy,
                 **rectangle_kwargs
             )
         ax.add_artist(self.boundary_)
 
         return ax
+
 
 def color_spectrum(
     x,
@@ -625,7 +636,8 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
 
     raise Exception("Unable to create a symmetric, positive definite matrix")
 
-def pls_vip(pls: PLSRegression, mode='weights'):
+
+def pls_vip(pls: PLSRegression, mode="weights"):
     """
     Compute the variable importance in projection (VIP) in a PLS(1) model.
 
@@ -648,33 +660,34 @@ def pls_vip(pls: PLSRegression, mode='weights'):
 
     References
     ----------
-    [1] Wold, S., Sjoestroem, M., & Eriksson, L. (2001). PLS-regression: a basic tool of 
-    chemometrics. Chemometrics and intelligent laboratory systems, 58(2), 109-130. 
+    [1] Wold, S., Sjoestroem, M., & Eriksson, L. (2001). PLS-regression: a basic tool of
+    chemometrics. Chemometrics and intelligent laboratory systems, 58(2), 109-130.
 
-    [2] Chong, I.-G., Jun, C.-H. (2005). Performance of some variable selection methods 
-    when multicollinearity is present. Chemometrics and intelligent laboratory systems, 
+    [2] Chong, I.-G., Jun, C.-H. (2005). Performance of some variable selection methods
+    when multicollinearity is present. Chemometrics and intelligent laboratory systems,
     78(1), 103-112.
     """
     t = pls.x_scores_
     q = pls.y_loadings_
 
-    if mode == 'weights':
-      w = pls.x_weights_
+    if mode == "weights":
+        w = pls.x_weights_
     else:
-      w = pls.x_rotations_
+        w = pls.x_rotations_
     w /= np.linalg.norm(w, axis=0)
 
     n, _ = w.shape
     s = np.diag(t.T @ t @ q.T @ q)
 
-    return np.sqrt(n*(w**2 @ s)/ np.sum(s))
+    return np.sqrt(n * (w**2 @ s) / np.sum(s))
+
 
 def _logistic_proba(x):
     """
     Compute the logistic function of a given input.
 
     This is designed to work on margin space "distances" from classifiers
-    or authenticators to predict probabilities. See scikit-learn convention: 
+    or authenticators to predict probabilities. See scikit-learn convention:
     https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
     Parameters
@@ -688,15 +701,11 @@ def _logistic_proba(x):
         2D array as logistic function of the the input, x. First column
         is NOT inlier, 1-p(x), second column is inlier probability, p(x).
     """
-
     p_inlier = p_inlier = 1.0 / (
-        1.0
-        + np.exp(
-            -np.clip(x, a_max=None, a_min=-500)
-        )
+        1.0 + np.exp(-np.clip(x, a_max=None, a_min=-500))
     )
     prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
     prob[:, 1] = p_inlier
     prob[:, 0] = 1.0 - p_inlier
-        
+
     return prob

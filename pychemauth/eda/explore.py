@@ -393,8 +393,14 @@ class InspectData:
 
     @staticmethod
     def cluster_collinear(
-        X, feature_names=None, figsize=None, t=None, display=True, figname=None,
-        highlight=True, return_linkage=False
+        X,
+        feature_names=None,
+        figsize=None,
+        t=None,
+        display=True,
+        figname=None,
+        highlight=True,
+        return_linkage=False,
     ):
         """
         Identify collinear features using the Spearman rank order correlation.
@@ -419,7 +425,7 @@ class InspectData:
 
         figname : str, optional(default=None)
             If display is True, can also save to this file.
-        
+
         highlight : scalar(bool), optiona(default=True)
             If True, highlight the features selected on the output by adding
             asterisks and capitalization.
@@ -440,7 +446,7 @@ class InspectData:
             Figure the result is plotted on if `display` is True, otherwise None.
 
         dist_linkage : scipy.cluster.hierarchy.linkage
-            If `return_linkage` is True then return the linkage used for hierarchical 
+            If `return_linkage` is True then return the linkage used for hierarchical
             clustering.
 
         Note
@@ -535,7 +541,7 @@ class InspectData:
                 leaf_rotation=90,
                 color_threshold=guess,
             )
-            ax1.set_ylabel('Distance')
+            ax1.set_ylabel("Distance")
 
             dendro_idx = np.arange(0, len(dendro["ivl"]))
             corr_ = ax2.imshow(corr[dendro["leaves"], :][:, dendro["leaves"]])

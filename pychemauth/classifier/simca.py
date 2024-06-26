@@ -353,7 +353,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(distance) shifted by the cutoff distance, so f < 0 implies 
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies
         an extreme or outlier while f > 0 implies an inlier.
 
         References
@@ -805,7 +805,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an
         extreme or outlier while f > 0 implies an inlier.
 
         References
@@ -1471,7 +1471,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Note
         ----
         Following scikit-learn's EllipticEnvelope, this returns the negative
-        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an 
+        sqrt(distance) shifted by the cutoff distance, so f < 0 implies an
         extreme or outlier while f > 0 implies an inlier.
 
         References

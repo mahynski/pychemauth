@@ -19,6 +19,7 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
 
+
 class PLSDA(ClassifierMixin, BaseEstimator):
     """
     PLS-DA for classification.
@@ -1010,16 +1011,20 @@ n_features [{}])] = [{}, {}].".format(
         check_is_fitted(self, "is_fitted_")
         ndim = len(self.__class_centers_) - 1
         if ndim == 1:
-            ax = self.visualize_1d(styles=styles, ax=ax, show_training=show_training)
+            ax = self.visualize_1d(
+                styles=styles, ax=ax, show_training=show_training
+            )
         elif ndim == 2:
-            ax = self.visualize_2d(styles=styles, ax=ax, show_training=show_training)
+            ax = self.visualize_2d(
+                styles=styles, ax=ax, show_training=show_training
+            )
         else:
             raise Exception(
                 "Unable to visualize {} class results ({} dimensions).".format(
                     ndim + 1, ndim
                 )
             )
-            
+
         return ax
 
     def visualize_1d(self, styles=None, ax=None, show_training=True):
@@ -1136,17 +1141,37 @@ n_features [{}])] = [{}, {}].".format(
             for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
                 mask = self.__raw_y_.ravel() == c_
                 rect = OneDimLimits(
-                    method='empirical',
-                    center=self.__class_centers_[i]
-                ).fit(
-                    self.__T_train_[mask]
-                )
+                    method="empirical", center=self.__class_centers_[i]
+                ).fit(self.__T_train_[mask])
 
                 # Plot the inlier boundary
-                _ = rect.visualize(ax=ax, x=i, alpha=self.alpha, rectangle_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0}, vertical=False)
+                _ = rect.visualize(
+                    ax=ax,
+                    x=i,
+                    alpha=self.alpha,
+                    rectangle_kwargs={
+                        "alpha": 0.3,
+                        "facecolor": f"C{i}",
+                        "linewidth": 0.0,
+                    },
+                    vertical=False,
+                )
 
                 # Plot the outlier boundary
-                _ = rect.visualize(ax=ax, x=i, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), vertical=False, rectangle_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+                _ = rect.visualize(
+                    ax=ax,
+                    x=i,
+                    alpha=1.0
+                    - (1.0 - self.gamma)
+                    ** (1.0 / np.sum(self.__class_mask_[i])),
+                    vertical=False,
+                    rectangle_kwargs={
+                        "alpha": 1.0,
+                        "linestyle": "--",
+                        "edgecolor": f"C{i}",
+                        "fill": False,
+                    },
+                )
 
         if "hard" in styles:
             t0 = hard_boundaries_1d()
@@ -1346,18 +1371,35 @@ n_features [{}])] = [{}, {}].".format(
             for i, c_ in enumerate(self.__ohencoder_.categories_[0]):
                 mask = self.__raw_y_.ravel() == c_
                 ellipse = CovarianceEllipse(
-                    method='empirical',
-                    center=self.__class_centers_[i]
+                    method="empirical", center=self.__class_centers_[i]
                 ).fit(
-                    self.__T_train_[mask,:2],
+                    self.__T_train_[mask, :2],
                 )
 
                 # Plot the inlier boundary
-                _ = ellipse.visualize(ax=ax, alpha=self.alpha, ellipse_kwargs={'alpha':0.3, 'facecolor':f'C{i}', 'linewidth':0.0})
+                _ = ellipse.visualize(
+                    ax=ax,
+                    alpha=self.alpha,
+                    ellipse_kwargs={
+                        "alpha": 0.3,
+                        "facecolor": f"C{i}",
+                        "linewidth": 0.0,
+                    },
+                )
 
                 # Plot the outlier boundary
-                _ = ellipse.visualize(ax=ax, alpha=1.0-(1.0 - self.gamma) ** (1.0 / np.sum(self.__class_mask_[i])), 
-                ellipse_kwargs={'alpha':1.0, 'linestyle':'--', 'edgecolor':f'C{i}', 'fill':False})
+                _ = ellipse.visualize(
+                    ax=ax,
+                    alpha=1.0
+                    - (1.0 - self.gamma)
+                    ** (1.0 / np.sum(self.__class_mask_[i])),
+                    ellipse_kwargs={
+                        "alpha": 1.0,
+                        "linestyle": "--",
+                        "edgecolor": f"C{i}",
+                        "fill": False,
+                    },
+                )
 
         if "hard" in styles:
             lines = hard_boundaries_2d(maxp=1000, rmax=2.0, dx=0.05)
