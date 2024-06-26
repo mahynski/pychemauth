@@ -13,7 +13,7 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import estimate_dof
+from pychemauth.utils import estimate_dof, _logistic_proba
 
 
 class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
@@ -475,16 +475,19 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
         check_is_fitted(self, "is_fitted_")
-        p_inlier = p_inlier = 1.0 / (
-            1.0
-            + np.exp(
-                -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
-            )
-        )
-        prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 1] = p_inlier
-        prob[:, 0] = 1.0 - p_inlier
-        return prob
+        
+        return _logistic_proba(self.decision_function(X, y))
+
+        # p_inlier = p_inlier = 1.0 / (
+        #     1.0
+        #     + np.exp(
+        #         -np.clip(self.decision_function(X, y), a_max=None, a_min=-500)
+        #     )
+        # )
+        # prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+        # prob[:, 1] = p_inlier
+        # prob[:, 0] = 1.0 - p_inlier
+        # return prob
 
     def predict(self, X):
         """

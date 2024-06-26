@@ -668,3 +668,35 @@ def pls_vip(pls: PLSRegression, mode='weights'):
     s = np.diag(t.T @ t @ q.T @ q)
 
     return np.sqrt(n*(w**2 @ s)/ np.sum(s))
+
+def _logistic_proba(x):
+    """
+    Compute the logistic function of a given input.
+
+    This is designed to work on margin space "distances" from classifiers
+    or authenticators to predict probabilities. See scikit-learn convention: 
+    https://scikit-learn.org/stable/glossary.html#term-predict_proba
+
+    Parameters
+    ----------
+    x : ndarray(float, ndim=1)
+        Array of distances.
+
+    Returns
+    -------
+    probabilities : ndarray(float, ndim=2)
+        2D array as logistic function of the the input, x. First column
+        is NOT inlier, 1-p(x), second column is inlier probability, p(x).
+    """
+
+    p_inlier = p_inlier = 1.0 / (
+        1.0
+        + np.exp(
+            -np.clip(x, a_max=None, a_min=-500)
+        )
+    )
+    prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+    prob[:, 1] = p_inlier
+    prob[:, 0] = 1.0 - p_inlier
+        
+    return prob

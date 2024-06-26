@@ -12,7 +12,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
+from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits, _logistic_proba
 
 class _PassthroughDR(TransformerMixin, BaseEstimator):
     """Allow data to pass through without modification."""
@@ -1078,12 +1078,15 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
         check_is_fitted(self, "is_fitted_")
-        p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
-        prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
-        prob[:, 1] = p_inlier
-        prob[:, 0] = 1.0 - p_inlier
 
-        return prob
+        return _logistic_proba(self.decision_function(X))
+
+        # p_inlier = 1.0 / (1.0 + np.exp(-self.decision_function(X)))
+        # prob = np.zeros((p_inlier.shape[0], 2), dtype=np.float64)
+        # prob[:, 1] = p_inlier
+        # prob[:, 0] = 1.0 - p_inlier
+
+        # return prob
 
     def loss(self, X, y, eps=1.0e-15):
         r"""
