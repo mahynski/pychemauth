@@ -172,6 +172,7 @@ While examination of loadings, for example, is one way to understand commonly em
    :includehidden:
    :caption: Learn
 
+   carpentry
    chemometrics
    cross_validation
 
