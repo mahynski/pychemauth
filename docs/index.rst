@@ -6,14 +6,16 @@
 =======================================
 Python-based Chemometric Authentication
 =======================================
+.. image:: https://github.com/mahynski/pychemauth/actions/workflows/python-app.yml/badge.svg?branch=main
+   :target: https://github.com/mahynski/pychemauth/actions
+.. image:: https://readthedocs.org/projects/pychemauth/badge/?version=latest
+   :target: https://pychemauth.readthedocs.io/en/latest/?badge=latest
 .. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
    :target: https://github.com/pre-commit/pre-commit
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
 .. image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
    :target: https://pycqa.github.io/isort/
-.. image:: https://github.com/mahynski/pychemauth/actions/workflows/python-app.yml/badge.svg?branch=main
-   :target: https://github.com/mahynski/pychemauth/actions
 .. image:: https://zenodo.org/badge/331207062.svg
    :target: https://zenodo.org/badge/latestdoi/331207062
 
