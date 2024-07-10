@@ -45,5 +45,6 @@ setup(
         "pytest==7.4.0",
         "xgboost==2.0.0",
         "missingno==0.5.2",
+        "huggingface_hub==0.23.4",
     ],
 )

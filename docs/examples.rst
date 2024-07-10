@@ -18,3 +18,4 @@ API Examples
    jupyter/api/comparing_pipelines
    jupyter/api/model_inspection
    jupyter/api/learning_curves
+   jupyter/api/sharing_models
