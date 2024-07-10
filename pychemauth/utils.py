@@ -35,32 +35,34 @@ from huggingface_hub import hf_hub_download, HfApi, ModelCard, ModelCardData
 
 
 class HuggingFace:
-    """Tools to help store and load models on Huggingface."""
+    """Tools to help store and load models on Hugging Face Hub."""
 
     @staticmethod
     def from_pretrained(
         model_id: str,
-        filename: str,
+        filename="model.pkl",
         revision=None,
         token=None,
         library_version=None,
     ):
         """
-        Load a pre-trained model from Huggingface.
+        Load a pre-trained model from Hugging Face.
 
         Parameters
         ----------
         model_id : str
             Model ID, for example "hf-user/my-awesome-model"
 
-        filename : str
-            Name of the model file in the repo, e.g., "model.pkl"
+        filename : str, optional(default="model.pkl")
+            The name of the model file in the repo, e.g., "model.pkl". This is the default name
+            used when pushing to Hugging Face hub (`push_to_hub`), but if you change it or
+            use another repo with a different name, change it to match here.
 
         revision : str, optional(default=None)
             Model revision; if None, the latest version is retrieved.
 
         token : str, optional(default=None)
-            Your Huggingface access token. Refer to https://huggingface.co/settings/tokens.
+            Your Hugging Face access token. Refer to https://huggingface.co/settings/tokens.
             Ungated, public models do not require this to be specified.
 
         library_version : str, optional(default=None)
@@ -88,11 +90,12 @@ class HuggingFace:
         repo_name: str,
         token: str,
         revision=None,
+        private=True,
     ) -> None:
         """
-        Push a PyChemAuth model, or pipeline, to Huggingface.
+        Push a PyChemAuth model, or pipeline, to Hugging Face.
 
-        If no repo (namespace/repo_name) exists on Huggingface this creates a minimal model
+        If no repo (namespace/repo_name) exists on Hugging Face this creates a minimal model
         card and repo to hold a PyChemAuth model or pipeline. By default, all new repos are
         set to private.
 
@@ -107,17 +110,20 @@ class HuggingFace:
             Model, or pipeline, from PyChemAuth that is compatible with sklearn's estimator API.
 
         namespace : str
-            User or organization name on Huggingface.
+            User or organization name on Hugging Face.
 
         repo_name : str
-            Name of Huggingface repository, e.g., "my-awesome-model".
+            Name of Hugging Face repository, e.g., "my-awesome-model".
 
         token : str
-            Your Huggingface access token.  Be sure it has write access.
+            Your Hugging Face access token.  Be sure it has write access.
             Refer to https://huggingface.co/settings/tokens.
 
         revision : str, optional(default=None)
             The git revision to commit from. Defaults to the head of the `"main"` branch.
+
+        private : bool, optional(default=True)
+            If a new repo is created, this indicates if it should be private.
 
         Notes
         -----
@@ -167,7 +173,7 @@ class HuggingFace:
                 return api.create_repo(
                     repo_id=repo_id,
                     token=token,
-                    private=True,  # By default all repos are private, you can manually change this on HF
+                    private=private,
                     repo_type="model",
                     exist_ok=exist_ok,
                 )
@@ -192,7 +198,7 @@ class HuggingFace:
                         library_name="PyChemAuth",
                         license="other",
                         license_name="nist",
-                        license_link="https://github.com/usnistgov/opensource-repo/blob/main/LICENSE.md",
+                        license_link="https://github.com/mahynski/pychemauth/blob/main/LICENSE.md",
                         pipeline_tag=_check_model_type(model),
                         tags=["PyChemAuth"],
                     )
