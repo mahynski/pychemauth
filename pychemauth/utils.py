@@ -4,8 +4,14 @@ General utility functions.
 author: nam
 """
 import copy
-import bokeh
 import scipy
+import joblib
+import sklearn
+import pychemauth
+import imblearn
+import pickle
+import datetime
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,6 +28,208 @@ from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array
 
 from matplotlib.patches import Ellipse, Rectangle
+
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from huggingface_hub import hf_hub_download, HfApi, ModelCard, ModelCardData
+
+
+class HuggingFace:
+    """Tools to help store and load models on Huggingface."""
+
+    @staticmethod
+    def from_pretrained(
+        model_id: str,
+        filename: str,
+        revision=None,
+        token=None,
+        library_version=None,
+    ):
+        """
+        Load a pre-trained model from Huggingface.
+
+        Parameters
+        ----------
+        model_id : str
+            Model ID, for example "hf-user/my-awesome-model"
+
+        filename : str
+            Name of the model file in the repo, e.g., "model.pkl"
+
+        revision : str, optional(default=None)
+            Model revision; if None, the latest version is retrieved.
+
+        token : str, optional(default=None)
+            Your Huggingface access token. Refer to https://huggingface.co/settings/tokens.
+            Ungated, public models do not require this to be specified.
+
+        library_version : str, optional(default=None)
+            The version of the PyChemAuth library to use; if None, the latest version is used.
+
+        Returns
+        -------
+        model : sklearn.base.BaseEstimator
+            Model, or pipeline, from PyChemAuth that is compatible with sklearn's estimator API.
+        """
+        filename = hf_hub_download(
+            repo_id=model_id,
+            filename=filename,
+            revision=revision,
+            token=token,
+            library_version=library_version,
+            library_name="PyChemAuth",
+        )
+        return joblib.load(filename)
+
+    @staticmethod
+    def push_to_hub(
+        model: sklearn.base.BaseEstimator,
+        namespace: str,
+        repo_name: str,
+        token: str,
+        revision=None,
+    ) -> None:
+        """
+        Push a PyChemAuth model, or pipeline, to Huggingface.
+
+        If no repo (namespace/repo_name) exists on Huggingface this creates a minimal model
+        card and repo to hold a PyChemAuth model or pipeline. By default, all new repos are
+        set to private.
+
+        It is strongly recommended that you visit the link below for instructions on how to
+        fill out an effective model card that accurately and completely describes your model.
+
+        https://huggingface.co/docs/hub/model-card-annotated
+
+        Parameters
+        ----------
+        model : sklearn.base.BaseEstimator
+            Model, or pipeline, from PyChemAuth that is compatible with sklearn's estimator API.
+
+        namespace : str
+            User or organization name on Huggingface.
+
+        repo_name : str
+            Name of Huggingface repository, e.g., "my-awesome-model".
+
+        token : str
+            Your Huggingface access token.  Be sure it has write access.
+            Refer to https://huggingface.co/settings/tokens.
+
+        revision : str, optional(default=None)
+            The git revision to commit from. Defaults to the head of the `"main"` branch.
+
+        Notes
+        -----
+        All models are serialized using pickle(protocol=4).
+        """
+
+        def _check_model_type(model):
+            """Determine if the model is a regressor or classifier."""
+            from pychemauth.classifier import osr, plsda, simca
+            from pychemauth.manifold import elliptic
+
+            _type = type(model)
+            if (_type is sklearn.pipeline.Pipeline) or (
+                _type is imblearn.pipeline.Pipeline
+            ):
+                _type = type(model.steps[-1][1])
+
+            if _type in [
+                pychemauth.classifier.osr.OpenSetClassifier,
+                pychemauth.classifier.plsda.PLSDA,
+                pychemauth.classifier.simca.SIMCA_Authenticator,
+                pychemauth.classifier.simca.SIMCA_Model,
+                pychemauth.classifier.simca.DDSIMCA_Model,
+                pychemauth.manifold.elliptic.EllipticManifold_Authenticator,
+                pychemauth.manifold.elliptic.EllipticManifold_Model,
+            ]:
+                # Tag as classifier
+                return "tabular-classification"
+            elif _type in [
+                pychemauth.regressor.pcr.PCR,
+                pychemauth.regressor.pls.PLS,
+            ]:
+                # Tag as regressor
+                return "tabular-regression"
+            else:
+                # No tags - e.g., PCA.
+                return "other"
+
+        # Save all files in a temporary directory and push them in a single commit
+        try:
+            repo_id = f"{namespace}/{repo_name}"
+
+            # Create repo
+            api = HfApi()
+
+            def _create_repo(exist_ok=False):
+                return api.create_repo(
+                    repo_id=repo_id,
+                    token=token,
+                    private=True,  # By default all repos are private, you can manually change this on HF
+                    repo_type="model",
+                    exist_ok=exist_ok,
+                )
+
+            try:
+                _ = _create_repo(exist_ok=False)
+                _new_repo = True
+            except:
+                _ = _create_repo(exist_ok=True)
+                _new_repo = False
+
+            with TemporaryDirectory() as tmpdir:
+                tmpdir = Path(tmpdir)
+
+                # Serialize the model
+                with open(os.path.join(tmpdir, "model.pkl"), mode="bw") as f:
+                    pickle.dump(model, file=f, protocol=4)
+
+                # Create the model card for new repos only - otherwise this will overwrite
+                if _new_repo:
+                    card_data = ModelCardData(
+                        library_name="PyChemAuth",
+                        license="other",
+                        license_name="nist",
+                        license_link="https://github.com/usnistgov/opensource-repo/blob/main/LICENSE.md",
+                        pipeline_tag=_check_model_type(model),
+                        tags=["PyChemAuth"],
+                    )
+                    content = f"""
+---
+{ card_data.to_yaml() }
+---
+
+# Model Card
+
+This is a default card created by PyChemAuth.
+
+Refer to [this link](https://huggingface.co/docs/hub/model-card-annotated) for best practices on filling this out.
+"""
+                    card = ModelCard(content)
+                    card.validate()
+                    (tmpdir / "README.md").write_text(card.content)
+
+                return api.upload_folder(
+                    repo_id=repo_id,
+                    folder_path=tmpdir,
+                    token=token,
+                    commit_message="Pushing model on {}".format(
+                        datetime.datetime.now()
+                    ),
+                    revision=revision,
+                    repo_type="model",
+                )
+
+        except Exception as e:
+            raise Exception(
+                "Unable to create temporary directory and save model information : {}".format(
+                    e
+                )
+            )
+
+        return
 
 
 class ControlBoundary:
@@ -185,7 +393,7 @@ class CovarianceEllipse(ControlBoundary):
             width=np.sqrt(self.__l1_) * k * 2,
             height=np.sqrt(self.__l2_) * k * 2,
             angle=self.__angle_,
-            **ellipse_kwargs
+            **ellipse_kwargs,
         )
         ax.add_artist(self.boundary_)
 
@@ -295,7 +503,7 @@ class OneDimLimits(ControlBoundary):
                 ],
                 width=0.6,
                 height=2 * np.sqrt(d_crit * self.__S_[0][0]),
-                **rectangle_kwargs
+                **rectangle_kwargs,
             )
         else:
             dy = 2.0 / 3.0
@@ -306,7 +514,7 @@ class OneDimLimits(ControlBoundary):
                 ],
                 width=2 * np.sqrt(d_crit * self.__S_[0][0]),
                 height=dy,
-                **rectangle_kwargs
+                **rectangle_kwargs,
             )
         ax.add_artist(self.boundary_)
 
