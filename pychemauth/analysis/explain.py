@@ -72,6 +72,13 @@ class CAM1D(CAMExplainer):
         """Instantiate the class."""
         super(CAM1D).__init__(style=style)
 
+    def visualize(self):
+        return
+    
+    def explain(self):
+        return
+    
+
 
 class CAM2D(CAMExplainer):
     """Explain 2D spectra classified with CNN using CAM methods."""
@@ -330,7 +337,7 @@ class CAM2D(CAMExplainer):
                 symm_class_act_map,
                 preds,
                 pred_index,
-            ) = self.explain_2d_(
+            ) = self._explain_2d(
                 image=np.expand_dims(
                     image, axis=0
                 ),  # Make into a batch with only 1 entry
@@ -355,7 +362,7 @@ class CAM2D(CAMExplainer):
 
         return cmap_heatmap, lc, preds, pred_index
 
-    def explain_2d_(
+    def _explain_2d(
         self, image, model, conv_layer_name, mode, cmap, symmetrize
     ):
         """
@@ -410,7 +417,7 @@ class CAM2D(CAMExplainer):
             mode=mode,
         )
 
-        cmap_heatmap = self.fit_heatmap_(
+        cmap_heatmap = self._fit_heatmap(
             image_shape=(image.shape[2], image.shape[1]),
             class_act_map=(
                 symm_class_act_map if symmetrize else asymm_class_act_map
@@ -426,7 +433,7 @@ class CAM2D(CAMExplainer):
             pred_index,
         )
 
-    def fit_heatmap_(
+    def _fit_heatmap(
         self, image_shape, class_act_map, cmap=matplotlib.colormaps["jet"]
     ):
         """
@@ -466,68 +473,6 @@ class CAM2D(CAMExplainer):
         cmap_heatmap = keras.utils.img_to_array(cmap_heatmap)
 
         return np.uint8(cmap_heatmap)
-
-
-def _cam_1d(self, centers, spectra, heatmap, cmap="Reds", interp=False):
-    """
-    Explain 1D spectra by coloring it according to a heatmap.
-
-    Parameters
-    ----------
-    centers : ndarray(float, ndim=1)
-        Location spectra were measured at in an (N,) array.
-
-    spectra : ndarray(float, ndim=1)
-        A single (N,) spectra.
-
-    heatmap : ndarray(float, ndim=1)
-        1D heatmap vector.
-
-    cmap : matplotlib.colormaps, optional(default="Reds")
-        Matplotlib colormap to use for spectra heatmap. Best if perceptually uniform.
-
-    interp : bool, optional(default="False")
-        Whether or not to interpolate the coloring.
-
-    Returns
-    -------
-    lc : matplotlib.collections.LineCollection
-        Line collection colored according to class activation map.
-    """
-    # https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html.
-    points = np.array([centers, spectra]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-    lc = LineCollection(
-        segments,
-        cmap=cmap,
-        norm=plt.Normalize(
-            heatmap.min(), heatmap.max()
-        ),  # For improved visualization
-    )
-
-    if interp:
-        # Linearly interpolate
-        lc.set_array(
-            np.interp(
-                centers,
-                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
-                + centers[0],
-                heatmap,
-            )
-        )
-    else:
-        # Just nearest neighbor - this assumes 'same' padding everywhere
-        tree = scipy.spatial.KDTree(
-            np.expand_dims(
-                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
-                + centers[0],
-                axis=1,
-            )
-        )
-        indices = tree.query(np.expand_dims(centers, axis=1))[1]
-        lc.set_array(heatmap[indices])
-
-    return lc
 
 
 def _make_cam(
@@ -744,6 +689,66 @@ def _make_cam(
             f"Model does not have the right architecture to be explained with the {style} method."
         )
 
+def _cam_1d(self, centers, spectra, heatmap, cmap="Reds", interp=False):
+    """
+    Explain 1D spectra by coloring it according to a heatmap using upsampling.
+
+    Parameters
+    ----------
+    centers : ndarray(float, ndim=1)
+        Location spectra were measured at in an (N,) array.
+
+    spectra : ndarray(float, ndim=1)
+        A single (N,) spectra.
+
+    heatmap : ndarray(float, ndim=1)
+        1D heatmap vector.
+
+    cmap : matplotlib.colormaps, optional(default="Reds")
+        Matplotlib colormap to use for spectra heatmap. Best if perceptually uniform.
+
+    interp : bool, optional(default="False")
+        Whether or not to interpolate the coloring.
+
+    Returns
+    -------
+    lc : matplotlib.collections.LineCollection
+        Line collection colored according to class activation map.
+    """
+    # https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html.
+    points = np.array([centers, spectra]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    lc = LineCollection(
+        segments,
+        cmap=cmap,
+        norm=plt.Normalize(
+            heatmap.min(), heatmap.max()
+        ),  # For improved visualization
+    )
+
+    if interp:
+        # Linearly interpolate
+        lc.set_array(
+            np.interp(
+                centers,
+                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
+                + centers[0],
+                heatmap,
+            )
+        )
+    else:
+        # Just nearest neighbor - this assumes 'same' padding everywhere
+        tree = scipy.spatial.KDTree(
+            np.expand_dims(
+                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
+                + centers[0],
+                axis=1,
+            )
+        )
+        indices = tree.query(np.expand_dims(centers, axis=1))[1]
+        lc.set_array(heatmap[indices])
+
+    return lc
 
 def color_spectrum(
     x,
@@ -755,7 +760,7 @@ def color_spectrum(
     background=True,
 ):
     """
-    Color a spectrum based on feature importance values.
+    Color a 1D spectrum based on feature importance values.
 
     Parameters
     ----------
@@ -766,7 +771,7 @@ def color_spectrum(
         Spectral (signal) intensities.
 
     importance_values : array_like(float, ndim=1)
-        Importance value assigned.
+        Importance value assigned. Should have the same length as x and y.
 
     cmap : str, optional(default="coolwarm")
         Name of matplotlib colormap to use.
@@ -820,7 +825,7 @@ def bokeh_color_spectrum(
     x, y, importance_values, palette=Spectral10, y_axis_type=None
 ):
     """
-    Color a spectrum based on feature importance values in Bokeh.
+    Color a 1D spectrum based on feature importance values in Bokeh.
 
     Parameters
     ----------
@@ -831,7 +836,7 @@ def bokeh_color_spectrum(
         Spectral (signal) intensities.
 
     importance_values : array_like(float, ndim=1)
-        Importance value assigned to each feature.
+        Importance value assigned to each feature. Should have the same length as x and y.
 
     palette : bokeh.palettes, optional(default=Spectral10)
         Color palette to use (https://docs.bokeh.org/en/latest/docs/reference/palettes.html).
