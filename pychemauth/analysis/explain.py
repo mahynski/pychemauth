@@ -20,7 +20,7 @@ from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
 
 
-class CAMExplainer:
+class _CAMExplainer:
     """Base class for explaining classifications of 1D or 2D (imaged) spectra with CAM methods."""
 
     def __init__(self, style="hires"):
@@ -63,29 +63,149 @@ class CAMExplainer:
         return {
             "style": self.style,
         }
+    
+    def importances(self, *args, **kwargs):
+        """Compute the feature importances for a single input."""
+        raise NotImplementedError
+    
+    def explain(self, *args, **kwargs):
+        """Compute an explanation."""
+        raise NotImplementedError
 
+    def visualize(self, *args, **kwargs):
+        """Visualize the explanation."""
+        raise NotImplementedError
 
-class CAM1D(CAMExplainer):
+class CAM1D(_CAMExplainer):
     """Explain 1D spectra classified with CNN using CAM methods."""
 
-    def __init__(style="hires"):
+    def __init__(self, style="hires"):
         """Instantiate the class."""
-        super(CAM1D).__init__(style=style)
+        super().__init__(style=style)
 
+    def importances(self,
+        spectra,
+        centers,
+        model,
+    ):  
+        """
+        Compute the feature importances for a single spectra.
+
+        The importances are bounded between [0, 1] and reflect the 
+        explanation of the class predicted for this spectra.
+
+        Parameters
+        ----------
+        spectra : ndarray(float, ndim=2)
+            A single (N, 1) spectra.
+            
+        centers : ndarray(float, ndim=1)
+            Location spectra were measured at in an (N,) array.
+
+        model : keras.Model
+            Model being used.
+
+        Returns
+        -------
+        importances : ndarray(float, ndim=1)
+            A vector of feature importances the same length as the spectra.
+
+        Raises
+        ------
+        Exception
+            The Keras model architecture is incorrect.
+
+        ValueError
+            The spectra is provided in the incorrect shape.
+        """
+        result = self.explain(
+            spectra=spectra,
+            centers=centers,
+            model=model
+        )
+
+        return result[1].get_array().data
+
+    def explain(self,
+        spectra,
+        centers,
+        model,
+    ):
+        """
+        Compute a detailed explanation for a single spectra.
+
+        Parameters
+        ----------
+        spectra : ndarray(float, ndim=2)
+            A single (N, 1) spectra.
+            
+        centers : ndarray(float, ndim=1)
+            Location spectra were measured at in an (N,) array.
+
+        model : keras.Model
+            Model being used.
+
+        Returns
+        -------
+        class_act_map : ndarray
+            Class activation map in the range of [0, 1].
+
+        lc : matplotlib.collections.LineCollection
+            Line collection colored according to class activation map.
+
+        preds : ndarray(float, ndim=1)
+            A vector of class probabilities.
+
+        pred_index : int
+            The index of the most likely class.
+
+        conv_layer_name : str
+            Name of the last CNN layer found in the network, which is used for explanations.
+        
+        Raises
+        ------
+        Exception
+            The Keras model architecture is incorrect.
+
+        ValueError
+            The spectra is provided in the incorrect shape.
+        """
+        if len(spectra.shape) == 2:
+            if spectra.shape[1] != 1:
+                raise ValueError("Spectra should have a single channel and have shape (N, 1).")
+            
+            # Checks that architecture is correct internally
+            asymm_class_act_map, _, preds, pred_index, conv_layer_name = _make_cam(
+                style=self.style,
+                input=np.expand_dims(spectra, axis=0),
+                model=model,
+                conv_layer_name=None, # Auto-detect
+            )
+
+            lc = _cam_1d(
+                centers, 
+                np.squeeze(spectra), 
+                asymm_class_act_map, 
+                cmap="Reds", 
+                interp=False
+            )
+        else:
+            raise ValueError("Unexpected shape of spectra")
+
+        return asymm_class_act_map, lc, preds, pred_index, conv_layer_name
+    
     def visualize(self):
+        # Add features like cmaps to explain as options so we can 
+        # specify them for this function to get nice explanations
         return
-    
-    def explain(self):
-        return
-    
 
 
-class CAM2D(CAMExplainer):
+class CAM2D(_CAMExplainer):
     """Explain 2D spectra classified with CNN using CAM methods."""
 
-    def __init__(style="hires"):
+    def __init__(self, style="hires"):
         """Instantiate the class."""
-        super(CAM2D).__init__(style=style)
+        super().__init__(style=style)
 
     def visualize(
         self,
@@ -119,7 +239,7 @@ class CAM2D(CAMExplainer):
             Correct label for the spectra (e.g., from y_train).
 
         model : keras.Model
-            Model being used.  This should end in a `keras.layers.Dense` layer.
+            Model being used. 
 
         conv_layer_name : str
             Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
@@ -295,7 +415,7 @@ class CAM2D(CAMExplainer):
             Imaged spectra as a single (N, N, 1) tensor where the image is NxN with 1 channel (must be in 'channels_last' format).
 
         model : keras.Model
-            Model being used.  This should end in a `keras.layers.Dense` layer.
+            Model being used.
 
         conv_layer_name : str
             Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
@@ -374,7 +494,7 @@ class CAM2D(CAMExplainer):
             Imaged spectra as a single (1, N, N, C) tensor where the image is NxN with C=1 channels (must be in 'channels_last' format).
 
         model : keras.Model
-            Model being used.  This should end in a `keras.layers.Dense` layer.
+            Model being used.
 
         conv_layer_name : str
             Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
@@ -409,7 +529,7 @@ class CAM2D(CAMExplainer):
         pred_index : int
             The index of the most likely class.
         """
-        asymm_class_act_map, symm_class_act_map, preds, pred_index = _make_cam(
+        asymm_class_act_map, symm_class_act_map, preds, pred_index, conv_layer_name = _make_cam(
             style=self.style,
             input=image,
             model=model,
@@ -476,12 +596,15 @@ class CAM2D(CAMExplainer):
 
 
 def _make_cam(
-    style, input, model, conv_layer_name, mode="output", pred_index=None
+    style, input, model, conv_layer_name=None, mode="output", pred_index=None
 ):
     """
     Compute activation map for a given 1D or 2D input.
 
-    This is based on https://keras.io/examples/vision/grad_cam/.
+    This is based on https://keras.io/examples/vision/grad_cam/.  To ensure explainability, 
+    the Keras model is checked that it conforms to a "CAM" architecture (CNN -> GAP -> Dense),
+    or simply terminates in a single Dense layer (CNN -> Dense).  The former can be explained
+    with either 'grad' or 'hires' methods, but the latter requires 'hires'.
 
     Parameters
     ----------
@@ -492,14 +615,16 @@ def _make_cam(
         When explaining a 2D image (1, N, N, C) tensor where the image is NxN with C=1 channels. This must be in 'channels_last' format. When explaining a 1D spectra (1, N, C) tensor where the image is NxN with C=1 channels.
 
     model : keras.Model
-        Model being used.  This should end in a `keras.layers.Dense` layer.
+        Model being used. 
 
-    conv_layer_name : str
+    conv_layer_name : str, optional(default=None)
         Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
         input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this.
+        If None, defaults to the last convolutional layer before the top.
 
     mode : str, optional(default='output')
-        Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}.
+        Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}. If `conv_layer_name`
+        is None, this is ignored.
 
     pred_index : int, optional(default=None)
         Index of class to compute the activation map with respect to.  If `None`, the most likely class is used.
@@ -512,11 +637,19 @@ def _make_cam(
     symm_class_act_map : ndarray
         Symmmetric CAM in the range of [0, 1].
 
-    preds : ndarray
+    preds : ndarray(float, ndim=1)
         A vector of class probabilities.
 
     pred_index : int
         The index of the most likely class.
+
+    conv_layer_name : str
+        Name of the last CNN layer found in the network, which is used for explanations.
+
+    Raises
+    ------
+    Exception
+        The Keras model architecture is incorrect.
     """
 
     def _is_conv(layer, return_dim=False):
@@ -531,7 +664,7 @@ def _make_cam(
 
         return (False, 0) if return_dim else False
 
-    def is_gap(layer):
+    def _is_gap(layer):
         # Check if a layer does global average pooling
         valid = [
             keras.layers.pooling.global_average_pooling1d.GlobalAveragePooling1D,
@@ -558,53 +691,82 @@ def _make_cam(
                         return True, -2
         return False, 0
 
-    def _check_last_cnn(position):
+    def _check_last_cnn(dense_position, conv_layer_name, mode):
         # Check we are explaining the last CNN layer in the network
+        # Assumes CNN -> GAP -> Dense
         if (
             mode == "output"
-            and model.layers[position - 2].name != conv_layer_name
-        ):
+            and model.layers[dense_position - 2].name != conv_layer_name
+        ): # Output of CNN
             raise Exception(
                 "You are not explaining the last CNN layer in the network."
             )
         if (
             mode == "input"
-            and mode.layers[position - 1].name != conv_layer_name
-        ):
+            and mode.layers[dense_position - 1].name != conv_layer_name
+        ): # Input to GAP layer
             raise Exception(
                 "You are not explaining the last CNN layer in the network."
             )
         return True
 
-    def _is_valid(model):
+    def _is_valid(model, conv_layer_name):
         # Check the overall model architecture
         check, dense_position = _ends_with_dense(model)
         if (
             check
-            and is_gap(model.layers[dense_position - 1])
+            and _is_gap(model.layers[dense_position - 1])
             and _is_conv(model.layers[dense_position - 2])
         ):
             # CAM architecture - can explain with either method and should give identical results
             _, dim = _is_conv(model.layers[dense_position - 2], return_dim=True)
-            _ = _check_last_cnn(dense_position)
+            if conv_layer_name is None:
+                # Choose default
+                conv_layer_name = model.layers[dense_position - 2].name
+                _ = _check_last_cnn(
+                    dense_position, 
+                    conv_layer_name=conv_layer_name, 
+                    mode='output'
+                )
+            else:
+                # Check user-specified layer and mode
+                _ = _check_last_cnn(
+                    dense_position, 
+                    conv_layer_name=conv_layer_name, 
+                    mode=mode
+                )
             if style in ["grad", "hires"]:
-                return True, dense_position, dim
+                return True, dense_position, dim, conv_layer_name
         elif check and _is_conv(model.layers[dense_position - 1]):
             # CNN -> Dense without GAP can still be explained with HiResCAM
             _, dim = _is_conv(model.layers[dense_position - 1], return_dim=True)
-            _ = _check_last_cnn(dense_position + 1)
+            if conv_layer_name is None:
+                # Choose default
+                conv_layer_name = model.layers[dense_position - 1].name
+                _ = _check_last_cnn(
+                    dense_position + 1, # Hack to get logic to understand CNN right before Dense
+                    conv_layer_name=conv_layer_name, 
+                    mode='output'
+                )
+            else:
+                # Check user-specified layer and mode
+                _ = _check_last_cnn(
+                    dense_position + 1, # Hack to get logic to understand CNN right before Dense
+                    conv_layer_name=conv_layer_name, 
+                    mode=mode
+                )
             if style == "hires":
-                return True, dense_position, dim
+                return True, dense_position, dim, conv_layer_name
             else:
                 raise Exception(
                     "Cannot safely explain this model with GradCAM; use HiResCAM instead."
                 )
         else:
             pass
-        return False, dense_position, 0
+        return False, dense_position, 0, conv_layer_name
 
     # Check the model has the right architecture to be safely explained
-    valid, _, dim = _is_valid(model)
+    valid, _, dim, conv_layer_name = _is_valid(model, conv_layer_name)
     if valid:
         last_layer_act = model.layers[-1].activation
 
@@ -683,13 +845,14 @@ def _make_cam(
             symm_class_act_map.numpy(),
             preds[0].numpy(),
             pred_index.numpy(),
+            conv_layer_name
         )
     else:
         raise Exception(
             f"Model does not have the right architecture to be explained with the {style} method."
         )
 
-def _cam_1d(self, centers, spectra, heatmap, cmap="Reds", interp=False):
+def _cam_1d(centers, spectra, heatmap, cmap="Reds", interp=False):
     """
     Explain 1D spectra by coloring it according to a heatmap using upsampling.
 
