@@ -20,31 +20,11 @@ from bokeh.plotting import figure, show
 from matplotlib.collections import LineCollection
 
 
-class _CAMExplainer:
-    """Base class for explaining classifications of 1D or 2D (imaged) spectra with CAM methods."""
+class CAMBaseExplainer:
+    """Base class for explaining classifications of 1D or 2D (imaged) series with CAM methods."""
 
     def __init__(self, style="hires"):
-        """
-        Instantiate the class.
-
-        An architecture ending in a global average pooling (GAP), followed by a
-        single dense layer is recommended for the most consistent explanations. HiResCAM will be guaranteed to reflect areas that increase the most prediction's likelihood only when a single dense layer is used at the end, but a GAP is not required (and the last CNN layer is used for explanation). Grad-CAM does not carry such guarantees.
-
-        Parameters
-        ----------
-        style : str
-            'grad' uses Grad-CAM algorithm; 'hires' uses HiResCAM algorithm instead.  If the model has a CAM architecture
-            (it ends in GAP + 1 Dense layer) these should yield identical results.
-
-        References
-        -----------
-        1. HiResCAM Method: https://arxiv.org/abs/2011.08891
-        2. Grad-CAM Method: https://openaccess.thecvf.com/content_ICCV_2017/papers/Selvaraju_Grad-CAM_Visual_Explanations_ICCV_2017_paper.pdf
-
-        Notes
-        -----
-        This only supports Keras models at the moment.
-        """
+        """Instantiate the class."""
         self.set_params(
             **{
                 "style": style.lower(),
@@ -76,39 +56,69 @@ class _CAMExplainer:
         """Visualize the explanation."""
         raise NotImplementedError
 
-class CAM1D(_CAMExplainer):
-    """Explain 1D spectra classified with CNN using CAM methods."""
+class CAM1D(CAMBaseExplainer):
+    """
+    Use Class Activation Map (CAM) methods to explain 1D series (e.g., spectra) classified with a Convolutional Neural Network (CNN).
 
+    A network architecture ending in a global average pooling (GAP), followed by a single dense layer is recommended for the most consistent explanations. HiResCAM [1] will be guaranteed to reflect areas that increase the prediction's likelihood only when a single dense layer is used at the end, but a GAP is not required (and the last convolutional layer is used for explanation). Grad-CAM [2] does not carry such guarantees.
+
+    Feature importances are bounded between [0, 1] and reflect the explanation of the class predicted for this series. CAM methods compute the importance value of each point in output of the last convolutional layer, which is much smaller than the input; e.g., a 1D spectra with 1000 input points may end up with 10 outputs from the last convolutional layer. This coarse-grained explanation vector is upsampled to match the size of the input.  The downsampled vector being explained, has a receptive field [3] (portion of the input) that mathematically contributes to its value.  Input points contribute differently to each point in the CAM which is approximated by interpolating the importance values during upsampling, though this is not rigorous.
+
+    References
+    -----------
+    1. HiResCAM Method: https://arxiv.org/abs/2011.08891
+    2. Grad-CAM Method: https://openaccess.thecvf.com/content_ICCV_2017/papers/Selvaraju_Grad-CAM_Visual_Explanations_ICCV_2017_paper.pdf
+    3. https://github.com/google-research/receptive_field 
+
+    Notes
+    -----
+    This only supports Keras models at the moment.
+    """
     def __init__(self, style="hires"):
-        """Instantiate the class."""
+        """
+        Instantiate the class.
+        
+        Parameters
+        ----------
+        style : str
+            'grad' uses Grad-CAM algorithm; 'hires' uses HiResCAM algorithm instead.  If the model has a CAM architecture (it ends in global average pooling then 1 dense layer) these should yield identical results.
+
+        References
+        -----------
+        1. HiResCAM Method: https://arxiv.org/abs/2011.08891
+        2. Grad-CAM Method: https://openaccess.thecvf.com/content_ICCV_2017/papers/Selvaraju_Grad-CAM_Visual_Explanations_ICCV_2017_paper.pdf
+        """
         super().__init__(style=style)
 
     def importances(self,
-        spectra,
-        centers,
+        y,
+        x,
         model,
+        interp=True
     ):  
         """
-        Compute the feature importances for a single spectra.
-
-        The importances are bounded between [0, 1] and reflect the 
-        explanation of the class predicted for this spectra.
+        Compute the feature importances for a single series, such as a spectra.
 
         Parameters
         ----------
-        spectra : ndarray(float, ndim=2)
-            A single (N, 1) spectra.
+        y : ndarray(float, ndim=2)
+            A single (N, 1) series.
             
-        centers : ndarray(float, ndim=1)
-            Location spectra were measured at in an (N,) array.
+        x : ndarray(float, ndim=1)
+            Location series were measured at in an (N,) array.
 
         model : keras.Model
             Model being used.
 
+        interp : bool, optional(default=True)
+            Whether or not to interpolate the class activation map during upsampling
+            to produce the feature importances.  If False, the importances are reported
+            as the value in the CAM they are closest to (nearest neighbor) in `x`.
+
         Returns
         -------
         importances : ndarray(float, ndim=1)
-            A vector of feature importances the same length as the spectra.
+            A vector of feature importances the same length as the input, N.
 
         Raises
         ------
@@ -116,42 +126,55 @@ class CAM1D(_CAMExplainer):
             The Keras model architecture is incorrect.
 
         ValueError
-            The spectra is provided in the incorrect shape.
+            The series is provided in the incorrect shape.
         """
         result = self.explain(
-            spectra=spectra,
-            centers=centers,
-            model=model
+            y=y,
+            x=x,
+            model=model,
+            interp=interp
         )
 
         return result[1].get_array().data
 
     def explain(self,
-        spectra,
-        centers,
+        y,
+        x,
         model,
+        cmap="Reds",
+        interp=True,
     ):
         """
-        Compute a detailed explanation for a single spectra.
+        Compute a detailed explanation for a single series, such as a spectra.
 
         Parameters
         ----------
-        spectra : ndarray(float, ndim=2)
-            A single (N, 1) spectra.
+        y : ndarray(float, ndim=2)
+            A single (N, 1) series.
             
-        centers : ndarray(float, ndim=1)
-            Location spectra were measured at in an (N,) array.
+        x : ndarray(float, ndim=1)
+            Location series were measured at in an (N,) array.
 
         model : keras.Model
             Model being used.
 
+        cmap : matplotlib.colormaps, optional(default="Reds")
+            Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
+
+        interp : bool, optional(default=False)
+            Whether or not to interpolate the class activation map during upsampling
+            to produce the feature importances reflected in the LineCollection returned (`lc`).  If False, the importances are reported as the value in the class activation map they are closest to (nearest neighbor) in `x`.
+
         Returns
         -------
-        class_act_map : ndarray
-            Class activation map in the range of [0, 1].
+        class_act_map : ndarray(float, ndim=1)
+            Class activation map in the range of [0, 1]. The size is determined by the
+            size of the output from the last CNN layer in the model.
 
         lc : matplotlib.collections.LineCollection
-            Line collection colored according to class activation map.
+            Line collection colored according to class activation map.  This is an 
+            upsampled version of `class_act_map` and may or may not be interpolated
+            depending on `interp`.
 
         preds : ndarray(float, ndim=1)
             A vector of class probabilities.
@@ -168,43 +191,192 @@ class CAM1D(_CAMExplainer):
             The Keras model architecture is incorrect.
 
         ValueError
-            The spectra is provided in the incorrect shape.
+            The series is provided in the incorrect shape.
         """
-        if len(spectra.shape) == 2:
-            if spectra.shape[1] != 1:
-                raise ValueError("Spectra should have a single channel and have shape (N, 1).")
+        if len(y.shape) == 2:
+            if y.shape[1] != 1:
+                raise ValueError("Series should have a single channel and have shape (N, 1).")
             
             # Checks that architecture is correct internally
             asymm_class_act_map, _, preds, pred_index, conv_layer_name = _make_cam(
                 style=self.style,
-                input=np.expand_dims(spectra, axis=0),
+                input=np.expand_dims(y, axis=0),
                 model=model,
                 conv_layer_name=None, # Auto-detect
             )
 
             lc = _cam_1d(
-                centers, 
-                np.squeeze(spectra), 
+                x, 
+                np.squeeze(y), 
                 asymm_class_act_map, 
-                cmap="Reds", 
-                interp=False
+                cmap=cmap, 
+                interp=interp
             )
         else:
-            raise ValueError("Unexpected shape of spectra")
+            raise ValueError("Unexpected shape of series")
 
         return asymm_class_act_map, lc, preds, pred_index, conv_layer_name
     
-    def visualize(self):
-        # Add features like cmaps to explain as options so we can 
-        # specify them for this function to get nice explanations
-        return
+    def visualize(
+            self, 
+            y,
+            x,
+            model,
+            cmap="Reds",
+            interp=True,
+            enc=None, 
+            figsize=None,
+            fontsize=None,
+            show_lines=False
+        ):
+        """
+        Visualize the predictions and class activation map for a series, such as a spectra.
+
+        Parameters
+        ----------
+        y : ndarray(float, ndim=2)
+            A single (N, 1) series.
+            
+        x : ndarray(float, ndim=1)
+            Location series were measured at in an (N,) array.
+
+        model : keras.Model
+            Model being used.
+
+        cmap : matplotlib.colormaps, optional(default="Reds")
+            Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
+
+        interp : bool, optional(default=True)
+            Whether or not to interpolate the class activation map during upsampling
+            to produce the feature importances reflected in the LineCollection returned (`lc`).  If False, the importances are reported as the value in the CAM they are closest to (nearest neighbor).
+
+        enc : sklearn.preprocessing.OrdinalEncoder, optional(default=None)
+            Encoder used to translate class names into integers. If None labels are reported
+            as integers.
+        
+        figsize : tuple(int, int), optional(default=None)
+            Size of the output figure.
+
+        fontsize : int, optional(default=None)
+            Control the fontsize in the output figure.
+
+        show_lines : bool, optional(default=False)
+            Whether or not to display lines which divide the regions of the series based on
+            where the nearest (in `x`) class activation map point is used for upsampling.  
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.Axes
+            Axes the result is plotted on.
+
+        explanation : tuple
+            class_act_map : ndarray(float, ndim=1)
+                Class activation map in the range of [0, 1]. The size is determined by the
+                size of the output from the last CNN layer in the model.
+
+            lc : matplotlib.collections.LineCollection
+                Line collection colored according to class activation map.  This is an 
+                upsampled version of `class_act_map` and may or may not be interpolated
+                depending on `interp`.
+
+            preds : ndarray(float, ndim=1)
+                A vector of class probabilities.
+
+            pred_index : int
+                The index of the most likely class.
+
+            conv_layer_name : str
+                Name of the last CNN layer found in the network, which is used for explanations.
+            
+        Raises
+        ------
+        Exception
+            The Keras model architecture is incorrect.
+
+        ValueError
+            The series is provided in the incorrect shape.
+        """
+        explanation = self.explain(
+            y=y,
+            x=x,
+            model=model,
+            cmap=cmap,
+            interp=interp
+        )
+        class_act_map, lc, preds, pred_index, _ = explanation
+
+        if enc is not None:
+            classes_ = enc.inverse_transform([[i] for i in range(len(enc.categories_[0]))]).ravel()
+            pred_ = enc.inverse_transform([[pred_index]])[0][0]
+        else:
+            classes_ = [str(c_) for c_ in range(len(preds))]
+            pred_ = pred_index
+
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(8,2) if figsize is None else figsize)
+
+        # Plot raw scores before softmax is applied to compute probabilities
+        ax[0].bar(classes_, preds, color='black', width=0.9)
+        ax[0].set_xticks(ticks=np.arange(len(classes_)), labels=classes_, rotation=90, fontsize=fontsize-2 if fontsize is not None else fontsize)
+        ax[0].set_title('Prediction = {}'.format(pred_), fontsize=fontsize)
+        ax[0].set_ylabel('Raw Scores', fontsize=fontsize)
+
+        # Plot colored series from CAM
+        ax[1].set_xlim(
+            np.min((ax[1].get_xlim()[0], x.min())),
+            np.max((ax[1].get_xlim()[1], x.max()))
+        )
+        ax[1].set_ylim(
+            np.min((ax[1].get_ylim()[0], y.min())),
+            np.max((ax[1].get_ylim()[1], y.max()))
+        )
+        line = ax[1].add_collection(lc)
+        cbar = fig.colorbar(line, ax=ax[1])
+        cbar.ax.tick_params(labelsize=fontsize-2 if fontsize is not None else fontsize)
+        # ax[1].set_xticklabels(ax[1].get_xticklabels(), fontsize=fontsize-2 if fontsize is not None else fontsize)
+        # ax[1].set_yticklabels(ax[1].get_yticklabels(), fontsize=fontsize-2 if fontsize is not None else fontsize)
+
+        if show_lines:
+            # Draw the lines where the colors change (heatmap pixels)
+            for i in range(len(class_act_map)-1):
+                dx = (x[-1] - x[0])/float(len(class_act_map)-1)
+                ax[1].axvline((0.5+i)*dx + x[0], color='k', ls='--')
+
+        return ax, explanation
 
 
-class CAM2D(_CAMExplainer):
-    """Explain 2D spectra classified with CNN using CAM methods."""
+class CAM2D(CAMBaseExplainer):
+    """
+    Use Class Activation Map (CAM) methods to explain 2D images classified with a Convolutional Neural Network (CNN).
+
+    A network architecture ending in a global average pooling (GAP), followed by a single dense layer is recommended for the most consistent explanations. HiResCAM [1] will be guaranteed to reflect areas that increase the prediction's likelihood only when a single dense layer is used at the end, but a GAP is not required (and the last convolutional layer is used for explanation). Grad-CAM [2] does not carry such guarantees.
+
+    Feature importances are bounded between [0, 1] and reflect the explanation of the class predicted for this series. CAM methods compute the importance value of each pixel in output of the last convolutional layer, which is much smaller than the input; e.g., a 256x256 image may end up being 10x10 after the last convolutional layer. This coarse-grained explanation image is upsampled to match the size of the input.  The downsampled image being explained, has a receptive field [3] (portion of the input) that mathematically contributes to its value.  Input pixels contribute differently to each pixel in the CAM which is approximated by interpolating the importance values during upsampling, though this is not rigorous.
+
+    References
+    -----------
+    1. HiResCAM Method: https://arxiv.org/abs/2011.08891
+    2. Grad-CAM Method: https://openaccess.thecvf.com/content_ICCV_2017/papers/Selvaraju_Grad-CAM_Visual_Explanations_ICCV_2017_paper.pdf
+    3. https://github.com/google-research/receptive_field 
+
+    Notes
+    -----
+    This only supports Keras models at the moment.
+    """
 
     def __init__(self, style="hires"):
-        """Instantiate the class."""
+        """
+        Instantiate the class.
+        
+        Parameters
+        ----------
+        style : str
+            'grad' uses Grad-CAM algorithm; 'hires' uses HiResCAM algorithm instead.  If the model has a CAM architecture (it ends in global average pooling then 1 dense layer) these should yield identical results.
+
+        References
+        -----------
+        1. HiResCAM Method: https://arxiv.org/abs/2011.08891
+        2. Grad-CAM Method: https://openaccess.thecvf.com/content_ICCV_2017/papers/Selvaraju_Grad-CAM_Visual_Explanations_ICCV_2017_paper.pdf
+        """
         super().__init__(style=style)
 
     def visualize(
@@ -612,19 +784,16 @@ def _make_cam(
         Should be {'grad', 'hires'} to indicate the style of CAM.
 
     input : ndarray(float, ndim=3 or 4)
-        When explaining a 2D image (1, N, N, C) tensor where the image is NxN with C=1 channels. This must be in 'channels_last' format. When explaining a 1D spectra (1, N, C) tensor where the image is NxN with C=1 channels.
+        When explaining a 2D image (1, N, N, C) tensor where the image is NxN with C=1 channels. This must be in 'channels_last' format. When explaining a 1D series (1, N, C) tensor where the image is NxN with C=1 channels.
 
     model : keras.Model
         Model being used. 
 
     conv_layer_name : str, optional(default=None)
-        Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
-        input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this.
-        If None, defaults to the last convolutional layer before the top.
+        Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this. If None, defaults to the last convolutional layer before the top.
 
     mode : str, optional(default='output')
-        Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}. If `conv_layer_name`
-        is None, this is ignored.
+        Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}. If `conv_layer_name` is None, this is ignored.
 
     pred_index : int, optional(default=None)
         Index of class to compute the activation map with respect to.  If `None`, the most likely class is used.
@@ -852,23 +1021,23 @@ def _make_cam(
             f"Model does not have the right architecture to be explained with the {style} method."
         )
 
-def _cam_1d(centers, spectra, heatmap, cmap="Reds", interp=False):
+def _cam_1d(x, y, heatmap, cmap="Reds", interp=False):
     """
     Explain 1D spectra by coloring it according to a heatmap using upsampling.
 
     Parameters
     ----------
-    centers : ndarray(float, ndim=1)
-        Location spectra were measured at in an (N,) array.
+    x : ndarray(float, ndim=1)
+        Location series were measured at in an (N,) array.
 
-    spectra : ndarray(float, ndim=1)
+    y : ndarray(float, ndim=1)
         A single (N,) spectra.
 
     heatmap : ndarray(float, ndim=1)
-        1D heatmap vector.
+        1D class activation map vector.
 
     cmap : matplotlib.colormaps, optional(default="Reds")
-        Matplotlib colormap to use for spectra heatmap. Best if perceptually uniform.
+        Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
 
     interp : bool, optional(default="False")
         Whether or not to interpolate the coloring.
@@ -879,7 +1048,7 @@ def _cam_1d(centers, spectra, heatmap, cmap="Reds", interp=False):
         Line collection colored according to class activation map.
     """
     # https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html.
-    points = np.array([centers, spectra]).T.reshape(-1, 1, 2)
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
     lc = LineCollection(
         segments,
@@ -893,9 +1062,9 @@ def _cam_1d(centers, spectra, heatmap, cmap="Reds", interp=False):
         # Linearly interpolate
         lc.set_array(
             np.interp(
-                centers,
-                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
-                + centers[0],
+                x,
+                np.linspace(0, 1, len(heatmap)) * (x[-1] - x[0])
+                + x[0],
                 heatmap,
             )
         )
@@ -903,12 +1072,12 @@ def _cam_1d(centers, spectra, heatmap, cmap="Reds", interp=False):
         # Just nearest neighbor - this assumes 'same' padding everywhere
         tree = scipy.spatial.KDTree(
             np.expand_dims(
-                np.linspace(0, 1, len(heatmap)) * (centers[-1] - centers[0])
-                + centers[0],
+                np.linspace(0, 1, len(heatmap)) * (x[-1] - x[0])
+                + x[0],
                 axis=1,
             )
         )
-        indices = tree.query(np.expand_dims(centers, axis=1))[1]
+        indices = tree.query(np.expand_dims(x, axis=1))[1]
         lc.set_array(heatmap[indices])
 
     return lc
