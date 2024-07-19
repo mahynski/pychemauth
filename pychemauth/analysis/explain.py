@@ -183,7 +183,7 @@ class CAM1D(CAMBaseExplainer):
             The index of the most likely class.
 
         conv_layer_name : str
-            Name of the last CNN layer found in the network, which is used for explanations.
+            Name of the last convolutional layer found in the network, which is used for explanations.
         
         Raises
         ------
@@ -196,7 +196,7 @@ class CAM1D(CAMBaseExplainer):
         if len(y.shape) == 2:
             if y.shape[1] != 1:
                 raise ValueError("Series should have a single channel and have shape (N, 1).")
-            
+
             # Checks that architecture is correct internally
             asymm_class_act_map, _, preds, pred_index, conv_layer_name = _make_cam(
                 style=self.style,
@@ -386,8 +386,6 @@ class CAM2D(CAMBaseExplainer):
         image,
         correct_label,
         model,
-        conv_layer_name,
-        mode,
         image_cmap=matplotlib.colormaps["jet"],
         spectra_cmap="Reds",
         encoder=None,
@@ -413,13 +411,6 @@ class CAM2D(CAMBaseExplainer):
         model : keras.Model
             Model being used. 
 
-        conv_layer_name : str
-            Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
-            input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this.
-
-        mode : str
-            Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}.
-
         image_cmap : matplotlib.colormaps, optional(default=matplotlib.colormaps["jet"])
             Matplotlib colormap to use for the 2D heatmap.
 
@@ -440,17 +431,36 @@ class CAM2D(CAMBaseExplainer):
         fig2 : matplotlib.pyplot.figure
             Figure showing the colored heatmaps.
         """
-        cmap_heatmap, lc, preds, pred_index = self.explain(
-            centers,
-            spectra,
-            image,
-            model,
-            conv_layer_name,
-            mode=mode,
+        asymm_class_act_map, symm_class_act_map, cmap_heatmap, lc, preds, pred_index, _ = self.explain(
+            centers=centers,
+            spectra=spectra,
+            image=image,
+            model=model,
             image_cmap=image_cmap,
             spectra_cmap=spectra_cmap,
             symmetrize=symmetrize,
         )
+
+        # Use the CAM to create an alpha mask for visualization
+        alpha_map = asymm_class_act_map if not symmetrize else symm_class_act_map
+        alpha_map = self._upsample(
+            image_shape=(image.shape[1], image.shape[0]),
+            image=np.expand_dims(alpha_map, axis=-1)
+        )
+        alpha_map = np.squeeze(
+            alpha_map / 255., # Convert back to [0, 1] range
+            axis=-1
+        )
+
+        # alpha_map = keras.utils.array_to_img(np.expand_dims(alpha_map, axis=-1))
+        # alpha_map = alpha_map.resize(
+        #             (image.shape[1], image.shape[0]),
+        #             resample=PIL.Image.BILINEAR,  # Do linear interpolation to be consistent with interpolation of 1D
+        #         )
+        # alpha_map = np.squeeze(
+        #     keras.utils.img_to_array(alpha_map) / 255., # Convert back to [0, 1] range
+        #     axis=-1
+        # )
 
         # 1. Plot raw score output
         if encoder is not None:
@@ -529,7 +539,7 @@ class CAM2D(CAMBaseExplainer):
 
         # Plot the image
         ax_gaf = fig2.add_subplot(gs[1, 1])
-        im1 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin="lower")
+        im1 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin="lower", alpha=alpha_map)
         ax_gaf.set_xticks([])
         ax_gaf.set_yticks([])
         ax_gaf.set_title("Imaged Spectra", y=-0.09)
@@ -563,14 +573,12 @@ class CAM2D(CAMBaseExplainer):
     def explain(
         self,
         centers,
-        spectra,
         image,
         model,
-        conv_layer_name,
-        mode="output",
-        image_cmap=matplotlib.colormaps["jet"],
-        spectra_cmap="Reds",
         symmetrize=False,
+        image_cmap=matplotlib.colormaps["jet"],
+        spectra=None,
+        spectra_cmap="Reds",
     ):
         """
         Produce a color-coded explanation for the classification of a spectra.
@@ -580,82 +588,84 @@ class CAM2D(CAMBaseExplainer):
         centers : ndarray(float, ndim=1)
             Location spectra were measured at in an (N,) array.
 
-        spectra : ndarray(float, ndim=1)
-            A single (N,) spectra.
-
         image : ndarray(float, ndim=3)
             Imaged spectra as a single (N, N, 1) tensor where the image is NxN with 1 channel (must be in 'channels_last' format).
 
         model : keras.Model
             Model being used.
 
-        conv_layer_name : str
-            Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
-            input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this.
-
-        mode : str, optional(default='output')
-            Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}.
+        symmetrize : bool, optional(default=False)
+            Whether to use the symmetric CAM for 2D visualization. Symmetrization is applied before normalizing (incl. applying a ReLU). This means that if (i,j) helps but (j,i) hurts, then the averaging done by symmetrizing should be done before ReLU since the parts of the image that might decrease class probability are rounded up to 0, artificially inflating the representation of how much the model really interacts with the i-j peaks.
 
         image_cmap : matplotlib.colormaps, optional(default=matplotlib.colormaps["jet"])
             Matplotlib colormap to use for the 2D heatmap.
 
+        spectra : ndarray(float, ndim=1), optional(default=None)
+            A single (N,) spectra. If provided, assumes we are examining an "imaged" version of this series.
+            
         spectra_cmap : matplotlib.colormaps, optional(default="Reds")
-            Matplotlib colormap to use for the spectra heatmap. Best if perceptually uniform.
-
-        symmetrize : bool, optional(default=False)
-            Whether to use the symmetric CAM for 2D visualization. Symmetrization is applied before normalizing (incl. applying a ReLU).
-            This means that if (i,j) helps but (j,i) hurts, then the averaging done by symmetrizing should be done before ReLU since
-            the parts of the image that might decrease class probability are rounded up to 0, artificially inflating the representation
-            of how much the model really interacts with the i-j peaks.
+            Matplotlib colormap to use for the spectra heatmap, if provided. Best if perceptually uniform.
 
         Returns
         -------
+        asymm_class_act_map : ndarray(float, ndim=2)
+            Asymmetric class activation map.
+
+        symm_class_act_map : ndarray(float, ndim=2)
+            Symmetric class activation map.
+
         cmap_heatmap : ndarray(float, ndim=3)
             (N, N, 3) RBG colormap of class activations.
 
         lc : matplotlib.collections.LineCollection
-            Line collection colored according to "condensed" class activation map.
+            Line collection colored according to "condensed" class activation map if a 1D series is provided. If a series was not provided, this is returned as `None`.
 
         preds : ndarray(float, ndim=1)
             A vector of class probabilities.
 
         pred_index : int
             The index of the most likely class.
+
+        conv_layer_name : str
+            Name of the last convolutional layer found in the network, which is used for explanations.
         """
         if len(image.shape) == 3:
             (
                 cmap_heatmap,
-                _,
+                asymm_class_act_map,
                 symm_class_act_map,
                 preds,
                 pred_index,
+                conv_layer_name
             ) = self._explain_2d(
                 image=np.expand_dims(
                     image, axis=0
                 ),  # Make into a batch with only 1 entry
                 model=model,
-                conv_layer_name=conv_layer_name,
-                mode=mode,
                 cmap=image_cmap,
                 symmetrize=symmetrize,
             )
-            lc = _cam_1d(
-                centers=centers,
-                spectra=spectra,  # may need to np.squeeze(spectra, axis=-1)
-                # symm_class_act_map=symm_class_act_map,
-                heatmap=np.mean(
-                    symm_class_act_map, axis=0
-                ),  # Average across "columns"
-                cmap=spectra_cmap,
-                interp=False,
-            )
+            if spectra is None:
+                # Explaining a 2D image, or we do not have access to the original spectra
+                lc = None
+            else:
+                # Explaining an "imaged" series such as a spectra
+                lc = _cam_1d(
+                    x=centers,
+                    y=spectra,  # may need to np.squeeze(spectra, axis=-1)
+                    heatmap=np.mean(
+                        symm_class_act_map, axis=0
+                    ),  # Average across "columns" - use symmetric version
+                    cmap=spectra_cmap,
+                    interp=False,
+                )
         else:
             raise ValueError("Unexpected shape of image")
 
-        return cmap_heatmap, lc, preds, pred_index
+        return asymm_class_act_map, symm_class_act_map, cmap_heatmap, lc, preds, pred_index, conv_layer_name
 
     def _explain_2d(
-        self, image, model, conv_layer_name, mode, cmap, symmetrize
+        self, image, model, cmap, symmetrize
     ):
         """
         Explain a 2D image.
@@ -668,21 +678,11 @@ class CAM2D(CAMBaseExplainer):
         model : keras.Model
             Model being used.
 
-        conv_layer_name : str
-            Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the
-            input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this.
-
-        mode : str
-            Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}.
-
         cmap : matplotlib.colormaps
             Matplotlib colormap to use for the 2D heatmap.
 
         symmetrize : bool
-            Whether to use the symmetric CAM for 2D visualization. Symmetrization is applied before normalizing (incl. applying a ReLU).
-            This means that if (i,j) helps but (j,i) hurts, then the averaging done by symmetrizing should be done before ReLU since
-            the parts of the image that might decrease class probability are rounded up to 0, artificially inflating the representation
-            of how much the model really interacts with the i-j peaks.
+            Whether to use the symmetric CAM for 2D visualization. Symmetrization is applied before normalizing (incl. applying a ReLU). This means that if (i,j) helps but (j,i) hurts, then the averaging done by symmetrizing should be done before ReLU since the parts of the image that might decrease class probability are rounded up to 0, artificially inflating the representation of how much the model really interacts with the i-j peaks.
 
         Returns
         -------
@@ -700,21 +700,29 @@ class CAM2D(CAMBaseExplainer):
 
         pred_index : int
             The index of the most likely class.
+
+        conv_layer_name : str
+            Name of the last convolutional layer found in the network, which is used for explanations.
         """
+
+        # Checks that architecture is correct internally
         asymm_class_act_map, symm_class_act_map, preds, pred_index, conv_layer_name = _make_cam(
             style=self.style,
             input=image,
             model=model,
-            conv_layer_name=conv_layer_name,
-            mode=mode,
+            conv_layer_name=None, # Auto-detect
         )
 
-        cmap_heatmap = self._fit_heatmap(
-            image_shape=(image.shape[2], image.shape[1]),
-            class_act_map=(
-                symm_class_act_map if symmetrize else asymm_class_act_map
-            ),
-            cmap=cmap,
+        class_act_map = (symm_class_act_map if symmetrize else asymm_class_act_map)
+        heatmap = np.uint8(255 * class_act_map) # Create a scaled heatmap in a range 0-255 (CAM is in range [0, 1] already)
+        cmap_colors = cmap(np.arange(256))[:, :3]
+        cmap_heatmap = cmap_colors[heatmap]
+
+        cmap_heatmap = np.uint8(
+            self._upsample(
+                image_shape=(image.shape[2], image.shape[1]),
+                image=cmap_heatmap,
+            )
         )
 
         return (
@@ -723,10 +731,11 @@ class CAM2D(CAMBaseExplainer):
             symm_class_act_map,
             preds,
             pred_index,
+            conv_layer_name
         )
 
-    def _fit_heatmap(
-        self, image_shape, class_act_map, cmap=matplotlib.colormaps["jet"]
+    def _upsample(
+        self, image_shape, image #class_act_map, cmap=matplotlib.colormaps["jet"]
     ):
         """
         Compute colored heatmap and rescale to size of input image.
@@ -750,21 +759,21 @@ class CAM2D(CAMBaseExplainer):
             Linearly interpolated resized heatmap.
         """
         # Create a scaled heatmap in a range 0-255 (CAM is in range [0, 1] already)
-        heatmap = np.uint8(255 * class_act_map)
+        # heatmap = np.uint8(255 * class_act_map)
 
         # Use colormap to colorize heatmap (use only RGB values of the colormap)
-        cmap_colors = cmap(np.arange(256))[:, :3]
-        cmap_heatmap = cmap_colors[heatmap]
+        # cmap_colors = cmap(np.arange(256))[:, :3]
+        # cmap_heatmap = cmap_colors[heatmap]
 
         # Create an image with RGB colorized heatmap
-        cmap_heatmap = keras.utils.array_to_img(cmap_heatmap)
-        cmap_heatmap = cmap_heatmap.resize(
+        image = keras.utils.array_to_img(image)
+        image = image.resize(
             image_shape,
             resample=PIL.Image.BILINEAR,  # Do linear interpolation to be consistent with interpolation of 1D
         )
-        cmap_heatmap = keras.utils.img_to_array(cmap_heatmap)
+        image = keras.utils.img_to_array(image)
 
-        return np.uint8(cmap_heatmap)
+        return image #np.uint8(cmap_heatmap)
 
 
 def _make_cam(
@@ -800,10 +809,10 @@ def _make_cam(
 
     Returns
     -------
-    asymm_class_act_map : ndarray
+    asymm_class_act_map : ndarray(float, ndim=1 or 2)
         Asymmmetric CAM in the range of [0, 1].
 
-    symm_class_act_map : ndarray
+    symm_class_act_map : ndarray(float, ndim=1 or 2)
         Symmmetric CAM in the range of [0, 1].
 
     preds : ndarray(float, ndim=1)
@@ -822,16 +831,28 @@ def _make_cam(
     """
 
     def _is_conv(layer, return_dim=False):
-        # Check if a layer is convolutional
+        # Check if a layer is convolutional - meant to check the model's base.
+        # If the base is a pretrained Keras application we need to use the 'input' to
+        # the next layer, not the 'output' of this part for the gradcam algorithm.
+        # This performs these checks.
         for type_ in [keras.layers.Conv1D]:
             if isinstance(layer, type_):
-                return (True, 1) if return_dim else True
+                return (True, 1, None) if return_dim else True
 
         for type_ in [keras.layers.Conv2D]:
             if isinstance(layer, type_):
-                return (True, 2) if return_dim else True
+                return (True, 2, None) if return_dim else True
+            
+        # No easy way to check if we are using a pre-trained CNN base
+        # from Keras applications; best way I can think of for now is
+        # to recognize this as a functional.Functional as assume it is
+        # for 2D since at the moment only 2D image classifiers are 
+        # available in Keras.
+        for type_ in [keras.engine.functional.Functional]:
+            if isinstance(layer, type_):
+                return (True, 2, 'input') if return_dim else True
 
-        return (False, 0) if return_dim else False
+        return (False, 0, None) if return_dim else False
 
     def _is_gap(layer):
         # Check if a layer does global average pooling
@@ -862,80 +883,98 @@ def _make_cam(
 
     def _check_last_cnn(dense_position, conv_layer_name, mode):
         # Check we are explaining the last CNN layer in the network
-        # Assumes CNN -> GAP -> Dense
+        # Assumes CNN / keras.engine.functional.Functional -> GAP -> Dense
         if (
             mode == "output"
             and model.layers[dense_position - 2].name != conv_layer_name
         ): # Output of CNN
             raise Exception(
-                "You are not explaining the last CNN layer in the network."
+                "You are not explaining the last convolutional layer in the network."
             )
         if (
             mode == "input"
-            and mode.layers[dense_position - 1].name != conv_layer_name
+            and model.layers[dense_position - 1].name != conv_layer_name
         ): # Input to GAP layer
             raise Exception(
-                "You are not explaining the last CNN layer in the network."
+                "You are not explaining the last convolutional layer in the network."
             )
         return True
 
     def _is_valid(model, conv_layer_name):
         # Check the overall model architecture
         check, dense_position = _ends_with_dense(model)
+        effective_mode = mode
+
         if (
             check
             and _is_gap(model.layers[dense_position - 1])
             and _is_conv(model.layers[dense_position - 2])
         ):
             # CAM architecture - can explain with either method and should give identical results
-            _, dim = _is_conv(model.layers[dense_position - 2], return_dim=True)
+            _, dim, mode_override = _is_conv(model.layers[dense_position - 2], return_dim=True)
+            if mode_override is not None:
+                effective_mode = mode_override
+
             if conv_layer_name is None:
                 # Choose default
-                conv_layer_name = model.layers[dense_position - 2].name
+                if effective_mode == 'input': # Functional Keras base so need to use input mode
+                    conv_layer_name = model.layers[dense_position - 2 + 1].name
+                else:
+                    conv_layer_name = model.layers[dense_position - 2].name
+                    effective_mode = 'output'
+
                 _ = _check_last_cnn(
                     dense_position, 
                     conv_layer_name=conv_layer_name, 
-                    mode='output'
+                    mode=effective_mode
                 )
             else:
                 # Check user-specified layer and mode
                 _ = _check_last_cnn(
                     dense_position, 
                     conv_layer_name=conv_layer_name, 
-                    mode=mode
+                    mode=effective_mode
                 )
             if style in ["grad", "hires"]:
-                return True, dense_position, dim, conv_layer_name
+                return True, dense_position, dim, conv_layer_name, effective_mode
         elif check and _is_conv(model.layers[dense_position - 1]):
             # CNN -> Dense without GAP can still be explained with HiResCAM
-            _, dim = _is_conv(model.layers[dense_position - 1], return_dim=True)
+            _, dim, mode_override = _is_conv(model.layers[dense_position - 1], return_dim=True)
+            if mode_override is not None:
+                effective_mode = mode_override
+
             if conv_layer_name is None:
                 # Choose default
-                conv_layer_name = model.layers[dense_position - 1].name
+                if effective_mode == 'input': # Functional Keras base so need to use input mode
+                    conv_layer_name = model.layers[dense_position - 1 + 1].name
+                else:
+                    conv_layer_name = model.layers[dense_position - 1].name
+                    effective_mode = 'output'
+                
                 _ = _check_last_cnn(
                     dense_position + 1, # Hack to get logic to understand CNN right before Dense
                     conv_layer_name=conv_layer_name, 
-                    mode='output'
+                    mode=effective_mode
                 )
             else:
                 # Check user-specified layer and mode
                 _ = _check_last_cnn(
                     dense_position + 1, # Hack to get logic to understand CNN right before Dense
                     conv_layer_name=conv_layer_name, 
-                    mode=mode
+                    mode=effective_mode
                 )
             if style == "hires":
-                return True, dense_position, dim, conv_layer_name
+                return True, dense_position, dim, conv_layer_name, effective_mode
             else:
                 raise Exception(
                     "Cannot safely explain this model with GradCAM; use HiResCAM instead."
                 )
         else:
             pass
-        return False, dense_position, 0, conv_layer_name
+        return False, dense_position, 0, conv_layer_name, effective_mode
 
     # Check the model has the right architecture to be safely explained
-    valid, _, dim, conv_layer_name = _is_valid(model, conv_layer_name)
+    valid, _, dim, conv_layer_name, effective_mode = _is_valid(model, conv_layer_name)
     if valid:
         last_layer_act = model.layers[-1].activation
 
@@ -948,7 +987,7 @@ def _make_cam(
             model.inputs,
             [
                 model.get_layer(conv_layer_name).output
-                if mode == "output"
+                if effective_mode == "output"
                 else model.get_layer(conv_layer_name).input,
                 model.output,
             ],
