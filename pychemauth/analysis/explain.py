@@ -154,7 +154,7 @@ class CAM1D(CAMBaseExplainer):
         cmap : matplotlib.colormaps, optional(default="Reds")
             Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
 
-        interp : bool, optional(default=False)
+        interp : bool, optional(default=True)
             Whether or not to interpolate the class activation map during upsampling
             to produce the feature importances reflected in the LineCollection returned (`lc`).  If False, the importances are reported as the value in the class activation map they are closest to (nearest neighbor) in `x`.
 
@@ -207,7 +207,11 @@ class CAM1D(CAMBaseExplainer):
             )
 
             lc = _color_1d(
-                x, np.squeeze(y), asymm_class_act_map, cmap=cmap, interp=interp
+                x=x,
+                y=np.squeeze(y),
+                importances=asymm_class_act_map,
+                cmap=cmap,
+                interp=interp,
             )
         else:
             raise ValueError("Unexpected shape of series")
@@ -420,7 +424,9 @@ class CAM2D(CAMBaseExplainer):
             The series is provided in the incorrect shape.
             The value of `dim` is not in {1, 2}.
         """
-        asymm_class_act_map, symm_class_act_map, _, lc, _, _, _ = self.explain_(
+        _, _, _, lc, _, _, _, importances = self.explain_(
+            x=np.arange(0, image.shape[1], dtype=np.float64),  # Dummy values
+            y=np.arange(0, image.shape[0], dtype=np.float64),  # Dummy values
             image=image,
             model=model,
             symmetrize=symmetrize,
@@ -428,21 +434,11 @@ class CAM2D(CAMBaseExplainer):
         )
 
         if dim == 1:
-            return self._condense(
-                series_summary=series_summary,
-                symm_class_act_map=symm_class_act_map,
-            )
+            # This condenses CAM then linearly interpolates to full size spectra
+            return lc.get_array().data
         elif dim == 2:
-            return self._resize(
-                image=np.expand_dims(
-                    asymm_class_act_map
-                    if not symmetrize
-                    else symm_class_act_map,
-                    axis=-1,
-                ),
-                image_shape=(image.shape[1], image.shape[0]),
-                rescale=True,
-            )
+            # (bi)Linearly interpolate CAM to larger image size
+            return importances
         else:
             raise ValueError("Invalid dim value; must be in {1, 2}.")
 
@@ -489,16 +485,17 @@ class CAM2D(CAMBaseExplainer):
         Returns
         -------
         asymm_class_act_map : ndarray(float, ndim=2)
-            Asymmetric class activation map.
+            Asymmetric class activation map in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
         symm_class_act_map : ndarray(float, ndim=2)
-            Symmetric class activation map.
+            Symmetric class activation map in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
         cmap_heatmap : ndarray(float, ndim=3)
             (N, N, 3) RBG colormap of class activations.
 
         lc : matplotlib.collections.LineCollection
-            Line collection colored according to "condensed" class activation map if a 1D series is provided. If a series was not provided, this is returned as `None`.
+            Line collection colored according to "condensed" class activation map if a 1D series is provided. This is an
+            upsampled version of `symm_class_act_map`. If a series was not provided, this is returned as `None`.
 
         preds : ndarray(float, ndim=1)
             A vector of class probabilities.
@@ -508,8 +505,20 @@ class CAM2D(CAMBaseExplainer):
 
         conv_layer_name : str
             Name of the last convolutional layer found in the network, which is used for explanations.
+
+        importances : ndarray(float, ndim=2)
+            Feature importance of each pixel [0, 1] with the original image size (N, N).
+
+        Raises
+        ------
+        ValueError
+            If the image has the wrong shape.
+            If the image is not square (N, N, 1).
         """
         if len(image.shape) == 3:
+            if image.shape[0] != image.shape[1]:
+                raise ValueError("Image should be square.")
+
             (
                 cmap_heatmap,
                 asymm_class_act_map,
@@ -525,6 +534,18 @@ class CAM2D(CAMBaseExplainer):
                 cmap=image_cmap,
                 symmetrize=symmetrize,
             )
+
+            importances = self._resize(
+                image=np.expand_dims(
+                    asymm_class_act_map
+                    if not symmetrize
+                    else symm_class_act_map,
+                    axis=-1,
+                ),
+                image_shape=(image.shape[1], image.shape[0]),
+                rescale=True,
+            )
+
             if y is None:
                 # Explaining a 2D image, or we do not have access to the original spectra
                 lc = None
@@ -533,12 +554,12 @@ class CAM2D(CAMBaseExplainer):
                 lc = _color_1d(
                     x=x,
                     y=y,
-                    heatmap=self._condense(
+                    importances=self._condense(
                         series_summary=series_summary,
-                        symm_class_act_map=symm_class_act_map,
+                        symm_map=symm_class_act_map,
                     ),
                     cmap=series_cmap,
-                    interp=True,  # Shouldn't matter because 1D spectra same size as 2D image edge
+                    interp=True,
                 )
         else:
             raise ValueError("Unexpected shape of image")
@@ -551,6 +572,7 @@ class CAM2D(CAMBaseExplainer):
             preds,
             pred_index,
             conv_layer_name,
+            importances,
         )
 
     def visualize(
@@ -606,13 +628,14 @@ class CAM2D(CAMBaseExplainer):
             Figure showing the colored heatmaps.
         """
         (
-            asymm_class_act_map,
-            symm_class_act_map,
+            _,
+            _,
             cmap_heatmap,
             lc,
             preds,
             pred_index,
             _,
+            importances,
         ) = self.explain_(
             x=x,
             y=y,
@@ -621,16 +644,6 @@ class CAM2D(CAMBaseExplainer):
             image_cmap=image_cmap,
             series_cmap=series_cmap,
             symmetrize=symmetrize,
-        )
-
-        # Use the CAM to create an alpha mask for visualization
-        alpha_map = self._resize(
-            image=np.expand_dims(
-                asymm_class_act_map if not symmetrize else symm_class_act_map,
-                axis=-1,
-            ),
-            image_shape=(image.shape[1], image.shape[0]),
-            rescale=True,
         )
 
         # 1. Plot raw score output
@@ -737,7 +750,7 @@ class CAM2D(CAMBaseExplainer):
         # Plot the image with alpha to indicate relevance / explanation
         ax_expl = fig2.add_subplot(gs[1, 5])
         im3 = ax_expl.imshow(
-            image[:, :, 0], cmap=image_cmap, origin="lower", alpha=alpha_map
+            image[:, :, 0], cmap=image_cmap, origin="lower", alpha=importances
         )
         ax_expl.set_xticks([])
         ax_expl.set_yticks([])
@@ -787,10 +800,10 @@ class CAM2D(CAMBaseExplainer):
             (N, N, 3) RGB heatmap of class activations.
 
         asymm_class_act_map : ndarray(float, ndim=2)
-            Asymmetric class activation map.
+            Asymmetric class activation map in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
         symm_class_act_map : ndarray(float, ndim=2)
-            Symmetric class activation map.
+            Symmetric class activation map in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
         preds : ndarray(float, ndim=1)
             A vector of class probabilities.
@@ -877,7 +890,7 @@ class CAM2D(CAMBaseExplainer):
             # Convert to uint8 for image convention
             return np.uint8(image)
 
-    def _condense(self, series_summary, symm_class_act_map):
+    def _condense(self, series_summary, symm_map):
         """
         Condense a 2D symmetric CAM to a 1D version.
 
@@ -886,21 +899,21 @@ class CAM2D(CAMBaseExplainer):
         series_summary : str, optional(default='mean')
             Method to summarize the 2D explanation on a 1D series.  The default, 'mean', takes the average across the rows (equivalently, columns) of the symmetrized image.  Must be in {'mean', 'max'}.
 
-        symm_class_act_map : ndarray(float, ndim=2)
+        symm_map : ndarray(float, ndim=2)
             Symmetric class activation map.
 
         Returns
         -------
         condensed : ndarray(float, ndim=1)
-            Condensed version of `symm_class_act_map`.
+            Condensed version of `symm_map`.
         """
         if series_summary.lower() == "mean":
             condensed = np.mean(
-                symm_class_act_map, axis=0
+                symm_map, axis=0
             )  # Average across "columns" - always use symmetric version, otherwise ambiguous if we should use columns or rows since they could differ
         elif series_summary.lower() == "max":
             condensed = np.max(
-                symm_class_act_map, axis=0
+                symm_map, axis=0
             )  # Take max across "columns" - always use symmetric version, otherwise ambiguous if we should use columns or rows since they could differ
         else:
             raise ValueError(
@@ -944,10 +957,10 @@ def _make_cam(
     Returns
     -------
     asymm_class_act_map : ndarray(float, ndim=1 or 2)
-        Asymmmetric CAM in the range of [0, 1].
+        Asymmmetric CAM in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
     symm_class_act_map : ndarray(float, ndim=1 or 2)
-        Symmmetric CAM in the range of [0, 1].
+        Symmmetric CAM in the range of [0, 1]. The size is determined by the size of the output from the last CNN layer in the model.
 
     preds : ndarray(float, ndim=1)
         A vector of class probabilities.
@@ -1219,7 +1232,7 @@ def _make_cam(
         )
 
 
-def _color_1d(x, y, heatmap, cmap="Reds", interp=True, bounds=None):
+def _color_1d(x, y, importances, cmap="Reds", interp=True, bounds=None):
     """
     Explain 1D series by coloring it according to a heatmap using upsampling.
 
@@ -1231,11 +1244,11 @@ def _color_1d(x, y, heatmap, cmap="Reds", interp=True, bounds=None):
     y : ndarray(float, ndim=1)
         A single (N,) series, such as a 1D spectra.
 
-    heatmap : ndarray(float, ndim=1)
-        1D class activation map vector.
+    importances : ndarray(float, ndim=1)
+        1D vector to color based on, e.g., the class activation map.
 
     cmap : matplotlib.colormaps, optional(default="Reds")
-        Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
+        Matplotlib colormap to use for the `importances`. Best if perceptually uniform.
 
     interp : bool, optional(default=True)
         Whether or not to interpolate the coloring.
@@ -1254,7 +1267,7 @@ def _color_1d(x, y, heatmap, cmap="Reds", interp=True, bounds=None):
     lc = LineCollection(
         segments,
         cmap=cmap,
-        norm=plt.Normalize(heatmap.min(), heatmap.max())
+        norm=plt.Normalize(importances.min(), importances.max())
         if bounds is None
         else plt.Normalize(bounds[0], bounds[1]),  # For improved visualization
     )
@@ -1264,20 +1277,20 @@ def _color_1d(x, y, heatmap, cmap="Reds", interp=True, bounds=None):
         lc.set_array(
             np.interp(
                 x,
-                np.linspace(0, 1, len(heatmap)) * (x[-1] - x[0]) + x[0],
-                heatmap,
+                np.linspace(0, 1, len(importances)) * (x[-1] - x[0]) + x[0],
+                importances,
             )
         )
     else:
         # Just nearest neighbor - this assumes 'same' padding everywhere
         tree = scipy.spatial.KDTree(
             np.expand_dims(
-                np.linspace(0, 1, len(heatmap)) * (x[-1] - x[0]) + x[0],
+                np.linspace(0, 1, len(importances)) * (x[-1] - x[0]) + x[0],
                 axis=1,
             )
         )
         indices = tree.query(np.expand_dims(x, axis=1))[1]
-        lc.set_array(heatmap[indices])
+        lc.set_array(importances[indices])
 
     return lc
 
@@ -1340,7 +1353,7 @@ def color_series(
     lc = _color_1d(
         x=x,
         y=y,
-        heatmap=np.asarray(importance_values, dtype=np.float64).ravel(),
+        importances=np.asarray(importance_values, dtype=np.float64).ravel(),
         cmap=cmap,
         interp=True,  # Shouldn't matter if x.shape == y.shape
         bounds=bounds,
