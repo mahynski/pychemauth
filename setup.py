@@ -47,6 +47,6 @@ setup(
         "xgboost==2.0.0",
         "missingno==0.5.2",
         "huggingface_hub==0.23.4",
-        "tensorflow==2.12.0", # This command should install keras==2.12.0 as well, which is critical
+        "tensorflow==2.12.0",  # This command should install keras==2.12.0 as well, which is critical
     ],
 )

@@ -923,63 +923,71 @@ class CAM2D(CAMBaseExplainer):
         return condensed
 
 
-def _check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
+def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
     """
     Check if a Keras model has a valid architecture for CAM explanation.
-    
+
     There are 2 valid architectures:
     1. BASE -> [GAP -> Dropout (optional) -> Dense]
     2. BASE -> [Flatten -> Dropout (optional) -> Dense]
-    where BASE = CNN or a pretrained convolutional keras.engine.functional.Functional and the [bracketed] part is the 
+    where BASE = CNN or a pretrained convolutional keras.engine.functional.Functional and the [bracketed] part is the
     TOP.
-    
-    If BASE is pretrained then it can be complicated, in practice, to point to the "output" of the last convolutional 
+
+    If BASE is pretrained then it can be complicated, in practice, to point to the "output" of the last convolutional
     layer.  Instead, we can use the "input" to the next layer (first in the TOP) which would be either the GAP or Flatten.
-    
+
     Parameters
     ----------
     model : keras.Model
         Model being used.
-        
+
     style : str
         Should be {'grad', 'hires'} to indicate the style of CAM.
-        
+
     conv_layer_name : str, optional(default=None)
         Name of the Keras layer being explained. Sometimes these layers are hidden as a function so it easier to reference the input to the subsequent layer, rather than the output of the layer desired.  `mode` controls this. If None, defaults to the last convolutional layer before the TOP.
 
     mode : str, optional(default=None)
         Whether to explain the output or input of the `conv_layer_name` layer. Expects either {'output', 'input'}. If `conv_layer_name` is None, this is ignored.
-    
-        
+
     Returns
     -------
     valid : bool
         Whether the model has a valid architecture.
-    
+
     position : int
         Layer position, relative to the model end, where the GAP or Flatten is.
-        
+
     dim : int
         Dimensionality of the model (either 1D or 2D).
-        
+
     layer_name : str
         Name of the terminal convolutional layer being explained.  If `effective_mode` is input, this will be the name of the next layer.
-    
+
     effective_mode : str
-        Whether to explain the output or input of the `conv_layer_name` layer. 
+        Whether to explain the output or input of the `conv_layer_name` layer.
     """
+
     def _is_conv(layer, return_dim=False):
         # Check if a layer is convolutional - meant to check the model's base.
         # If the base is a pretrained Keras application we need to use the 'input' to
         # the next layer, not the 'output' of this part for the gradcam algorithm.
         # This performs these checks.
-        
+
         # Pooling after other convolutional layers is also acceptable, just not Global pooling
-        for type_ in [keras.layers.Conv1D, keras.layers.MaxPooling1D, keras.layers.AveragePooling1D]:
+        for type_ in [
+            keras.layers.Conv1D,
+            keras.layers.MaxPooling1D,
+            keras.layers.AveragePooling1D,
+        ]:
             if isinstance(layer, type_):
                 return (True, 1, None) if return_dim else True
 
-        for type_ in [keras.layers.Conv2D, keras.layers.MaxPooling2D, keras.layers.AveragePooling2D]:
+        for type_ in [
+            keras.layers.Conv2D,
+            keras.layers.MaxPooling2D,
+            keras.layers.AveragePooling2D,
+        ]:
             if isinstance(layer, type_):
                 return (True, 2, None) if return_dim else True
 
@@ -1007,26 +1015,29 @@ def _check_cam_model_architecture(model, style, conv_layer_name=None, mode=None)
 
     def _ends_with_dense(model):
         # Check the model ends with a dense layer.
-        valid = [keras.activations.softmax, keras.activations.sigmoid] # Could be softmax (multiclass) or logistic (binary)
+        valid = [
+            keras.activations.softmax,
+            keras.activations.sigmoid,
+        ]  # Could be softmax (multiclass) or logistic (binary)
         if isinstance(model.layers[-1], keras.layers.Dense):
             # Ends with a dense layer with a softmax activation
             if model.layers[-1].activation in valid:
                 return True, -1
-        elif isinstance(
-            model.layers[-1], keras.layers.Activation
-        ):
+        elif isinstance(model.layers[-1], keras.layers.Activation):
             # Activation specified manually after a linear dense layer
-            if model.layers[-1].activation in valid: 
+            if model.layers[-1].activation in valid:
                 if isinstance(model.layers[-2], keras.layers.Dense):
-                    if model.layers[-2].activation == keras.activations.linear: # Must not be an activation here
+                    if (
+                        model.layers[-2].activation == keras.activations.linear
+                    ):  # Must not be an activation here
                         return True, -2
         return False, 0
-    
+
     def _dropout_adjust(dense_position, model):
         # Positional adjustment if there is an optional dropout layer before the final Dense layer
-        if isinstance(model.layers[dense_position-1], keras.layers.Dropout):
+        if isinstance(model.layers[dense_position - 1], keras.layers.Dropout):
             return -1
-        else: 
+        else:
             return 0
 
     def _check_last_cnn(dense_position, conv_layer_name, mode):
@@ -1046,13 +1057,15 @@ def _check_cam_model_architecture(model, style, conv_layer_name=None, mode=None)
                 "You are not explaining the last convolutional layer in the network."
             )
         return True
-    
-    def _certify_mode(model, dense_position, terminal_dropout, conv_layer_name, mode):
+
+    def _certify_mode(
+        model, dense_position, terminal_dropout, conv_layer_name, mode
+    ):
         # Check the mode of operation is consistent with where the last convolutional layer is
         _, dim, mode_override = _is_conv(
-            model.layers[dense_position+terminal_dropout - 2], return_dim=True
+            model.layers[dense_position + terminal_dropout - 2], return_dim=True
         )
-        
+
         effective_mode = mode
         if mode_override is not None:
             effective_mode = mode_override
@@ -1062,59 +1075,70 @@ def _check_cam_model_architecture(model, style, conv_layer_name=None, mode=None)
             if (
                 effective_mode == "input"
             ):  # Functional Keras base so need to use input mode to next layer
-                conv_layer_name = model.layers[dense_position+terminal_dropout - 2 + 1].name
+                conv_layer_name = model.layers[
+                    dense_position + terminal_dropout - 2 + 1
+                ].name
             else:
                 # Point directly to output of the BASE
-                conv_layer_name = model.layers[dense_position+terminal_dropout - 2].name
+                conv_layer_name = model.layers[
+                    dense_position + terminal_dropout - 2
+                ].name
                 effective_mode = "output"
 
             _ = _check_last_cnn(
-                dense_position+terminal_dropout,
+                dense_position + terminal_dropout,
                 conv_layer_name=conv_layer_name,
                 mode=effective_mode,
             )
         else:
             # Check user-specified layer and mode are correct
             _ = _check_last_cnn(
-                dense_position+terminal_dropout,
+                dense_position + terminal_dropout,
                 conv_layer_name=conv_layer_name,
                 mode=effective_mode,
             )
-        
+
         return dim, conv_layer_name, effective_mode
 
     # Check the overall model architecture
     check, dense_position = _ends_with_dense(model)
     terminal_dropout = _dropout_adjust(dense_position, model)
-    
+
     if (
         check
-        and _is_gap(model.layers[dense_position+terminal_dropout - 1])
-        and _is_conv(model.layers[dense_position+terminal_dropout - 2])
+        and _is_gap(model.layers[dense_position + terminal_dropout - 1])
+        and _is_conv(model.layers[dense_position + terminal_dropout - 2])
     ):
         # CAM architecture
         # Can explain with either method and should give identical results
-        dim, layer_name, effective_mode = _certify_mode(model, dense_position, terminal_dropout, conv_layer_name, mode)
+        dim, layer_name, effective_mode = _certify_mode(
+            model, dense_position, terminal_dropout, conv_layer_name, mode
+        )
         if style in ["grad", "hires"]:
             return (
                 True,
-                dense_position+terminal_dropout,
+                dense_position + terminal_dropout,
                 dim,
                 layer_name,
                 effective_mode,
             )
     elif (
         check
-        and isinstance(model.layers[dense_position+terminal_dropout - 1], keras.layers.Flatten)
-        and _is_conv(model.layers[dense_position+terminal_dropout - 2])
+        and isinstance(
+            model.layers[dense_position + terminal_dropout - 1],
+            keras.layers.Flatten,
+        )
+        and _is_conv(model.layers[dense_position + terminal_dropout - 2])
     ):
         # Only alternative valid archictecture is BASE -> Flatten -> Dropout (optional) -> Dense
         # Can still be explained with HiResCAM
-        dim, layer_name, effective_mode = _certify_mode(model, dense_position, terminal_dropout, conv_layer_name, mode)
+        dim, layer_name, effective_mode = _certify_mode(
+            model, dense_position, terminal_dropout, conv_layer_name, mode
+        )
         if style == "hires":
             return (
                 True,
-                dense_position+terminal_dropout,
+                dense_position + terminal_dropout,
                 dim,
                 layer_name,
                 effective_mode,
@@ -1125,7 +1149,7 @@ def _check_cam_model_architecture(model, style, conv_layer_name=None, mode=None)
             )
     else:
         pass
-        
+
     return False, 0, 0, "", ""
 
 
@@ -1182,7 +1206,13 @@ def _make_cam(
     Exception
         The Keras model architecture is incorrect.
     """
-    valid, _, dim, conv_layer_name, effective_mode = _check_cam_model_architecture(
+    (
+        valid,
+        _,
+        dim,
+        conv_layer_name,
+        effective_mode,
+    ) = check_cam_model_architecture(
         model=model, style=style, conv_layer_name=conv_layer_name, mode=mode
     )
     if valid:
