@@ -930,7 +930,7 @@ def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
     There are 2 valid architectures:
     1. BASE -> [GAP -> Dropout (optional) -> Dense]
     2. BASE -> [Flatten -> Dropout (optional) -> Dense]
-    where BASE = CNN or a pretrained convolutional keras.engine.functional.Functional and the [bracketed] part is the
+    where BASE = CNN or a pretrained convolutional keras.src.engine.functional.Functional and the [bracketed] part is the
     TOP.
 
     If BASE is pretrained then it can be complicated, in practice, to point to the "output" of the last convolutional
@@ -996,7 +996,7 @@ def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
         # to recognize this as a functional.Functional as assume it is
         # for 2D since at the moment only 2D image classifiers are
         # available in Keras.
-        for type_ in [keras.engine.functional.Functional]:
+        for type_ in [keras.src.engine.functional.Functional]:
             if isinstance(layer, type_):
                 return (True, 2, "input") if return_dim else True
 
@@ -1005,8 +1005,8 @@ def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
     def _is_gap(layer):
         # Check if a layer does global average pooling
         valid = [
-            keras.layers.pooling.global_average_pooling1d.GlobalAveragePooling1D,
-            keras.layers.pooling.global_average_pooling2d.GlobalAveragePooling2D,
+            keras.layers.GlobalAveragePooling1D,
+            keras.layers.GlobalAveragePooling2D,
         ]
         for type_ in valid:
             if isinstance(layer, type_):

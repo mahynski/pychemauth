@@ -8,7 +8,6 @@ import keras
 import pytest
 
 import numpy as np
-import tensorflow as tf
 
 from pychemauth.analysis import explain
 
@@ -30,7 +29,7 @@ def _model_factory(idx):
             activation=keras.activations.tanh,
             use_bias=False,
         )(input_)
-        base_model = tf.keras.applications.MobileNetV3Small(
+        base_model = keras.applications.MobileNetV3Small(
             include_top=False,
             weights="imagenet",
             input_shape=(224, 224, 3),
