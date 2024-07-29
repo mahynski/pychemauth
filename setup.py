@@ -13,7 +13,7 @@ setup(
     description="Python-based Chemometric Authentication",
     author="Nathan A. Mahynski",
     homepage="https://github.com/mahynski/pychemauth",
-    python_requires=">=3.9.0",
+    python_requires=">=3.10.0",
     version=__version__,
     packages=find_packages(),
     license_files=("LICENSE",),
@@ -47,6 +47,6 @@ setup(
         "xgboost==2.0.0",
         "missingno==0.5.2",
         "huggingface_hub==0.23.4",
-        # "tensorflow==2.12.0",  # This command should install keras==2.12.0 as well, which is critical
+        "tensorflow==2.14.0",  # This command should install keras==2.14.0 as well
     ],
 )
