@@ -301,7 +301,7 @@ class NNTools:
             base_lr=0.001,
             max_lr=0.01,
             step_size=20,
-            mode="triangular",
+            mode="triangular2",
             gamma=1.0,
             scale_fn=None,
             scale_mode="cycle",
@@ -320,7 +320,7 @@ class NNTools:
             step_size : int, optional(default=2000)
                 Number of iterations in half a cycle.
 
-            mode : str, optional(default='triangular')
+            mode : str, optional(default='triangular2')
                 Mode defined in Ref. [1].  Determines the shape of the learning function over time.  Should be one of {'triangular', 'triangular2', 'exp_range'}.
                 If a `scale_fn` is provided then this argument is ignored.
 
@@ -367,7 +367,7 @@ class NNTools:
                     scale_fn = lambda x: 1 / (2.0 ** (x - 1))
                     scale_mode = "cycle"
                 elif self.mode == "exp_range":
-                    scale_fn = lambda x: gamma ** (x)
+                    scale_fn = lambda x: self.gamma ** (x)
                     scale_mode = "iterations"
                 else:
                     raise ValueError(
@@ -797,7 +797,7 @@ class NNTools:
         --------
         To train a model use cyclical learning rates:
         >>> finder = NNTools.find_learning_rate(
-        ...     model=CNNFactory(...),
+        ...     model=CNNFactory(...), # Instantiate a new model
         ...     (X_train, y_train),
         ...     compiler_kwargs=compiler_kwargs
         ... )
@@ -807,7 +807,7 @@ class NNTools:
         ...     step_size=20,
         ... )
         >>> model = NNTools.train(
-        ...     model=CNNFactory(...),
+        ...     model=CNNFactory(...), # Instantiate a new model, do not recycle the old one!
         ...     data=(X_train, y_train),
         ...     fit_kwargs={
         ...         'batch_size': 50,

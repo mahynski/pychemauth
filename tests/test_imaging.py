@@ -528,90 +528,90 @@ def _model_factory(idx):
     elif idx == 39:
         # Test the CNNFactory with CAM
         cnn_builder = CNNFactory(
-            name='mobilenet',
+            name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=True,
-            dropout=0.0
-        ) 
+            dropout=0.0,
+        )
         model = cnn_builder.build()
     elif idx == 40:
         # Test the CNNFactory with CAM
         cnn_builder = CNNFactory(
-            name='xception',
+            name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=True,
-            dropout=0.0
-        ) 
+            dropout=0.0,
+        )
         model = cnn_builder.build()
     elif idx == 41:
         # Test the CNNFactory with CAM + dropout
         cnn_builder = CNNFactory(
-            name='mobilenet',
+            name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=True,
-            dropout=0.2
-        ) 
+            dropout=0.2,
+        )
         model = cnn_builder.build()
     elif idx == 42:
         # Test the CNNFactory with CAM + dropout
         cnn_builder = CNNFactory(
-            name='xception',
+            name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=True,
-            dropout=0.2
-        ) 
+            dropout=0.2,
+        )
         model = cnn_builder.build()
     elif idx == 43:
         # Test the CNNFactory with CAM
         cnn_builder = CNNFactory(
-            name='mobilenet',
+            name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=False,
-            dropout=0.0
-        ) 
+            dropout=0.0,
+        )
         model = cnn_builder.build()
     elif idx == 44:
         # Test the CNNFactory with CAM
         cnn_builder = CNNFactory(
-            name='xception',
+            name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=False,
-            dropout=0.0
-        ) 
+            dropout=0.0,
+        )
         model = cnn_builder.build()
     elif idx == 45:
         # Test the CNNFactory with CAM + dropout
         cnn_builder = CNNFactory(
-            name='mobilenet',
+            name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=False,
-            dropout=0.2
-        ) 
+            dropout=0.2,
+        )
         model = cnn_builder.build()
     elif idx == 46:
         # Test the CNNFactory with CAM + dropout
         cnn_builder = CNNFactory(
-            name='xception',
+            name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
             dim=2,
             cam=False,
-            dropout=0.2
-        ) 
+            dropout=0.2,
+        )
         model = cnn_builder.build()
     else:
         raise Exception("Unknown model idx")
@@ -619,7 +619,7 @@ def _model_factory(idx):
     return model
 
 
-class CheckCAMArchitecture(unittest.TestCase):
+class TestCAMArchitecture(unittest.TestCase):
     """Check the CNN models follow an approved architecture for CAM explanations."""
 
     @classmethod
@@ -665,14 +665,14 @@ class CheckCAMArchitecture(unittest.TestCase):
             36: (False, 0, 0, "", ""),
             37: (False, 0, 0, "", ""),
             38: (False, 0, 0, "", ""),
-            39: (True, -1, 2, 'global_average_pooling2d_28', 'input'),
-            40: (True, -1, 2, 'global_average_pooling2d_29', 'input'),
-            41: (True, -2, 2, 'global_average_pooling2d_30', 'input'),
-            42: (True, -2, 2, 'global_average_pooling2d_31', 'input'),
-            43: (True, -1, 2, 'flatten_42', 'input'),
-            44: (True, -1, 2, 'flatten_43', 'input'),
-            45: (True, -2, 2, 'flatten_44', 'input'),
-            46: (True, -2, 2, 'flatten_45', 'input'),
+            39: (True, -1, 2, "global_average_pooling2d_28", "input"),
+            40: (True, -1, 2, "global_average_pooling2d_29", "input"),
+            41: (True, -2, 2, "global_average_pooling2d_30", "input"),
+            42: (True, -2, 2, "global_average_pooling2d_31", "input"),
+            43: (True, -1, 2, "flatten_42", "input"),
+            44: (True, -1, 2, "flatten_43", "input"),
+            45: (True, -2, 2, "flatten_44", "input"),
+            46: (True, -2, 2, "flatten_45", "input"),
         }
 
     def test_hires(self):
@@ -737,7 +737,7 @@ class CheckCAMArchitecture(unittest.TestCase):
                 43,
                 44,
                 45,
-                46
+                46,
             ]:  # Non-CAM architectures should not allow GradCAM
                 with pytest.raises(
                     Exception,
