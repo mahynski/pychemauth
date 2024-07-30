@@ -12,18 +12,931 @@ import imblearn
 import pickle
 import datetime
 import os
+import keras
+import json
+import visualkeras
+import wandb
 
 import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
 
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array
-
 from matplotlib.patches import Ellipse, Rectangle
-
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from huggingface_hub import hf_hub_download, HfApi, ModelCard, ModelCardData
+from tensorflow.keras import backend as K
+
+
+class NNTools:
+    """Tools for working with neural networks."""
+
+    class LearningRateFinder(keras.callbacks.Callback):
+        """
+        Keras Callback for finding bounds on optimal learning rates for neural networks.
+
+        See `NNTools.find_learning_rate` for a more user-friendly interface to this function.
+
+        Essentially, at the beginning of training the learning rate is set to a lower bound.
+        Then it is increased exponentially after each batch. Initially, the loss function
+        should not change since the learning rate is too low; however, a minimum in the loss
+        tends to appear at intermediate learning rates, before "exploding" at high rates.
+
+        The band between roughly the point where the loss starts to change and the minimum
+        is a reasonably optimal learning rate.  Cyclical learning rates can also be used
+        to dynamically move between them.
+
+        Notes
+        -----
+        Code inspired by: https://pyimagesearch.com/2019/08/05/keras-learning-rate-finder/
+
+        References
+        ----------
+        1. "Cyclical Learning Rates for Training Neural Networks," L. Smith, arXiv:1506.01186v6 (2017) (https://arxiv.org/pdf/1506.01186).
+
+        Example
+        -------
+        >>> finder = NNTools.find_learning_rate(
+        ...     model=CNNFactory(...),
+        ...     (X_train, y_train),
+        ...     compiler_kwargs=compiler_kwargs
+        ... )
+        >>> ax = finder.plot()
+        >>> ax.set_yscale('log')
+        >>> for l_ in finder.estimate_clr():
+        ...     ax.axvline(l_, color='red')
+        """
+
+        def __init__(
+            self,
+            start_lr=1.0e-8,
+            end_lr=10.0,
+            n_updates=100,
+            stop_factor=4.0,
+            beta=0.98,
+        ):
+            """
+            Instantiate the class.
+
+            Parameters
+            ----------
+            start_lr : float, optional(default=1.0e-8)
+                Initial learning rate.  Should be a value expected to be too small.
+
+            end_lr : float, optional(default=10.0)
+                Final learning rate.  Should be a value expected to be too large.
+
+            n_updates : int, optional(default=100)
+                Number of times to update learning rate; this is done after each bactch so this determines
+                the total number of batches (and therefore, epochs) run.
+
+            stop_factor : float, optional(default=4.0)
+                The factor multiplied by the smallest loss found to determine the limit at which the run should stop.  This stops the training from continuing after the loss goes through a minimum.
+
+            beta : float, optional(default=0.98)
+            Smoothing factor used to smooth the loss value over time.
+            """
+            super(NNTools.LearningRateFinder, self).__init__()
+            self.start_lr = start_lr
+            self.end_lr = end_lr
+            self.n_updates = n_updates
+            self.stop_factor = stop_factor
+            self.beta = beta
+
+            self._smoothed_loss = []
+            self._loss = []
+            self._lr = []
+            self.batch_num = 0
+            self.avg_loss = 0
+            self.best_loss = np.inf
+            self.lr_mult = (self.end_lr / self.start_lr) ** (1.0 / n_updates)
+
+        @property
+        def smoothed_loss(self):
+            """Return the smoothed loss."""
+            return copy.copy(self._smoothed_loss)
+
+        @property
+        def loss(self):
+            """Return the (unsoothed) loss."""
+            return copy.copy(self._loss)
+
+        @property
+        def learning_rate(self):
+            """Return the learning rates."""
+            return copy.copy(self._lr)
+
+        def on_train_begin(self, logs=None):
+            """Configure the model parameters when the training starts."""
+            # Set optimizer's initial learning rate
+            K.set_value(self.model.optimizer.lr, self.start_lr)
+
+        def on_train_batch_end(self, batch, logs=None):
+            """Update the learning rate and save history."""
+            # Current state
+            current_lr = K.get_value(self.model.optimizer.lr)
+            current_loss = logs["loss"]
+
+            self._lr.append(current_lr)
+            self._loss.append(current_loss)
+
+            # Smooth loss and save
+            self.batch_num += 1
+            self.avg_loss = (self.beta * self.avg_loss) + (
+                (1.0 - self.beta) * current_loss
+            )
+            smoothed_loss = self.avg_loss / (1 - (self.beta**self.batch_num))
+            self._smoothed_loss.append(smoothed_loss)
+
+            # Check if we should stop - i.e., loss started to grow at high LR
+            stop_loss = self.stop_factor * self.best_loss
+            if self.batch_num > 1 and smoothed_loss > stop_loss:
+                self.model.stop_training = True
+                return
+
+            # Update best loss
+            if self.batch_num == 1 or smoothed_loss < self.best_loss:
+                self.best_loss = smoothed_loss
+
+            # Update lr for next batch
+            K.set_value(self.model.optimizer.lr, current_lr * self.lr_mult)
+
+        def plot(self, ax=None):
+            """
+            Plot the smoothed loss vs. the learning rate.
+
+            This enables the user to manually determine their ideal learning rate visually.
+
+            Parameters
+            ----------
+            ax : matplotlib.pyplot.Axes, optional(default=None)
+                Axes object to plot the results on.
+
+            Returns
+            -------
+            ax : matplotlib.pyplot.Axes
+                Axes object the results are plotted on.
+            """
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            ax.plot(self.learning_rate, self.smoothed_loss, "-")
+            ax.set_xscale("log")
+            ax.set_xlabel("Learning Rate")
+            ax.set_ylabel("Loss")
+
+            return ax
+
+        def estimate_clr(self, frac=0.75):
+            """
+            Automatically estimate the upper and lower cyclical learning rate bounds.
+
+            The upper bound is taken as the order of magnitude just below the minima;
+            e.g., if lr_opt = 0.0123 then the max_lr = 0.01.  The lower bound is taken
+            as the learning rate where the loss is 25% of the way from the
+            value at a learning rate of 0 to the minimum.
+
+            Parameters
+            ----------
+            frac : float, optional(default=0.75)
+                Determines the lower bound on the learning rate which is set when the
+                loss is 100*(1-frac)% of the way from the value at a learning rate of
+                0 to the minimum.
+
+            Returns
+            -------
+            base_lr : float
+                Minimum learning rate to use.
+
+            max_lr : float
+                Maximum learning rate to use.
+
+            Raises
+            ------
+            Exception
+                Minimum in smoothed loss vs. learning rate occurs in the first 1/5 of the rates.
+                The estimate of the loss when the learning rate goes to 0 is higher than the minimum.
+            """
+            min_idx_ = np.argmin(self._smoothed_loss)
+            limit_ = 5  # The mean of the first 1/limit_ "chunk" of losses will be taken as an estimate of LR -> 0
+            if min_idx_ < len(self._lr) // limit_:
+                raise Exception(
+                    f"Minimum in loss occurs in the first 1/{limit_} of the learning rates; recommend reducing the lower bound and re-running."
+                )
+
+            # Round down to nearest order of magnitude for maximum LR at best loss
+            max_lr = 10 ** (np.floor(np.log10(self._lr[min_idx_])))
+
+            # Find the location that corresponds to just below the max_lr
+            idx_ = np.argmin((np.array(self._lr) - max_lr) ** 2)
+            while self._lr[idx_] > max_lr and idx_ >= 0:
+                idx_ -= 1
+
+            # Take lower bound of LR as the point where 90% of the gap from LR -> 0 and best LR
+            baseline_loss_ = np.mean(
+                self._smoothed_loss[: (len(self._lr) // limit_)]
+            )
+            if baseline_loss_ < self._smoothed_loss[idx_]:
+                raise Exception(
+                    "Cannot estimate cyclical learning rate bounds automatically; inspect visually instead."
+                )
+            threshold_ = self._smoothed_loss[idx_] + frac * (
+                baseline_loss_ - self._smoothed_loss[idx_]
+            )
+
+            # Walk toward LR = 0 to find this point
+            while self._smoothed_loss[idx_] < threshold_ and idx_ >= 0:
+                idx_ -= 1
+            base_lr = self._lr[idx_ + 1]
+
+            return base_lr, max_lr
+
+    class CyclicalLearningRate(keras.callbacks.Callback):
+        """
+        Create a cyclical learning rate policy for a Keras model during training.
+
+        Notes
+        -----
+        Code inspired by: https://github.com/bckenstler/CLR/blob/master/clr_callback.py
+
+        See `NNTools.find_learning_rate` for a user-friendly way to estimate the `base_lr` and `max_lr`.
+
+        References
+        ----------
+        1. "Cyclical Learning Rates for Training Neural Networks," L. Smith, arXiv:1506.01186v6 (2017) (https://arxiv.org/pdf/1506.01186).
+
+        Example
+        -------
+        >>> finder = NNTools.find_learning_rate(
+        ...     model=CNNFactory(...),
+        ...     (X_train, y_train),
+        ...     compiler_kwargs=compiler_kwargs
+        ... )
+        >>> clr = NNTools.CyclicalLearningRate(
+        ...     base_lr=finder.estimate_clr()[0],
+        ...     max_lr=finder.estimate_clr()[1],
+        ...     step_size=20,
+        ... )
+        >>> model = NNTools.train(
+        ...     model=CNNFactory(...),
+        ...     data=(X_train, y_train),
+        ...     fit_kwargs={
+        ...         'batch_size': 50,
+        ...         'epochs': 100,
+        ...         'validation_split': 0.2,
+        ...         'shuffle': True,
+        ...         'callbacks': [clr]
+        ...     },
+        ...     compiler_kwargs=compiler_kwargs, # Should be the same as finder
+        ...     model_filename=None,
+        ...     history_filename=None
+        ... )
+        """
+
+        def __init__(
+            self,
+            base_lr=0.001,
+            max_lr=0.01,
+            step_size=20,
+            mode="triangular",
+            gamma=1.0,
+            scale_fn=None,
+            scale_mode="cycle",
+        ):
+            """
+            Instantiate the class.
+
+            Parameters
+            ----------
+            base_lr : float, optional(default=0.001)
+                Minimum learning rate to use.
+
+            max_lr : float, optional(default=0.01)
+                Maximum learning rate to use.
+
+            step_size : int, optional(default=2000)
+                Number of iterations in half a cycle.
+
+            mode : str, optional(default='triangular')
+                Mode defined in Ref. [1].  Determines the shape of the learning function over time.  Should be one of {'triangular', 'triangular2', 'exp_range'}.
+                If a `scale_fn` is provided then this argument is ignored.
+
+            gamma : float, optional(default=1.0)
+                Constant in 'exp_range' scaling function gamma**(cycle iterations); ignored if not using this policy.
+
+            scale_fn : callable, optional(default=None)
+                Custom scaling policy defined by a single argument lambda function, where 0 <= scale_fn(x) <= 1 for all x >= 0. The `mode` paramater is ignored if this is provided.
+
+            scale_mode : str, optional(default='cycle')
+                Defines whether `scale_fn` is evaluated on cycle number or cycle iterations (training iterations since start of cycle). Should be in {'cycle', 'iterations'}.
+            """
+            super(NNTools.CyclicalLearningRate, self).__init__()
+            self.base_lr = base_lr
+            self.max_lr = max_lr
+            self.step_size = step_size
+            self.mode = mode
+            self.gamma = gamma
+            self.scale_fn = scale_fn
+            self.scale_mode = scale_mode
+
+            self._clr_iterations = 0.0
+            self._trn_iterations = 0.0
+            self._history = {}
+
+        @property
+        def history(self):
+            """Return the learning rates."""
+            return copy.copy(self._history)
+
+        def _reset(
+            self,
+        ):
+            """Reset the cycle iterations."""
+            self._clr_iterations = 0.0
+
+        def _clr(self):
+            """Compute instantaneous learning rate."""
+            if self.scale_fn is None:
+                if self.mode == "triangular":
+                    scale_fn = lambda x: 1.0
+                    scale_mode = "cycle"
+                elif self.mode == "triangular2":
+                    scale_fn = lambda x: 1 / (2.0 ** (x - 1))
+                    scale_mode = "cycle"
+                elif self.mode == "exp_range":
+                    scale_fn = lambda x: gamma ** (x)
+                    scale_mode = "iterations"
+                else:
+                    raise ValueError(
+                        f'Unrecognized mode {self.mode}; should be in {"triangular", "triangular2", "exp_range"}'
+                    )
+            else:
+                scale_fn = self.scale_fn
+                scale_mode = self.scale_mode
+
+            cycle = np.floor(1 + self._clr_iterations / (2 * self.step_size))
+            x = np.abs(self._clr_iterations / self.step_size - 2 * cycle + 1)
+            if scale_mode == "cycle":
+                return self.base_lr + (self.max_lr - self.base_lr) * np.maximum(
+                    0, (1 - x)
+                ) * scale_fn(cycle)
+            else:
+                return self.base_lr + (self.max_lr - self.base_lr) * np.maximum(
+                    0, (1 - x)
+                ) * scale_fn(self._clr_iterations)
+
+        def on_train_begin(self, logs=None):
+            """Initialize the learning rate when training starts."""
+            if self._clr_iterations == 0:
+                K.set_value(self.model.optimizer.lr, self.base_lr)  # First run
+            else:
+                K.set_value(self.model.optimizer.lr, self._clr())  # Restarting
+
+        def on_epoch_begin(self, epoch, logs=None):
+            """Update the learning rate at the end of an epoch."""
+            self._trn_iterations += 1
+            self._clr_iterations += 1
+
+            self._history.setdefault("lr", []).append(
+                K.get_value(self.model.optimizer.lr)
+            )
+            self._history.setdefault("iterations", []).append(
+                self._trn_iterations
+            )
+
+            for k, v in logs.items():
+                self._history.setdefault(k, []).append(v)
+
+            K.set_value(self.model.optimizer.lr, self._clr())
+
+    @staticmethod
+    def visualkeras(
+        model,
+        legend=False,
+        draw_volume=True,
+        scale_xy=0.25,
+        scale_z=10.0,
+        max_z=200,
+        padding=50,
+        **kwargs,
+    ):
+        """
+        Use visualkeras to visualize a Keras model as a PIL image.
+
+        This should work for an arbitrary model, but the defaults are tuned for convolutional neural networks.
+
+        Parameters
+        ----------
+        model : keras.Model
+            A Keras model to visualize.
+
+        legend : bool, optional(default=False)
+            Add a legend of the layers to the image.
+
+        draw_volume : bool, optional(default=True)
+            Flag to switch between 3D volumetric view and 2D box view. True is generally better for CNN architectures.
+
+        scale_xy : float, optional(default=0.25)
+            Scalar multiplier for the x and y size of each layer.
+
+        scale_z : float, optional(default=10.0)
+            Scalar multiplier for the z size of each layer.
+
+        max_z : int, optional(default=200)
+            Maximum z size in pixel a layer will have.
+
+        padding : int, optional(default=50)
+            Distance in pixel before the first and after the last layer.
+
+        kwargs : dict
+            Optional other keyword arguments to `visualkeras.layered_view`.
+
+        References
+        ----------
+        1. Gavrikov, Paul, "visualkeras" https://github.com/paulgavrikov/visualkeras (2020).
+
+        Example
+        -------
+        >>> model = CNNFactory(...)
+        >>> img = NNTools.visualkeras(model)
+        >>> img.save('my_model.png')
+        """
+
+        def _text_callable(
+            layer_index, layer
+        ):  # Based on visualkeras documentation example
+            # Every other piece of text is drawn above the layer, the first one above
+            above = not bool(layer_index % 2)
+
+            # If the output shape is a list of tuples, we only take the first one
+            output_shape = [
+                x for x in list(layer.output_shape) if x is not None
+            ]
+            if isinstance(output_shape[0], tuple):
+                output_shape = list(output_shape[0])
+                output_shape = [x for x in output_shape if x is not None]
+
+            # Create a string representation of the output shape
+            output_shape_txt = ""
+            for ii in range(len(output_shape)):
+                output_shape_txt += str(output_shape[ii])
+                if (
+                    ii < len(output_shape) - 1
+                ):  # Add an x between dimensions, e.g. 3x3
+                    output_shape_txt += "x"
+
+            # Remove the trailing index of layers for better visualization
+            segments = layer.name.split("_")
+            try:
+                int(segments[-1])  # Last segment is an integer index
+                name = "_".join(segments[:-1])
+            except:
+                name = layer.name  # Otherwise use the whole name
+
+            # Add the name of the layer to the text, as a new line
+            output_shape_txt += f"\n{name}"
+
+            # Return the text value and if it should be drawn above the layer
+            return output_shape_txt, above
+
+        img = visualkeras.layered_view(
+            model=model,
+            legend=legend,
+            draw_volume=draw_volume,
+            scale_xy=scale_xy,
+            scale_z=scale_z,
+            max_z=max_z,
+            text_callable=_text_callable,
+            padding=padding,
+        ).convert(
+            "RGB"
+        )  # default RGBA has some display issues in Jupyter Notebooks
+
+        return img
+
+    @staticmethod
+    def _is_data_iter(data):
+        """Check if data is an iterator of some kind."""
+        classes = [
+            "NumpyArrayIterator",
+            "DirectoryIterator",
+            "DataFrameIterator",
+            "Iterator",
+            "Sequence",
+        ]
+        return data.__class__.__name__ in classes
+
+    @staticmethod
+    def find_learning_rate(
+        model,
+        data,
+        start_lr=1.0e-8,
+        end_lr=1.0e1,
+        n_updates=100,
+        stop_factor=4.0,
+        beta=0.98,
+        batch_size=100,
+        compiler_kwargs={
+            "optimizer": "adam",
+            "loss": "sparse_categorical_crossentropy",
+            "weighted_metrics": ["accuracy", "sparse_categorical_accuracy"],
+        },
+        seed=42,
+        class_weight=None,
+    ):
+        """
+        Scan through different learning rates to understand how the model trains.
+
+        Default parameters correspond to classification or authentication applications.
+
+        Parameters
+        ----------
+        model : keras.Model
+            Uncompiled model to use.
+
+        data : tuple or
+            If the data is in memory this can be provided as (X_train, y_train)
+
+        start_lr : float, optional(default=1.0e-8)
+            Initial learning rate.  Should be a value expected to be too small.
+
+        end_lr : float, optional(default=10.0)
+            Final learning rate.  Should be a value expected to be too large.
+
+        n_updates : int, optional(default=100)
+            Number of times to update learning rate; this is done after each bactch so this determines
+            the total number of batches / epochs run.
+
+        stop_factor : float, optional(default=4.0)
+            The factor multiplied by the smallest loss found to determine the limit at which the run should stop.  This stops the training from continuing after the loss goes through a minimum.
+
+        beta : float, optional(default=0.98)
+           Smoothing factor used to smooth the loss value over time.
+
+        batch_size : int, optional(default=100)
+            Number of instances per batch. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues.
+
+        compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
+            Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.
+
+        seed : int, optional(default=42)
+            Seed for keras random weight initialization when the model is compiled.
+
+        class_weight : dict(int, float), optional(default=None)
+            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
+            inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
+            To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
+            simply become equivalent to 'metrics'
+
+        Returns
+        -------
+        finder : NNTools.LearningRateFinder
+            Object containing the history of the loss as a function of learning rate.  This can be used to plot the results directly.
+
+        Notes
+        -----
+        This is intended to be fast so should not require logging tools.
+
+        Example
+        -------
+        >>> finder = NNTools.find_learning_rate(
+        ...     model=CNNFactory(...),
+        ...     (X_train, y_train),
+        ...     compiler_kwargs=compiler_kwargs
+        ... )
+        """
+        finder = NNTools.LearningRateFinder(
+            start_lr=start_lr,
+            end_lr=end_lr,
+            n_updates=n_updates,
+            stop_factor=stop_factor,
+            beta=beta,
+        )
+
+        if not NNTools._is_data_iter(data):
+            N = data[0].shape[0]
+            epochs = int(np.ceil(n_updates * batch_size / float(N)))
+        else:
+            raise NotImplementedError("Data iterators are not yet supported.")
+
+        # Do a "fast" training updated LR with every batch
+        NNTools.train(
+            model=model,
+            data=data,
+            compiler_kwargs=compiler_kwargs,
+            fit_kwargs={
+                "batch_size": batch_size,
+                "epochs": epochs,
+                "validation_split": 0.0,  # No validation for this search
+                "shuffle": True,
+                "callbacks": [
+                    finder,  # Update LR after each batch
+                ],
+            },
+            class_weight=class_weight,
+            seed=seed,
+            wandb_project=None,  # No tracking or saving - this should be a 'fast' run
+            wandb_kwargs=None,
+            model_filename=None,
+            history_filename=None,
+        )
+
+        return finder
+
+    @staticmethod
+    def load(filepath, weights_only=False, model=None):
+        """
+        Load a Keras model from disk.
+
+        Parameters
+        ----------
+        filepath : str or pathlib.Path
+            Path to saved information (weights or a complete model).
+
+        weights_only : bool, optional(default=False)
+            If True, the filepath should contain the weights of the model to load.  The `model` provided should have the same architecture. and will not be compiled after loading the weights. If False, assumes the filepath points to a complete keras model which will be compiled automatically after loading.
+
+        model : keras.Model, optional(default=None)
+            Model to use if `weights_only=True`; it does not need to be compiled so you can use `NNFactory()` to produce a new model that will inherit weights from an old model of the exact same architecture.
+
+        Returns
+        -------
+        model : keras.Model
+            Model loaded from disk.
+        """
+        if weights_only:
+            model.load_weights(filepath, skip_mismatch=False)
+        else:
+            model = keras.saving.load_model(
+                filepath, custom_objects=None, compile=True
+            )
+
+        return model
+
+    @staticmethod
+    def _json_serializable(arg_dict):
+        """Check what can be serialized from a dictionary so WandB can save these parts as its config."""
+
+        def _safe(x):
+            try:
+                json.dumps(x)
+                return True
+            except:
+                return False
+
+        new_args = copy.copy(arg_dict)
+        for key, value in arg_dict.items():
+            if not _safe(value):
+                new_args.pop(key)
+
+        return new_args
+
+    @staticmethod
+    def train(
+        model,
+        data,
+        compiler_kwargs={
+            "optimizer": "adam",
+            "loss": "sparse_categorical_crossentropy",
+            "weighted_metrics": ["accuracy", "sparse_categorical_accuracy"],
+        },
+        fit_kwargs={
+            "batch_size": 100,
+            "epochs": 100,
+            "validation_split": 0.2,
+            "shuffle": True,
+            "callbacks": [
+                keras.callbacks.ModelCheckpoint(
+                    filepath="./checkpoints/model.{epoch:05d}",
+                    save_weights_only=True,
+                    monitor="val_sparse_categorical_accuracy",
+                    save_freq="epoch",
+                    mode="max",
+                    save_best_only=False,
+                ),
+                keras.callbacks.ReduceLROnPlateau(
+                    monitor="val_loss",
+                    factor=0.1,
+                    patience=10,
+                    verbose=0,
+                    mode="auto",
+                    min_delta=0.0001,
+                    cooldown=0,
+                    min_lr=1.0e-6,
+                ),
+            ],
+        },
+        class_weight=None,
+        seed=42,
+        wandb_project=None,
+        wandb_kwargs=None,
+        model_filename="trained_model.keras",
+        history_filename="training_history.pkl",
+    ):
+        """
+        Train a Keras model.
+
+        Parameters
+        ----------
+        model : keras.Model
+            Uncompiled model to compile and train.
+
+        data : tuple(X, y)
+            In the future we may support data iterators, but for now data should be a tuple of X and y data loaded in memory.
+
+            X : numpy.ndarray(float, ndim=3 or 4)
+                Channels-last formatted training instances.  For 2D images, this should have a shape of (N, D1, D2, C) where N is the number of instances and each image is D1xD2 with C channels.  For 1D series, the expected format is (N, D1, C).
+
+            y : numpy.ndarray(int, ndim=1 or 2)
+                Integer encoded class for each training instance. If a 1 dimensional input is provided, it is assumed the classes are uniquely encoded as integers and you should use a 'sparse_categorical_crossentropy' compiler loss and 'sparse_categorical_accuracy' metric. This works for binary as well as multiclass datasets. If a 2 dimensional input is provided, it is assumed each class is one-hot encoded and you should use a 'categorical_crossentropy' compiler loss and 'categorical_accuracy' metric.
+
+        compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
+            Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.  If None, will assume the model is already compiled.
+
+        fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.2, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
+            Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues.
+
+        class_weight : dict(int, float), optional(default=None)
+            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
+            inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
+            To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
+            simply become equivalent to 'metrics'
+
+        seed : int, optional(default=42)
+            Seed for keras random weight initialization when the model is compiled.
+
+        wandb_project : str, optional(default=None)
+            Project name for WandB; if None, do not use WandB to track the run.  Visit https://docs.wandb.ai/ to learn about this and set up a free account.  If you wish to store things locally and monitor them with tensorboard instead, provide a callback if `fit_kwargs` as illustrated below.
+
+        wandb_kwargs : dict(str, object), optional(default=None)
+            Any additional parameters and their values you may want to record in WandB; for example, parameters used to create the model.
+
+        model_filename : str, optional(default='trained_model.keras')
+            Name of the file to save the model to when finished training. If None the model will not be saved.
+
+        history_filename : str, optional(default='training_history.pkl')
+            Name of the file to save the training history to when finished training. If None the history will not be saved.
+
+        Returns
+        -------
+        model : keras.Model
+            The fitted model at the end of training.
+
+        Notes
+        -----
+        The Keras seed and other factors are set at the begnning of this function in the interest of reproducibility.  The produces identical initial layer weights, etc. between different runs with the same seed.
+
+        With the default parameters above (1) model checkpoints are writted to 'checkpoints/model.{epoch:05d}', (2) the final model is saved locally to 'model_filename', and (3) the model history is saved locally to 'history_filename'.  The `save_best_only=False` option in the keras.callbacks.ModelCheckpoint will save all checkpoints, which could take up disk space; consider `save_best_only=True` if that is an issue. Also, the `save_weights_only=True` option helps save disk space by only saving weights; to load a new model from these weights use `NNTools.load(filepath=filepath, weights_only=True, model=same_model)` where `filepath` refers to weights you wish to load.
+
+        If you use wandb to track the run a "wandb" folder will also be created locally.
+
+        Examples
+        --------
+        To train a model use cyclical learning rates:
+        >>> finder = NNTools.find_learning_rate(
+        ...     model=CNNFactory(...),
+        ...     (X_train, y_train),
+        ...     compiler_kwargs=compiler_kwargs
+        ... )
+        >>> clr = NNTools.CyclicalLearningRate(
+        ...     base_lr=finder.estimate_clr()[0],
+        ...     max_lr=finder.estimate_clr()[1],
+        ...     step_size=20,
+        ... )
+        >>> model = NNTools.train(
+        ...     model=CNNFactory(...),
+        ...     data=(X_train, y_train),
+        ...     fit_kwargs={
+        ...         'batch_size': 50,
+        ...         'epochs': 100,
+        ...         'validation_split': 0.2,
+        ...         'shuffle': True,
+        ...         'callbacks': [clr]
+        ...     },
+        ...     compiler_kwargs=compiler_kwargs, # Should be the same as finder
+        ...     model_filename=None,
+        ...     history_filename=None
+        ... )
+
+        To use tensorboard to view the history of a run instead of WandB, you can use a callback like this:
+        >>> tb_callback = keras.callbacks.TensorBoard(
+        ...                log_dir='path/to/my/logs/',
+        ...                histogram_freq=1,
+        ...                write_graph=True,
+        ...                write_steps_per_second=False,
+        ...                update_freq="batch",
+        ...                profile_batch=5
+        ...            )
+        >>> fit_kwargs = {'callbacks': [tb_callback, ...], ...}
+        >>> NNTools.train(model, X, y, fit_kwargs=fit_kwargs, ....)
+        Then, from the command line, execute:
+        $ tensorboard --logdir=path/to/my/logs/ --bind_all
+        """
+        # To ensure as much reproducibility as possible: https://keras.io/examples/keras_recipes/reproducibility_recipes/
+        keras.utils.set_random_seed(seed)
+        tf.config.experimental.enable_op_determinism()
+
+        if not NNTools._is_data_iter(data):
+            X, y = data
+
+            # Check n_classes is the same as in model
+            N_model = model.predict(X[:1]).shape[1]
+            N_data = len(np.unique(y))
+            if N_data != N_model:
+                raise Exception(
+                    f"Model is configured to predict {N_model} classes, while the training set contains {N_data} unique classes"
+                )
+
+            # Check length consistency between X and y
+            if X.shape[0] != y.shape[0]:
+                raise ValueError(
+                    "X and y should have the same first dimension corresponding to the number of datapoints"
+                )
+
+            # Check y is encoded as integers and other consistencies
+            if compiler_kwargs is not None:
+                if (
+                    compiler_kwargs.get("loss")
+                    == "sparse_categorical_crossentropy"
+                ):
+                    # Classes are unique integer values
+                    if type(y[0].item()) != int:
+                        raise ValueError(
+                            "A sparse_categorical_crossentropy loss is used when y is not one-hot encoded, but y should be provided as integers"
+                        )
+                    vals, counts = np.unique(y, return_counts=True)
+                elif compiler_kwargs.get("loss") == "categorical_crossentropy":
+                    # OHE of y
+                    if y.shape[1] != N_model:
+                        raise Exception(
+                            f"A categorical_crossentropy loss is used for one-hot-encoded y; y contains {y.shape[1]} classes but model is expecting {N_model}"
+                        )
+                    if type(y[0][0].item()) != int:
+                        raise ValueError("y should be encoded as integers")
+                    vals, counts = np.arange(y.shape[1]), np.sum(y, axis=0)
+                else:
+                    raise ValueError(
+                        'compiler loss should be "sparse_categorical_crossentropy" or "categorical_crossentropy"'
+                    )
+
+                # Bad compiler kwargs should cause this to fail
+                model.compile(**compiler_kwargs)
+
+            # Class weights following: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+            if class_weight is None:
+                class_weight = dict(
+                    zip(vals, (1.0 / counts) / (len(vals) / np.sum(counts)))
+                )
+
+        else:
+            raise NotImplementedError("Data iterators are not yet supported.")
+
+        if wandb_project is not None:
+            import wandb
+            from wandb.integration.keras import WandbMetricsLogger
+
+            wandb.login()
+            _ = wandb.init(
+                project=str(wandb_project),
+                config={
+                    "compiler_kwargs": {}
+                    if compiler_kwargs is None
+                    else NNTools._json_serializable(compiler_kwargs),
+                    "fit_kwargs": NNTools._json_serializable(fit_kwargs),
+                    "wandb_kwargs": {}
+                    if wandb_kwargs is None
+                    else NNTools._json_serializable(wandb_kwargs),
+                    "class_weight": class_weight,
+                    "seed": seed,
+                    "model_filename": ""
+                    if model_filename is None
+                    else model_filename,
+                    "history_filename": ""
+                    if history_filename is None
+                    else history_filename,
+                },
+            )
+
+            logger = WandbMetricsLogger(log_freq="batch")  # vs. 'epoch' default
+            if "callbacks" in fit_kwargs:
+                fit_kwargs["callbacks"].append(logger)
+            else:
+                fit_kwargs["callbacks"] = [logger]
+
+        # Fit model with incremental saving / checkpointing
+        _ = model.fit(x=X, y=y, **fit_kwargs)
+
+        # Write the final model and full training history
+        if model_filename is not None:
+            model.save(model_filename, overwrite=True)
+        if history_filename is not None:
+            with open(history_filename, "wb") as f:
+                pickle.dump(model.history.history, f)
+
+        return model
 
 
 class HuggingFace:

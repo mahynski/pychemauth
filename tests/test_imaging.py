@@ -10,6 +10,7 @@ import pytest
 import numpy as np
 
 from pychemauth.analysis import explain
+from pychemauth.classifier.cnn import CNNFactory
 
 from keras import layers
 
@@ -524,15 +525,96 @@ def _model_factory(idx):
                 layers.Dense(num_classes, activation="softmax"),
             ]
         )
+    elif idx == 39:
+        # Test the CNNFactory with CAM
+        cnn_builder = CNNFactory(
+            name='mobilenet',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=True,
+            dropout=0.0
+        ) 
+        model = cnn_builder.build()
+    elif idx == 40:
+        # Test the CNNFactory with CAM
+        cnn_builder = CNNFactory(
+            name='xception',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=True,
+            dropout=0.0
+        ) 
+        model = cnn_builder.build()
+    elif idx == 41:
+        # Test the CNNFactory with CAM + dropout
+        cnn_builder = CNNFactory(
+            name='mobilenet',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=True,
+            dropout=0.2
+        ) 
+        model = cnn_builder.build()
+    elif idx == 42:
+        # Test the CNNFactory with CAM + dropout
+        cnn_builder = CNNFactory(
+            name='xception',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=True,
+            dropout=0.2
+        ) 
+        model = cnn_builder.build()
+    elif idx == 43:
+        # Test the CNNFactory with CAM
+        cnn_builder = CNNFactory(
+            name='mobilenet',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=False,
+            dropout=0.0
+        ) 
+        model = cnn_builder.build()
+    elif idx == 44:
+        # Test the CNNFactory with CAM
+        cnn_builder = CNNFactory(
+            name='xception',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=False,
+            dropout=0.0
+        ) 
+        model = cnn_builder.build()
+    elif idx == 45:
+        # Test the CNNFactory with CAM + dropout
+        cnn_builder = CNNFactory(
+            name='mobilenet',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=False,
+            dropout=0.2
+        ) 
+        model = cnn_builder.build()
+    elif idx == 46:
+        # Test the CNNFactory with CAM + dropout
+        cnn_builder = CNNFactory(
+            name='xception',
+            input_size=(2631, 2631, 1),
+            n_classes=10,
+            dim=2,
+            cam=False,
+            dropout=0.2
+        ) 
+        model = cnn_builder.build()
     else:
         raise Exception("Unknown model idx")
-
-    # Compile so model.summary() can be called if necessary for debugging
-    model.compile(
-        optimizer=keras.optimizers.Adam(1e-3),
-        loss=keras.losses.BinaryCrossentropy(from_logits=True),
-        metrics=[keras.metrics.BinaryAccuracy(name="acc")],
-    )
 
     return model
 
@@ -583,6 +665,14 @@ class CheckCAMArchitecture(unittest.TestCase):
             36: (False, 0, 0, "", ""),
             37: (False, 0, 0, "", ""),
             38: (False, 0, 0, "", ""),
+            39: (True, -1, 2, 'global_average_pooling2d_28', 'input'),
+            40: (True, -1, 2, 'global_average_pooling2d_29', 'input'),
+            41: (True, -2, 2, 'global_average_pooling2d_30', 'input'),
+            42: (True, -2, 2, 'global_average_pooling2d_31', 'input'),
+            43: (True, -1, 2, 'flatten_42', 'input'),
+            44: (True, -1, 2, 'flatten_43', 'input'),
+            45: (True, -2, 2, 'flatten_44', 'input'),
+            46: (True, -2, 2, 'flatten_45', 'input'),
         }
 
     def test_hires(self):
@@ -644,6 +734,10 @@ class CheckCAMArchitecture(unittest.TestCase):
                 29,
                 30,
                 31,
+                43,
+                44,
+                45,
+                46
             ]:  # Non-CAM architectures should not allow GradCAM
                 with pytest.raises(
                     Exception,
