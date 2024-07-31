@@ -625,6 +625,7 @@ class TestCAMArchitecture(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         """Store the correct answers for all models."""
+        # Note that these numbers (_N) are dependent on what has been run so far, so they require manual updating as the codebase and tests change.
         self.correct_answers = {
             0: (True, -2, 2, "max_pooling2d_1", "output"),
             1: (True, -1, 2, "max_pooling2d_3", "output"),

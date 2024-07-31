@@ -12,8 +12,9 @@ from sklearn.preprocessing import LabelEncoder
 from pychemauth import utils, datasets
 from keras import layers
 
+
 class TestNNTools(unittest.TestCase):
-    """Test utilities in NNTools"""
+    """Test utilities in NNTools."""
 
     @classmethod
     def setUpClass(self):
@@ -24,18 +25,39 @@ class TestNNTools(unittest.TestCase):
         self.n_classes = len(np.unique(self._y))
         self._y = LabelEncoder().fit_transform(self._y)
 
-    def _make_model(self, activation='relu'):
+    def _make_model(self, activation="relu"):
         """Make a simple model to use."""
         input_ = keras.layers.Input(shape=self.image_size)
-        conv1 = layers.Conv1D(filters=16, kernel_size=16, activation=activation, strides=8, padding='same', use_bias=True)(input_)
+        conv1 = layers.Conv1D(
+            filters=16,
+            kernel_size=16,
+            activation=activation,
+            strides=8,
+            padding="same",
+            use_bias=True,
+        )(input_)
         pool1 = layers.MaxPool1D(2)(conv1)
-        conv2 = layers.Conv1D(filters=16*8, kernel_size=8, activation=activation, strides=4, padding='same', use_bias=True)(pool1)
+        conv2 = layers.Conv1D(
+            filters=16 * 8,
+            kernel_size=8,
+            activation=activation,
+            strides=4,
+            padding="same",
+            use_bias=True,
+        )(pool1)
         pool2 = layers.MaxPool1D(2)(conv2)
-        conv3 = layers.Conv1D(filters=16*8*4, kernel_size=8, activation=activation, strides=2, padding='same', use_bias=True)(pool2)
+        conv3 = layers.Conv1D(
+            filters=16 * 8 * 4,
+            kernel_size=8,
+            activation=activation,
+            strides=2,
+            padding="same",
+            use_bias=True,
+        )(pool2)
         flat = layers.Flatten()(conv3)
-        output = layers.Dense(self.n_classes, activation='softmax')(flat)
+        output = layers.Dense(self.n_classes, activation="softmax")(flat)
         model = keras.Model(inputs=[input_], outputs=[output])
-        
+
         return model
 
     def test_find_learning_rate(self):
@@ -46,12 +68,14 @@ class TestNNTools(unittest.TestCase):
                 (self._X, self._y),
                 n_updates=100,
                 start_lr=1.0e-8,
-                end_lr=10.0
+                end_lr=10.0,
             )
         except Exception as e:
             raise Exception(f"LearningRateFinder failed to run : {e}")
-        
-        np.testing.assert_almost_equal(finder.lr_mult, (10.0/1.0e-8)**(1/100.))
+
+        np.testing.assert_almost_equal(
+            finder.lr_mult, (10.0 / 1.0e-8) ** (1 / 100.0)
+        )
         np.testing.assert_almost_equal(finder.start_lr, 1.0e-8)
         np.testing.assert_almost_equal(finder.end_lr, 10.0)
 
@@ -68,21 +92,47 @@ class TestNNTools(unittest.TestCase):
             model=self._make_model(),
             data=(self._X, self._y),
             fit_kwargs={
-                'batch_size': 50,
-                'epochs': 20,
-                'validation_split': 0.2,
-                'shuffle': True,
-                'callbacks': [clr] 
+                "batch_size": 50,
+                "epochs": 20,
+                "validation_split": 0.2,
+                "shuffle": True,
+                "callbacks": [clr],
             },
             model_filename=None,
             history_filename=None,
-            wandb_project=None
+            wandb_project=None,
         )
 
         # Should go back to min
         np.testing.assert_almost_equal(model.optimizer.lr, 0.001)
-        np.testing.assert_almost_equal(clr.history['iterations'], np.arange(1, 20+1))
-        np.testing.assert_almost_equal(clr.history['lr'], [0.001 , 0.0019, 0.0028, 0.0037, 0.0046, 0.0055, 0.0064, 0.0073, 0.0082, 0.0091, 0.01, 0.0091, 0.0082, 0.0073, 0.0064, 0.0055, 0.0046, 0.0037, 0.0028, 0.0019])
+        np.testing.assert_almost_equal(
+            clr.history["iterations"], np.arange(1, 20 + 1)
+        )
+        np.testing.assert_almost_equal(
+            clr.history["lr"],
+            [
+                0.001,
+                0.0019,
+                0.0028,
+                0.0037,
+                0.0046,
+                0.0055,
+                0.0064,
+                0.0073,
+                0.0082,
+                0.0091,
+                0.01,
+                0.0091,
+                0.0082,
+                0.0073,
+                0.0064,
+                0.0055,
+                0.0046,
+                0.0037,
+                0.0028,
+                0.0019,
+            ],
+        )
 
     def test_clr_triangular2_train(self):
         """Test CLR triangular2 policy during training."""
@@ -97,22 +147,24 @@ class TestNNTools(unittest.TestCase):
             model=self._make_model(),
             data=(self._X, self._y),
             fit_kwargs={
-                'batch_size': 50,
-                'epochs': 40,
-                'validation_split': 0.2,
-                'shuffle': True,
-                'callbacks': [clr] 
+                "batch_size": 50,
+                "epochs": 40,
+                "validation_split": 0.2,
+                "shuffle": True,
+                "callbacks": [clr],
             },
             model_filename=None,
             history_filename=None,
-            wandb_project=None
+            wandb_project=None,
         )
 
         # Should go back to min
         np.testing.assert_almost_equal(model.optimizer.lr, 0.001)
-        np.testing.assert_almost_equal(clr.history['iterations'], np.arange(1, 40+1))
         np.testing.assert_almost_equal(
-            clr.history['lr'], 
+            clr.history["iterations"], np.arange(1, 40 + 1)
+        )
+        np.testing.assert_almost_equal(
+            clr.history["lr"],
             [
                 0.001,
                 0.0019,
@@ -153,8 +205,8 @@ class TestNNTools(unittest.TestCase):
                 0.0028,
                 0.00235,
                 0.0019,
-                0.00145
-            ]
+                0.00145,
+            ],
         )
 
     def test_clr_exp_range_train(self):
@@ -164,29 +216,31 @@ class TestNNTools(unittest.TestCase):
             max_lr=0.01,
             step_size=10,
             mode="exp_range",
-            gamma=0.9
+            gamma=0.9,
         )
 
         model = utils.NNTools.train(
             model=self._make_model(),
             data=(self._X, self._y),
             fit_kwargs={
-                'batch_size': 50,
-                'epochs': 40,
-                'validation_split': 0.2,
-                'shuffle': True,
-                'callbacks': [clr] 
+                "batch_size": 50,
+                "epochs": 40,
+                "validation_split": 0.2,
+                "shuffle": True,
+                "callbacks": [clr],
             },
             model_filename=None,
             history_filename=None,
-            wandb_project=None
+            wandb_project=None,
         )
 
         # Should go back to min
         np.testing.assert_almost_equal(model.optimizer.lr, 0.001)
-        np.testing.assert_almost_equal(clr.history['iterations'], np.arange(1, 40+1))
         np.testing.assert_almost_equal(
-            clr.history['lr'], 
+            clr.history["iterations"], np.arange(1, 40 + 1)
+        )
+        np.testing.assert_almost_equal(
+            clr.history["lr"],
             [
                 0.001,
                 0.00181,
@@ -227,11 +281,6 @@ class TestNNTools(unittest.TestCase):
                 0.0010811023,
                 0.001054744,
                 0.0010328464,
-                0.0010147808
-            ]
+                0.0010147808,
+            ],
         )
-
-
-
-
-        
