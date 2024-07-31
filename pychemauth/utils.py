@@ -24,6 +24,7 @@ import tensorflow as tf
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.utils.validation import check_array
+from sklearn.utils import shuffle as skshuffle
 from matplotlib.patches import Ellipse, Rectangle
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -33,6 +34,84 @@ from tensorflow.keras import backend as K
 
 class NNTools:
     """Tools for working with neural networks."""
+
+    class XLoader(tf.keras.utils.Sequence):
+        """Dataset loader that retrieves X from disk and y from memory."""
+
+        def __init__(self, x_files, y, batch_size, fmt="npy", shuffle=False):
+            """
+            Instantiate the class.
+
+            Parameters
+            ----------
+            x_files : list(str)
+                List of filenames, in order, that correspond to X.
+
+            y : ndarray(object, ndim=1)
+                Target.
+
+            batch_size : int
+                Batch size used during training.
+
+            fmt : str, optional(default='npy')
+                Format the X data is saved in. Default is numpy.
+
+            shuffle : bool, optional(default=False)
+                Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
+
+            Raises
+            ------
+            NotImplementedError
+                If `fmt` is unsupported.
+            """
+            self.x, self.y = x_files, y
+            self.x_orig, self.y_orig = copy.copy(self.x), copy.copy(
+                self.y
+            )  # Save the original ordering
+            self.batch_size = batch_size
+            self.shuffle = shuffle
+
+            if fmt == "npy":
+                self.load = np.load
+            else:
+                raise NotImplementedError(f"Cannot load data in {fmt} format")
+
+        def __len__(self):
+            """Return the number of datapoints in a batch."""
+            return np.ceil(len(self.x) / self.batch_size)
+
+        def __getitem__(self, idx):
+            """
+            Retrieve a batch of data.
+
+            Parameters
+            ----------
+            idx : int
+                Batch index.
+
+            Returns
+            -------
+            X_batch : ndarray
+                Numpy array of X data for this batch.
+
+            y_batch : ndarray(object, ndim=1)
+                Target data for this batch.
+            """
+            low = idx * self.batch_size
+            # Cap upper bound at array length; the last batch may be smaller
+            # if the total number of items is not a multiple of batch size.
+            high = min(low + self.batch_size, len(self.x))
+            batch_x = self.x[low:high]
+            batch_y = self.y[low:high]
+
+            return np.array(
+                [self.load(file_name) for file_name in batch_x]
+            ), np.array(batch_y)
+
+        def on_epoch_end(self, epoch, logs=None):
+            """Execute changes at the end of a training epoch."""
+            if self.shuffle:  # Shuffle if desired
+                self.x, self.y = skshuffle(self.x, self.y)
 
     class LearningRateFinder(keras.callbacks.Callback):
         """
@@ -519,15 +598,20 @@ class NNTools:
 
     @staticmethod
     def _is_data_iter(data):
-        """Check if data is an iterator of some kind."""
+        """Check if data is an iterator that returns batches."""
         classes = [
-            "NumpyArrayIterator",
-            "DirectoryIterator",
-            "DataFrameIterator",
-            "Iterator",
-            "Sequence",
+            tf.keras.preprocessing.image.NumpyArrayIterator,
+            tf.keras.preprocessing.image.DirectoryIterator,
+            tf.keras.utils.Sequence,
+            tf.keras.utils.experimental.DatasetCreator,
+            tf.data.Iterator,
+            tf.data.NumpyIterator,
+            tf.data.Dataset,
         ]
-        return data.__class__.__name__ in classes
+        for class_ in classes:
+            if isinstance(data, class_):
+                return True
+        return False
 
     @staticmethod
     def find_learning_rate(
