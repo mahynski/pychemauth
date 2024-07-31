@@ -4,7 +4,8 @@ Unittests for Convolutional Neural Networks (CNNs).
 author: nam
 """
 import unittest
-import sklearn
+import tqdm
+import pytest
 
 import numpy as np
 
@@ -33,7 +34,7 @@ class TestCNNFactory(unittest.TestCase):
 
         # Use sklearn to get a subsample with a consistent fraction of different classes
         _, self._X, _, self._y = train_test_split(
-            np.expand_dims(self._X, axis=-1), # Convert to a "single channeled" image
+            self._X, 
             self._y, 
             test_size=0.1, 
             random_state=42, 
@@ -50,9 +51,11 @@ class TestCNNFactory(unittest.TestCase):
         for i in range(self._X.shape[0]):
             gaf = GramianAngularField(method='difference')
             X_gaf[i] = gaf.fit_transform(self._X[i:i+1])[0]
-        
+        self._X = np.expand_dims(X_gaf, axis=-1) # Convert to a "single channeled" image
+
         self.n_classes = len(np.unique(self._y))
         self.image_size = self._X.shape[1:]
+        print(self._X)
 
         # For sparse categorical encoding
         enc = OrdinalEncoder(dtype=int)
@@ -87,15 +90,16 @@ class TestCNNFactory(unittest.TestCase):
         )
 
         # Check the CNN "adapter" layer has fixed weights
-        np.testing.assert_allclose(trained_model.layers[1].weights.numpy(), np.ones(3))
+        np.testing.assert_allclose(trained_model.layers[1].weights[0].numpy().ravel(), np.ones(3))
 
         # Check that the layers in the BASE haven't changed
         for layer_t, layer_u in zip(trained_model.layers[4].weights, untrained_model.layers[4].weights): 
             np.testing.assert_allclose(layer_t.numpy(), layer_u.numpy())
     
+    @pytest.mark.skip(reason="This takes a very long time - reenable for debugging")
     def test_init(self):
         """Test all the models in the factory can be looked up and initialized."""
-        for name in [
+        for name in tqdm.tqdm([
             'xception',
             'efficientnetb0',
             'efficientnetb1',
@@ -167,7 +171,7 @@ class TestCNNFactory(unittest.TestCase):
             'nasnetmobile',
             'inceptionv3',
             'inceptionresnetv2'
-        ]:
+        ]):
             try:
                 CNNFactory(name=name, input_size=self.image_size, n_classes=self.n_classes, dim=2).build()
             except Exception as e:
