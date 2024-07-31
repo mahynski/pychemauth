@@ -64,6 +64,9 @@ class NNTools:
             NotImplementedError
                 If `fmt` is unsupported.
             """
+            if len(x_files) != len(y):
+                raise Exception("X and y should have the same length.")
+
             self.x, self.y = x_files, y
             self.x_orig, self.y_orig = copy.copy(self.x), copy.copy(
                 self.y
@@ -641,8 +644,8 @@ class NNTools:
         model : keras.Model
             Uncompiled model to use.
 
-        data : tuple or
-            If the data is in memory this can be provided as (X_train, y_train)
+        data : tuple or iterable
+            If the data is in memory this can be provided as (X_train, y_train). Otherwise, provide an iterable, like `NNTools.XLoader` that can provide data in batches, consistent with Keras' API.  If the latter is provided, `batch_size` is ignored.
 
         start_lr : float, optional(default=1.0e-8)
             Initial learning rate.  Should be a value expected to be too small.
@@ -661,7 +664,7 @@ class NNTools:
            Smoothing factor used to smooth the loss value over time.
 
         batch_size : int, optional(default=100)
-            Number of instances per batch. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues.
+            Number of instances per batch. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues.  If `data` is provided as an iterable data loader, then this is ignored.
 
         compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
             Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.
@@ -673,7 +676,7 @@ class NNTools:
             Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
             inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
             To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
-            simply become equivalent to 'metrics'
+            simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
 
         Returns
         -------
@@ -704,6 +707,7 @@ class NNTools:
             N = data[0].shape[0]
             epochs = int(np.ceil(n_updates * batch_size / float(N)))
         else:
+            batch_size = None
             raise NotImplementedError("Data iterators are not yet supported.")
 
         # Do a "fast" training updated LR with every batch
@@ -779,6 +783,95 @@ class NNTools:
         return new_args
 
     @staticmethod
+    def _summarize_batches(data):
+        """
+        Perform 1 iteration over the dataset to summarize its contents for various consistency checks.
+
+        Parameters
+        ----------
+        data : iterator
+            A data iterator of some kind for a Keras model.
+
+        Returns
+        -------
+        N_data : int
+            Number of datapoints total.
+
+        N_batches : int
+            Total number of batches.
+
+        unique_targets : dict(int or str, int)
+            Unique classes found in the data and their counts in the dataset.  If not a classification problem returns an empty dictionary.
+
+        X_batch : ndarray
+            First batch of X data.
+
+        y_batch : ndarray
+            First batch of y data.
+        """
+        N_data, N_batches = 0, 0
+        X_, y_ = data[N_batches]
+        X_batch, y_batch = copy.copy(X_), copy.copy(
+            y_
+        )  # Save these to return as an example
+
+        classification = False
+        if y_.ndim == 1:  # Single target
+            if type(y_[0].item()) in [
+                str,
+                int,
+            ]:  # If y contains ints or strings assume we are doing classification
+                classification = True
+        elif (
+            y_.ndim == 2
+        ):  # If classification then this must be OHE matrix so only ints valid
+            if type(y_[0][0].item()) == int:
+                classification = True
+        else:
+            raise Exception("Target should have no more than 2 dimensions.")
+
+        unique_targets = {}
+
+        def _update(y_batch):  # Update class count for classification
+            if y_batch.ndim == 1:  # Single integers or strings for each class
+                d = dict(
+                    map(
+                        lambda i, j: (i, j),
+                        *np.unique(y_batch, return_counts=True),
+                    )
+                )
+            elif y_batch == 2:  # OHE integers for classes
+                d = dict(
+                    map(
+                        lambda i, j: (i, j),
+                        np.arange(y_batch.shape[1]),
+                        np.sum(y_batch, axis=0),
+                    )
+                )
+            else:
+                raise Exception("Target should have no more than 2 dimensions.")
+
+            for k, v in d.items():
+                try:
+                    unique_targets[k] += v
+                except:
+                    unique_targets[k] = v
+
+        # This is slow, but doesn't depend on internal variables, etc. that might vary between different types of iterators
+        while tqdm.tqdm(
+            len(X_) > 0,
+            desc="Iterating through all batches to summarize, be patient...",
+        ):
+            if classification:
+                _update(y_)
+            N_data += len(X_)
+
+            N_batches += 1
+            X_, y_ = data[N_batches]
+
+        return N_data, N_batches, unique_targets, X_batch, y_batch
+
+    @staticmethod
     def train(
         model,
         data,
@@ -828,26 +921,28 @@ class NNTools:
         model : keras.Model
             Uncompiled model to compile and train.
 
-        data : tuple(X, y)
-            In the future we may support data iterators, but for now data should be a tuple of X and y data loaded in memory.
+        data : tuple(X, y) or iterable
+            If the entire dataset can fit in memory you can provide it as a tuple.
 
-            X : numpy.ndarray(float, ndim=3 or 4)
-                Channels-last formatted training instances.  For 2D images, this should have a shape of (N, D1, D2, C) where N is the number of instances and each image is D1xD2 with C channels.  For 1D series, the expected format is (N, D1, C).
+                X : numpy.ndarray(float, ndim=3 or 4)
+                    Channels-last formatted training instances.  For 2D images, this should have a shape of (N, D1, D2, C) where N is the number of instances and each image is D1xD2 with C channels.  For 1D series, the expected format is (N, D1, C).
 
-            y : numpy.ndarray(int, ndim=1 or 2)
-                Integer encoded class for each training instance. If a 1 dimensional input is provided, it is assumed the classes are uniquely encoded as integers and you should use a 'sparse_categorical_crossentropy' compiler loss and 'sparse_categorical_accuracy' metric. This works for binary as well as multiclass datasets. If a 2 dimensional input is provided, it is assumed each class is one-hot encoded and you should use a 'categorical_crossentropy' compiler loss and 'categorical_accuracy' metric.
+                y : numpy.ndarray(int, ndim=1 or 2)
+                    Integer encoded class for each training instance. If a 1 dimensional input is provided, it is assumed the classes are uniquely encoded as integers and you should use a 'sparse_categorical_crossentropy' compiler loss and 'sparse_categorical_accuracy' metric. This works for binary as well as multiclass datasets. If a 2 dimensional input is provided, it is assumed each class is one-hot encoded and you should use a 'categorical_crossentropy' compiler loss and 'categorical_accuracy' metric.
+
+            Otherwise a data iterator may be provided consistent with Keras' API.  For example, a `NNTools.XLoader`.
 
         compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
             Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.  If None, will assume the model is already compiled.
 
         fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.2, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
-            Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues.
+            Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues, or using a data iterator instead; in this case `batch_size` will be ignored.
 
         class_weight : dict(int, float), optional(default=None)
             Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
             inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
             To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
-            simply become equivalent to 'metrics'
+            simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
 
         seed : int, optional(default=42)
             Seed for keras random weight initialization when the model is compiled.
@@ -923,16 +1018,19 @@ class NNTools:
         keras.utils.set_random_seed(seed)
         tf.config.experimental.enable_op_determinism()
 
-        if not NNTools._is_data_iter(data):
-            X, y = data
+        if NNTools._is_data_iter(data):
+            _, N_batches, unique_targets, X, y = NNTools._summarize_batches(
+                data
+            )
+            N_data = len(unique_targets)
+            vals = sorted(unique_targets.keys())
+            counts = np.array([unique_targets[k] for k in vals])
 
-            # Check n_classes is the same as in model
-            N_model = model.predict(X[:1]).shape[1]
+            # Overwrite this to ensure batch size is determined by the data iterator.  Keras knows to ignore this, but this is good to alert the user.
+            fit_kwargs["batch_size"] = None
+        else:
+            X, y = data
             N_data = len(np.unique(y))
-            if N_data != N_model:
-                raise Exception(
-                    f"Model is configured to predict {N_model} classes, while the training set contains {N_data} unique classes"
-                )
 
             # Check length consistency between X and y
             if X.shape[0] != y.shape[0]:
@@ -940,44 +1038,51 @@ class NNTools:
                     "X and y should have the same first dimension corresponding to the number of datapoints"
                 )
 
-            # Check y is encoded as integers and other consistencies
-            if compiler_kwargs is not None:
-                if (
-                    compiler_kwargs.get("loss")
-                    == "sparse_categorical_crossentropy"
-                ):
-                    # Classes are unique integer values
-                    if type(y[0].item()) != int:
-                        raise ValueError(
-                            "A sparse_categorical_crossentropy loss is used when y is not one-hot encoded, but y should be provided as integers"
-                        )
-                    vals, counts = np.unique(y, return_counts=True)
-                elif compiler_kwargs.get("loss") == "categorical_crossentropy":
-                    # OHE of y
-                    if y.shape[1] != N_model:
-                        raise Exception(
-                            f"A categorical_crossentropy loss is used for one-hot-encoded y; y contains {y.shape[1]} classes but model is expecting {N_model}"
-                        )
-                    if type(y[0][0].item()) != int:
-                        raise ValueError("y should be encoded as integers")
-                    vals, counts = np.arange(y.shape[1]), np.sum(y, axis=0)
-                else:
+        # Check n_classes is the same as in model
+        N_model = model.predict(X[:1]).shape[1]
+        if N_data != N_model:
+            raise Exception(
+                f"Model is configured to predict {N_model} classes, while the training set contains {N_data} unique classes"
+            )
+
+        # Check y is encoded as integers and other consistencies
+        if compiler_kwargs is not None:
+            if compiler_kwargs.get("loss") == "sparse_categorical_crossentropy":
+                # Classes are unique integer values
+                if type(y[0].item()) != int:
                     raise ValueError(
-                        'compiler loss should be "sparse_categorical_crossentropy" or "categorical_crossentropy"'
+                        "A sparse_categorical_crossentropy loss is used when y is not one-hot encoded, but y should be provided as integers"
                     )
-
-                # Bad compiler kwargs should cause this to fail
-                model.compile(**compiler_kwargs)
-
-            # Class weights following: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-            if class_weight is None:
-                class_weight = dict(
-                    zip(vals, (1.0 / counts) / (len(vals) / np.sum(counts)))
+                if not NNTools._is_data_iter(data):
+                    vals, counts = np.unique(y, return_counts=True)
+            elif compiler_kwargs.get("loss") == "categorical_crossentropy":
+                # OHE of y
+                if y.shape[1] != N_model:
+                    raise Exception(
+                        f"A categorical_crossentropy loss is used for one-hot-encoded y; y contains {y.shape[1]} classes but model is expecting {N_model}"
+                    )
+                if type(y[0][0].item()) != int:
+                    raise ValueError("y should be encoded as integers")
+                if not NNTools._is_data_iter(data):
+                    vals, counts = np.arange(y.shape[1]), np.sum(y, axis=0)
+            else:
+                raise ValueError(
+                    'compiler loss should be "sparse_categorical_crossentropy" or "categorical_crossentropy"'
                 )
 
-        else:
-            raise NotImplementedError("Data iterators are not yet supported.")
+            # Bad compiler kwargs should cause this to fail
+            model.compile(**compiler_kwargs)
 
+        # Class weights following: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+        if class_weight is None:
+            class_weight = dict(
+                zip(vals, (1.0 / counts) / (len(vals) / np.sum(counts)))
+            )
+
+        # Add class_weight to fit_kwargs
+        fit_kwargs["class_weight"] = class_weight
+
+        # Update callbacks with WandB logger, if used
         if wandb_project is not None:
             import wandb
             from wandb.integration.keras import WandbMetricsLogger
@@ -993,7 +1098,6 @@ class NNTools:
                     "wandb_kwargs": {}
                     if wandb_kwargs is None
                     else NNTools._json_serializable(wandb_kwargs),
-                    "class_weight": class_weight,
                     "seed": seed,
                     "model_filename": ""
                     if model_filename is None
@@ -1011,7 +1115,10 @@ class NNTools:
                 fit_kwargs["callbacks"] = [logger]
 
         # Fit model with incremental saving / checkpointing
-        _ = model.fit(x=X, y=y, **fit_kwargs)
+        if NNTools._is_data_iter(data):
+            _ = model.fit(x=data, **fit_kwargs)
+        else:
+            _ = model.fit(x=X, y=y, **fit_kwargs)
 
         # Write the final model and full training history
         if model_filename is not None:

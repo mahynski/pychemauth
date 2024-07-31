@@ -666,10 +666,10 @@ class TestCAMArchitecture(unittest.TestCase):
             36: (False, 0, 0, "", ""),
             37: (False, 0, 0, "", ""),
             38: (False, 0, 0, "", ""),
-            39: (True, -1, 2, "global_average_pooling2d_30", "input"),
-            40: (True, -1, 2, "global_average_pooling2d_31", "input"),
-            41: (True, -2, 2, "global_average_pooling2d_32", "input"),
-            42: (True, -2, 2, "global_average_pooling2d_33", "input"),
+            39: (True, -1, 2, "global_average_pooling2d_28", "input"),
+            40: (True, -1, 2, "global_average_pooling2d_29", "input"),
+            41: (True, -2, 2, "global_average_pooling2d_30", "input"),
+            42: (True, -2, 2, "global_average_pooling2d_31", "input"),
             43: (True, -1, 2, "flatten_42", "input"),
             44: (True, -1, 2, "flatten_43", "input"),
             45: (True, -2, 2, "flatten_44", "input"),
@@ -698,10 +698,13 @@ class TestCAMArchitecture(unittest.TestCase):
                 style="hires",
             )
 
-            # This assumes the layer name for these idx are correct, but at least it checks all the others
-            if model_idx in [0, 8, 12, 20, 28]:
+            # This assumes the layer name for these idx are correct, but at least it checks all the subsequent ones in each "block"
+            if model_idx in [0, 8, 12, 20, 28, 39, 43]:
                 start = model_idx
-                incr = 2 if model_idx != 8 else 1
+                if model_idx in [8, 39, 43]:
+                    incr = 1
+                else:
+                    incr = 2
                 base = _extract(res[3])
 
             # Renumber the layer if necessary using the start of a "chunk" as reference since this is run in a loop
@@ -710,7 +713,7 @@ class TestCAMArchitecture(unittest.TestCase):
                     self.correct_answers[model_idx],
                     base + (model_idx - start) * incr,
                 )
-                if model_idx <= 35
+                if (model_idx <= 35 or model_idx >= 39)
                 else self.correct_answers[model_idx]
             )
             np.testing.assert_equal(res, correct)
