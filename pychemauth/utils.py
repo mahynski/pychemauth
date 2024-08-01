@@ -16,6 +16,9 @@ import keras
 import json
 import visualkeras
 import wandb
+import struct
+import tqdm
+import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,6 +33,94 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from huggingface_hub import hf_hub_download, HfApi, ModelCard, ModelCardData
 from tensorflow.keras import backend as K
+
+
+class fastnumpyio:
+    """
+    Tools from fastnumpyio to accelerate numpy IO.
+
+    These tools can accelerate I/O operations by a factor of ~25.
+
+    This is a copy-paste from https://github.com/divideconcept/fastnumpyio provided under the MIT license,
+    from commit tag 627bb17.  If this package is ever released on pypi in the future it will be included in the
+    installation rather than an explicit copy here.
+    """
+
+    @staticmethod
+    def save(file, array):
+        """Save a numpy array to disk."""
+        magic_string = b"\x93NUMPY\x01\x00v\x00"
+        header = bytes(
+            (
+                "{'descr': '"
+                + array.dtype.descr[0][1]
+                + "', 'fortran_order': False, 'shape': "
+                + str(array.shape)
+                + ", }"
+            ).ljust(127 - len(magic_string))
+            + "\n",
+            "utf-8",
+        )
+        if type(file) == str:
+            file = open(file, "wb")
+        file.write(magic_string)
+        file.write(header)
+        file.write(array.data)
+
+    @staticmethod
+    def pack(array):
+        """Pack a numpy array."""
+        size = len(array.shape)
+        return (
+            bytes(
+                array.dtype.byteorder.replace(
+                    "=", "<" if sys.byteorder == "little" else ">"
+                )
+                + array.dtype.kind,
+                "utf-8",
+            )
+            + array.dtype.itemsize.to_bytes(1, byteorder="little")
+            + struct.pack(f"<B{size}I", size, *array.shape)
+            + array.data
+        )
+
+    @staticmethod
+    def load(file):
+        """Load a numpy array from disk."""
+        if type(file) == str:
+            file = open(file, "rb")
+        header = file.read(128)
+        if not header:
+            return None
+        descr = str(header[19:25], "utf-8").replace("'", "").replace(" ", "")
+        shape = tuple(
+            int(num)
+            for num in str(header[60:120], "utf-8")
+            .replace(", }", "")
+            .replace("(", "")
+            .replace(")", "")
+            .split(",")
+        )
+        datasize = np.lib.format.descr_to_dtype(descr).itemsize
+        for dimension in shape:
+            datasize *= dimension
+        return np.ndarray(shape, dtype=descr, buffer=file.read(datasize))
+
+    @staticmethod
+    def unpack(data):
+        """Unpack a numpy array."""
+        dtype = str(data[:2], "utf-8")
+        dtype += str(data[2])
+        size = data[3]
+        shape = struct.unpack_from(f"<{size}I", data, 4)
+        datasize = data[2]
+        for dimension in shape:
+            datasize *= dimension
+        return np.ndarray(
+            shape,
+            dtype=dtype,
+            buffer=data[4 + size * 4 : 4 + size * 4 + datasize],
+        )
 
 
 class NNTools:
@@ -75,7 +166,7 @@ class NNTools:
             self.shuffle = shuffle
 
             if fmt == "npy":
-                self.load = np.load
+                self.load = fastnumpyio.load  # faster than np.load
             else:
                 raise NotImplementedError(f"Cannot load data in {fmt} format")
 
@@ -172,7 +263,7 @@ class NNTools:
                 Final learning rate.  Should be a value expected to be too large.
 
             n_updates : int, optional(default=100)
-                Number of times to update learning rate; this is done after each bactch so this determines
+                Number of times to update learning rate; this is done after each batch so this determines
                 the total number of batches (and therefore, epochs) run.
 
             stop_factor : float, optional(default=4.0)

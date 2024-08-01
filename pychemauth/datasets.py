@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.utils import Bunch
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from pychemauth.utils import NNTools
+from pychemauth.utils import NNTools, fastnumpyio
 
 
 def load_pgaa(return_X_y=False, as_frame=False):
@@ -309,7 +309,9 @@ def make_pgaa_images(
                     if fmt == "npy":
                         file = os.path.join(path, f"x_{i}.npy")
                         with open(file, "wb") as f:
-                            np.save(f, X_)
+                            fastnumpyio.save(
+                                f, X_
+                            )  # faster than np.save(f, X_)
                             x_files.append(os.path.abspath(file))
                     else:
                         raise NotImplementedError(
@@ -319,7 +321,7 @@ def make_pgaa_images(
                 # For posterity, also save encoded y, even though loaders will not use.
                 # This way, a loader can be recreated from this directory in the future.
                 with open(os.path.join(path, "y.npy"), "wb") as f:
-                    np.save(f, y_)
+                    fastnumpyio.save(f, y_)  # faster than np.save(f, y_)
 
                 # Create Sequence
                 loaders[subdir_] = NNTools.XLoader(
