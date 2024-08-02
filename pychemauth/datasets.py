@@ -39,22 +39,22 @@ def load_pgaa(return_X_y=False, as_frame=False):
     data : Bunch
         Dictionary-like object, with the following attributes.
 
-        data{ndarray, DataFrame}
+        data : {ndarray, DataFrame}
             The data matrix. If as_frame=True, data will be a pandas DataFrame.
 
-        target: {ndarray, Series}
+        target : {ndarray, Series}
             The classification target. If as_frame=True, target will be a pandas Series.
 
-        feature_names: list
+        feature_names : list
             The names of the dataset columns.
 
-        target_names: list
+        target_names : list
             The names of target classes.
 
-        frame: DataFrame
+        frame : DataFrame
             Only present when as_frame=True. DataFrame with data and target.
 
-        DESCR: str
+        DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
@@ -87,7 +87,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
     )
     X.columns = feature_names
     if not as_frame:
-        X = X.values
+        X = np.ascontiguousarray(X.values)
 
     target_names = ["Material"]
     url = "https://raw.githubusercontent.com/mahynski/pgaa-material-authentication/master/data/raw/y.csv"
@@ -96,7 +96,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
     ).squeeze()
     y.name = target_names[0]
     if not as_frame:
-        y = y.values
+        y = np.ascontiguousarray(y.values)
 
     if return_X_y:
         return (X, y)
@@ -368,22 +368,22 @@ def load_stamp2010(return_X_y=False, as_frame=False):
     data : Bunch
         Dictionary-like object, with the following attributes.
 
-        data{ndarray, DataFrame}
+        data : {ndarray, DataFrame}
             The data matrix. If as_frame=True, data will be a pandas DataFrame.
 
-        target: {ndarray, DataFrame}
+        target : {ndarray, DataFrame}
             The classification target. If as_frame=True, target will be a pandas DataFrame.
 
-        feature_names: list
+        feature_names : list
             The names of the dataset columns.
 
-        target_names: list
+        target_names : list
             The names of target classes.
 
-        frame: DataFrame
+        frame : DataFrame
             Only present when as_frame=True. DataFrame with data and target.
 
-        DESCR: str
+        DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
@@ -416,13 +416,13 @@ def load_stamp2010(return_X_y=False, as_frame=False):
     )
     feature_names = X.columns.tolist()
     if not as_frame:
-        X = X.values
+        X = np.ascontiguousarray(X.values)
 
     url = "https://raw.githubusercontent.com/mahynski/stamp-dataset-1999-2010/master/y.csv"
     y = pd.read_csv(io.StringIO(requests.get(url).content.decode("utf-8")))
     target_names = y.columns.tolist()
     if not as_frame:
-        y = y.values
+        y = np.ascontiguousarray(y.values)
 
     if return_X_y:
         return (X, y)
