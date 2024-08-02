@@ -295,7 +295,7 @@ class NNTools:
             self.x_orig, self.y_orig = copy.copy(self.x), copy.copy(
                 self.y
             )  # Save the original ordering
-            self.batch_size = batch_size
+            self.batch_size = int(batch_size)
             self.shuffle = shuffle
 
             if fmt == "npy":
@@ -305,7 +305,7 @@ class NNTools:
 
         def __len__(self):
             """Return the number of datapoints in a batch."""
-            return np.ceil(len(self.x) / self.batch_size)
+            return int(np.ceil(len(self.x) / self.batch_size))
 
         def __getitem__(self, idx):
             """
@@ -335,7 +335,7 @@ class NNTools:
                 [self.load(file_name) for file_name in batch_x]
             ), np.array(batch_y)
 
-        def on_epoch_end(self, epoch, logs=None):
+        def on_epoch_end(self):#, epoch, logs=None):
             """Execute changes at the end of a training epoch."""
             if self.shuffle:  # Shuffle if desired
                 self.x, self.y = skshuffle(self.x, self.y)
@@ -995,8 +995,10 @@ class NNTools:
             N = data[0].shape[0]
             epochs = int(np.ceil(n_updates * batch_size / float(N)))
         else:
-            batch_size = None
-            raise NotImplementedError("Data iterators are not yet supported.")
+            batch_size = None 
+            batch_size = data[0][0].shape[0] # Take size of X from first batch
+            N = len(data)*batch_size # Last batch may be smaller so this is an upper bound on N
+            epochs = int(np.ceil(n_updates * batch_size / float(N-1))) # Use N-1 to increase the number of epochs for rounding
 
         # Do a "fast" training updated LR with every batch
         NNTools.train(
@@ -1146,6 +1148,7 @@ class NNTools:
                     unique_targets[k] = v
 
         # This is slow, but doesn't depend on internal variables, etc. that might vary between different types of iterators
+        # len(data) will given N_batches, but won't give us info on what is in y, etc.
         while tqdm.tqdm(
             len(X_) > 0,
             desc="Iterating through all batches to summarize, be patient...",
