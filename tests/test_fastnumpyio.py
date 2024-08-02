@@ -9,17 +9,18 @@ import numpy as np
 
 from pychemauth.utils import fastnumpyio
 
+
 class Checkfastnumpyio(unittest.TestCase):
     """Check fastnumpyio gives same results as numpy."""
 
     def test_io(self):
         """Test read/write in numpy is the same as in fastnumpyio."""
-        testarray = np.random.rand(3,64,64).astype('float32')
+        testarray = np.random.rand(3, 64, 64).astype("float32")
 
         # Numpy reference when it saves data and reloads it
         buffer = io.BytesIO()
         np.save(buffer, testarray)
-        numpy_save_data=buffer.getvalue()
+        numpy_save_data = buffer.getvalue()
 
         buffer = io.BytesIO(numpy_save_data)
         test_numpy_save = np.load(buffer)

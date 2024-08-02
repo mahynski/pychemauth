@@ -19,6 +19,8 @@ import wandb
 import struct
 import tqdm
 import sys
+import pathlib
+import shutil
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,8 +44,8 @@ class fastnumpyio:
     These tools can accelerate I/O operations by a factor of ~25.
 
     This is a copy-paste from https://github.com/divideconcept/fastnumpyio provided under the MIT license,
-    from commit tag 627bb17.  If this package is ever released on pypi in the future it will be included in the
-    installation rather than an explicit copy here.
+    from commit tag 627bb17 + hitfix to address #4.  If this package is ever released on pypi in the future 
+    it will be included in the installation rather than an explicit copy here.
     """
 
     @staticmethod
@@ -96,10 +98,12 @@ class fastnumpyio:
         shape = tuple(
             int(num)
             for num in str(header[60:120], "utf-8")
+            .strip()
             .replace(", }", "")
             .replace("(", "")
             .replace(")", "")
             .split(",")
+            if num != ""
         )
         datasize = np.lib.format.descr_to_dtype(descr).itemsize
         for dimension in shape:
@@ -123,11 +127,132 @@ class fastnumpyio:
         )
 
 
+def _sort_xdata(directory):
+    """Sort x_i.ext files in a directory by their index, i."""
+    path = pathlib.Path(directory).absolute()
+    sorted_x = [
+        pathlib.Path(os.path.join(path, f)).absolute()
+        for f in sorted(
+            [f for f in os.listdir(path) if f.startswith("x_")],
+            key=lambda x: int(x.split("_")[1].split(".")[0]),
+        )
+    ]
+    final_idx = int(sorted_x[-1].parts[-1].split("_")[1].split(".")[0])
+
+    return [str(p) for p in sorted_x], final_idx
+
+
+def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
+    """
+    Write a dataset from memory to disk.
+
+    Each observation in X (row, or first dimension) is saved as a separate file named "x_i.ext"
+    where i is the index and ext is the file extension.  All y values are saved in a single file
+    called "y.ext".
+
+    Parameters
+    ----------
+    directory : str, optional(default=None)
+        Directory to save dataset to.
+
+    X : ndarray
+        Dataset features as a numpy array.  First dimension should corresponds to observations.
+
+    y : ndarray
+        Target.
+
+    fmt : str, optional(default='npy')
+        Format the X data is saved in. Default is numpy.
+
+    overwrite : bool, optional(default=False)
+        Whether to delete any `directory` that already exists.
+
+    augment : bool, optional(default=False)
+        If True, assume X is being added to any existing data in `directory`; the data is written
+        with "x_i.ext" indices starting immediately after whatever currently exists.  Note that if
+        `overwrite=True` any existing directory will be removed so this parameter is irrlevant in
+        that case.
+
+    Raises
+    ------
+    Exception
+        If X and y are not numpy arrays with the same length.
+        If `directory` already exists and `overwrite` is False.
+
+    Example
+    -------
+    >>> write_dataset('./data/train', X_train, y_train)
+    >>> write_dataset('./data/test', X_test, y_test)
+    """
+    X, y = np.asarray(X), np.asarray(y)
+    if X.shape[0] != y.shape[0]:
+        raise Exception("X and y should have the same length.")
+
+    # Work with absolute paths
+    directory = pathlib.Path(directory).absolute()
+
+    if not augment and not overwrite and os.path.isdir(directory):
+        raise Exception(f"{directory} already exists.")
+
+    if overwrite and os.path.isdir(directory):
+        shutil.rmtree(directory)  # Completely wipe old directory
+
+    x_start = 0
+    if augment and os.path.isdir(directory):
+        _, x_start = _sort_xdata(directory)
+        x_start += 1
+
+    # Create directory if it doesn't already exist
+    os.makedirs(directory, exist_ok=True)
+
+    x_files, y_file = [], ""
+    if fmt == "npy":
+        # Save X to disk
+        for i in range(X.shape[0]):
+            file = str(
+                pathlib.Path(
+                    os.path.join(directory, f"x_{i+x_start:09}.npy")
+                ).absolute()
+            )
+            fastnumpyio.save(file, X[i])
+            x_files.append(file)
+
+        # Save y to disk
+        file = str(pathlib.Path(os.path.join(directory, "y.npy")).absolute())
+        if augment:
+            try:
+                y_prev = fastnumpyio.load(file)
+            except IOError:
+                if x_start > 0:
+                    raise Exception(
+                        "Augmentation error: previous x files found but y does not seem to exist."
+                    )
+            else:
+                y = np.concatenate((y_prev, y), axis=0)
+        fastnumpyio.save(file, y)
+        y_file = file
+    else:
+        raise NotImplementedError(f"Cannot save data in {fmt} format.")
+
+    return x_files, y_file
+
+
 class NNTools:
     """Tools for working with neural networks."""
 
     class XLoader(tf.keras.utils.Sequence):
-        """Dataset loader that retrieves X from disk and y from memory."""
+        """
+        Dataset loader that retrieves X from disk and y from memory.
+
+        Example
+        -------
+        >>> head = os.path.abspath('/path/to/directory')
+        >>> loader = NNTools.XLoader(
+        ...     x_files = [os.path.abspath(os.path.join(head, f)) for f in os.listdir(head)],
+        ...     y = np.load('/path/to/y_data'),
+        ...     batch_size = 10
+        ... )
+        """
 
         def __init__(self, x_files, y, batch_size, fmt="npy", shuffle=False):
             """
@@ -206,6 +331,70 @@ class NNTools:
             """Execute changes at the end of a training epoch."""
             if self.shuffle:  # Shuffle if desired
                 self.x, self.y = skshuffle(self.x, self.y)
+
+    @staticmethod
+    def build_loader(
+        directory, loader="x", batch_size=1, fmt="npy", shuffle=False
+    ):
+        """
+        Build a dataset loader from a directory.
+
+        Parameters
+        ----------
+        directory : str, optional(default=None)
+            Directory to read dataset from.  Should be the directory used in `write_dataset`.
+
+        loader : str, optional(default='x')
+            Type of Loader to create; default is XLoader.
+
+        batch_size : int
+            Batch size used during training.
+
+        fmt : str, optional(default='npy')
+            Format the X data is saved in. Default is numpy.
+
+        shuffle : bool, optional(default=False)
+            Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
+
+        Notes
+        -----
+        The directory should have the correct structure, i.e., that which is created by `write_dataset`.
+
+        Example
+        -------
+        >>> Train_Loader = NNTools.build_loader('./data/train', batch_size=10)
+        >>> Test_Loader = NNTools.build_loader('./data/test', batch_size=10)
+        """
+        directory = pathlib.Path(directory).absolute()
+
+        def _read_y(y_file):
+            if y_file.endswith("npy"):
+                return fastnumpyio.load(y_file)
+            else:
+                raise NotImplementedError(f"Cannot save data in {fmt} format.")
+
+        if loader.lower() == "x":
+            if not os.path.isdir(directory):
+                raise Exception(f"{directory} does not exist.")
+
+            y_file = os.path.join(directory, f"y.{fmt}")
+            if not os.path.isfile(y_file):
+                raise Exception(f"Could not find {y_file} in {directory}.")
+
+            loader = NNTools.XLoader(
+                x_files=_sort_xdata(directory)[0],
+                y=_read_y(y_file),
+                batch_size=batch_size,
+                fmt=fmt,
+                shuffle=shuffle,
+            )
+
+        else:
+            raise NotImplementedError(
+                f"Cannot create an '{loader}' style Loader."
+            )
+
+        return loader
 
     class LearningRateFinder(keras.callbacks.Callback):
         """
