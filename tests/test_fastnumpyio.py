@@ -5,6 +5,9 @@ author: nam
 """
 import unittest
 import io
+import tempfile
+import os
+
 import numpy as np
 
 from pychemauth.utils import fastnumpyio
@@ -39,3 +42,17 @@ class Checkfastnumpyio(unittest.TestCase):
 
         np.array_equal(test_numpy_save, test_fastnumpyio_save)
         np.array_equal(test_numpy_save, test_fastnumpyio_pack)
+
+    def test_disk(self):
+        """Test reading and writing to disk."""
+        testarray = np.random.rand(3, 64, 64).astype("float32")
+        
+        dir_ = tempfile.TemporaryDirectory()
+        with open(os.path.join(dir_.name, 'dummy.npy'), 'wb') as f:
+            fastnumpyio.save(f, testarray)
+            
+        with open(os.path.join(dir_.name, 'dummy.npy'), 'rb') as f:
+            checkarray = fastnumpyio.load(f)
+        dir_.cleanup()
+
+        np.testing.assert_allclose(testarray, checkarray)
