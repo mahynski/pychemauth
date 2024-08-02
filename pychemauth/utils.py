@@ -173,6 +173,14 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
         `overwrite=True` any existing directory will be removed so this parameter is irrlevant in
         that case.
 
+    Returns
+    -------
+    x_files : list(str)
+        List of absolute paths to files for each row in X, in order.
+    
+    y_file : str
+        Filename where y has been stored.
+        
     Raises
     ------
     Exception
