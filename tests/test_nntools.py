@@ -5,6 +5,7 @@ author: nam
 """
 import unittest
 import keras
+import tempfile
 
 import numpy as np
 
@@ -24,6 +25,36 @@ class TestNNTools(unittest.TestCase):
         self._X = np.expand_dims(self._X, axis=-1)
         self.n_classes = len(np.unique(self._y))
         self._y = LabelEncoder().fit_transform(self._y)
+
+    def test_make_npy_xloader(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y,
+            overwrite=False,
+            augment=False,
+        )
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy", batch_size=batch_size, loader="x", fmt="npy"
+        )
+
+        # Check it is the same as the original data
+        idx = 0
+        for b in range(int(np.ceil(self._X.shape[0] / batch_size))):
+            X_, y_ = data[b]
+            for i in range(min(batch_size, self._X.shape[0] - idx)):
+                np.testing.assert_allclose(self._X[idx], X_[i])
+                np.testing.assert_allclose(self._y[idx], y_[i])
+                idx += 1
+
+        dir_.cleanup()
 
     def _make_model(self, activation="relu"):
         """Make a simple model to use."""
