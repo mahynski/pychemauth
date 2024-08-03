@@ -15,7 +15,7 @@ import numpy as np
 from sklearn.utils import Bunch
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from pychemauth.utils import NNTools, fastnumpyio
+from pychemauth.utils import NNTools, write_dataset
 
 
 def load_pgaa(return_X_y=False, as_frame=False):
@@ -293,19 +293,14 @@ def make_pgaa_images(
             if dset_ is not None:
                 x_files = []
                 path = os.path.join(directory, subdir_)
-                # os.makedirs(
-                #     path, exist_ok=False
-                # )  # Will throw an error if this already exists
 
                 for i in tqdm.tqdm(
                     range(dset_.shape[0]), desc=f"Transforming {subdir_} set"
                 ):
                     # Transform one at a time - forced to treat each individual observation as the dataset
-                    X_ = _convert(
-                        transformer.fit_transform(dset_[i : i + 1])[0]
-                    )
+                    X_ = _convert(transformer.fit_transform(dset_[i : i + 1]))
 
-                    x_f_, _ = utils.write_dataset(
+                    x_f_, _ = write_dataset(
                         directory=path,
                         X=X_,
                         y=y_[i : i + 1],
@@ -316,24 +311,6 @@ def make_pgaa_images(
                         augment=True,
                     )
                     x_files += x_f_
-
-                #     # Save to disk
-                #     if fmt == "npy":
-                #         file = os.path.join(path, f"x_{i}.npy")
-                #         with open(file, "wb") as f:
-                #             fastnumpyio.save(
-                #                 f, X_
-                #             )  # faster than np.save(f, X_)
-                #             x_files.append(os.path.abspath(file))
-                #     else:
-                #         raise NotImplementedError(
-                #             f"Cannot save data in {fmt} format"
-                #         )
-
-                # # For posterity, also save encoded y, even though loaders will not use.
-                # # This way, a loader can be recreated from this directory in the future.
-                # with open(os.path.join(path, "y.npy"), "wb") as f:
-                #     fastnumpyio.save(f, y_)  # faster than np.save(f, y_)
 
                 # Create Sequence
                 loaders[subdir_] = NNTools.XLoader(

@@ -335,7 +335,7 @@ class NNTools:
                 [self.load(file_name) for file_name in batch_x]
             ), np.array(batch_y)
 
-        def on_epoch_end(self):#, epoch, logs=None):
+        def on_epoch_end(self):
             """Execute changes at the end of a training epoch."""
             if self.shuffle:  # Shuffle if desired
                 self.x, self.y = skshuffle(self.x, self.y)
@@ -993,12 +993,12 @@ class NNTools:
 
         if not NNTools._is_data_iter(data):
             N = data[0].shape[0]
-            epochs = int(np.ceil(n_updates * batch_size / float(N)))
         else:
-            batch_size = None 
-            batch_size = data[0][0].shape[0] # Take size of X from first batch
-            N = len(data)*batch_size # Last batch may be smaller so this is an upper bound on N
-            epochs = int(np.ceil(n_updates * batch_size / float(N-1))) # Use N-1 to increase the number of epochs for rounding
+            batch_size = data[0][0].shape[0]  # Take size of X from first batch
+            N = (len(data) - 1) * batch_size + len(
+                data[len(data) - 1][0]
+            )  # Last batch may be smaller so account for last one explicitly
+        epochs = int(np.ceil(n_updates * batch_size / float(N)))
 
         # Do a "fast" training updated LR with every batch
         NNTools.train(
@@ -1009,6 +1009,7 @@ class NNTools:
                 "batch_size": batch_size,
                 "epochs": epochs,
                 "validation_split": 0.0,  # No validation for this search
+                "validation_data": None,
                 "shuffle": True,
                 "callbacks": [
                     finder,  # Update LR after each batch
@@ -1175,6 +1176,7 @@ class NNTools:
             "batch_size": 100,
             "epochs": 100,
             "validation_split": 0.2,
+            "validation_data": None,
             "shuffle": True,
             "callbacks": [
                 keras.callbacks.ModelCheckpoint(
@@ -1226,8 +1228,8 @@ class NNTools:
         compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
             Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.  If None, will assume the model is already compiled.
 
-        fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.2, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
-            Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues, or using a data iterator instead; in this case `batch_size` will be ignored.
+        fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.2, 'validation_data': None, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
+            Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues, or using a data iterator instead; in this case `batch_size` will be ignored.  Also, `validation_split` is invalid when using data iterators; in that case, specify `validation_data` with a test or validation set iterator of its own.
 
         class_weight : dict(int, float), optional(default=None)
             Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
