@@ -44,7 +44,7 @@ class fastnumpyio:
     These tools can accelerate I/O operations by a factor of ~25.
 
     This is a copy-paste from https://github.com/divideconcept/fastnumpyio provided under the MIT license,
-    from commit tag 627bb17 + hitfix to address #4.  If this package is ever released on pypi in the future
+    from commit tag 627bb17 + hotfix to address #4.  If this package is ever released on pypi in the future
     it will be included in the installation rather than an explicit copy here.
     """
 

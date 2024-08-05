@@ -7,6 +7,7 @@ import PIL
 import scipy
 import keras
 import matplotlib
+import sklearn
 
 import numpy as np
 import pandas as pd
@@ -613,7 +614,7 @@ class CAM2D(CAMBaseExplainer):
         series_cmap : matplotlib.colormaps, optional(default="Reds")
             Matplotlib colormap to use on the condensed 2D CAM explanation for the series. Best if perceptually uniform.
 
-        encoder :  sklearn.preprocessing.OrdinalEncoder, optional(default=None)
+        encoder :  sklearn.preprocessing.OrdinalEncoder or sklearn.preprocessing.LabelEncoder, optional(default=None)
             Encodes classes (strings) as integers.
 
         correct_label : str, optional(default=None)
@@ -649,7 +650,7 @@ class CAM2D(CAMBaseExplainer):
         # 1. Plot raw score output
         fig1, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 2))
 
-        if encoder is not None:
+        if isinstance(encoder, sklearn.preprocessing.OrdinalEncoder):
             classes_ = encoder.inverse_transform(
                 [[i] for i in range(len(encoder.categories_[0]))]
             ).ravel()
@@ -658,6 +659,17 @@ class CAM2D(CAMBaseExplainer):
             ax[0].set_title(
                 "Prediction = {}".format(
                     encoder.inverse_transform([[pred_index]])[0][0]
+                )
+            )
+        elif isinstance(encoder, sklearn.preprocessing.LabelEncoder):
+            classes_ = encoder.inverse_transform(
+                [i for i in range(len(encoder.classes_))]
+            )
+            if len(classes_) != len(preds):
+                raise ValueError("Encoder has the wrong number of classes")
+            ax[0].set_title(
+                "Prediction = {}".format(
+                    encoder.inverse_transform([pred_index])[0]
                 )
             )
         else:
