@@ -1010,7 +1010,7 @@ class NNTools:
                 "epochs": epochs,
                 "validation_split": 0.0,  # No validation for this search
                 "validation_data": None,
-                "shuffle": True,
+                "shuffle": True, # Automatically ignored if data is an iterator
                 "callbacks": [
                     finder,  # Update LR after each batch
                 ],
@@ -1175,9 +1175,9 @@ class NNTools:
         fit_kwargs={
             "batch_size": 100,
             "epochs": 100,
-            "validation_split": 0.2,
+            "validation_split": 0.0,
             "validation_data": None,
-            "shuffle": True,
+            "shuffle": True, # Automatically ignored if data is an iterator
             "callbacks": [
                 keras.callbacks.ModelCheckpoint(
                     filepath="./checkpoints/model.{epoch:05d}",
@@ -1228,7 +1228,7 @@ class NNTools:
         compiler_kwargs : dict(str, object), optional(default={'optimizer': 'adam', 'loss': 'sparse_categorical_crossentropy', 'weighted_metrics': ['accuracy', 'sparse_categorical_accuracy'],})
             Arguments to use when compiling the `model`. See https://keras.io/api/models/model_training_apis/#compile-method for details.  If None, will assume the model is already compiled.
 
-        fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.2, 'validation_data': None, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
+        fit_kwargs : dict(str, object), optional(default={'batch_size': 100, 'epochs': 100, 'validation_split': 0.0, 'validation_data': None, 'shuffle': True, 'callbacks': [keras.callbacks.ModelCheckpoint(filepath='./checkpoints/model.{epoch:05d}', save_weights_only=True, monitor='val_sparse_categorical_accuracy', save_freq='epoch', mode='max', save_best_only=False), keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=0, mode="auto", min_delta=0.0001, cooldown=0, min_lr=1.0e-6)]})
             Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues, or using a data iterator instead; in this case `batch_size` will be ignored.  Also, `validation_split` is invalid when using data iterators; in that case, specify `validation_data` with a test or validation set iterator of its own.
 
         class_weight : dict(int, float), optional(default=None)
@@ -1524,32 +1524,54 @@ class HuggingFace:
             from pychemauth.classifier import osr, plsda, simca
             from pychemauth.manifold import elliptic
 
-            _type = type(model)
-            if (_type is sklearn.pipeline.Pipeline) or (
-                _type is imblearn.pipeline.Pipeline
-            ):
-                _type = type(model.steps[-1][1])
-
-            if _type in [
-                pychemauth.classifier.osr.OpenSetClassifier,
-                pychemauth.classifier.plsda.PLSDA,
-                pychemauth.classifier.simca.SIMCA_Authenticator,
-                pychemauth.classifier.simca.SIMCA_Model,
-                pychemauth.classifier.simca.DDSIMCA_Model,
-                pychemauth.manifold.elliptic.EllipticManifold_Authenticator,
-                pychemauth.manifold.elliptic.EllipticManifold_Model,
-            ]:
-                # Tag as classifier
-                return "tabular-classification"
-            elif _type in [
-                pychemauth.regressor.pcr.PCR,
-                pychemauth.regressor.pls.PLS,
-            ]:
-                # Tag as regressor
-                return "tabular-regression"
+            # First check if this is a NN model
+            if isinstance(model, keras.Model):
+                def _is_classifier(model):
+                    # If final layer is explicitly as activation then assume only linear is compatible with regression.
+                    # This logic is valid if last layer is explicity a keras.layer.Activation or keras.layer.Dense
+                    if model.layers[-1].activation == keras.activations.linear:
+                        return False
+                    else:
+                        return True
+                
+                classifier = _is_classifier(model)
+                if len(model.input_shape) == 3: # (index, D1, 1)
+                    # Effectively tabular
+                    return f"tabular-{'classification' if _is_classifier(model) else 'regression'}"
+                elif len(model.input_shape) == 4: # (index, D1, D2, C) where C is channels
+                    # Effectively working with images (2D) data
+                    if _is_classifier(model):
+                        return "image-classification"
+                    else:
+                        # Could be be image detection, segmentation, etc. and there is not a simple way to automatically tag this for now
+                        return "other"
             else:
-                # No tags - e.g., PCA.
-                return "other"
+                _type = type(model)
+                if (_type is sklearn.pipeline.Pipeline) or (
+                    _type is imblearn.pipeline.Pipeline
+                ):
+                    _type = type(model.steps[-1][1])
+
+                if _type in [
+                    pychemauth.classifier.osr.OpenSetClassifier,
+                    pychemauth.classifier.plsda.PLSDA,
+                    pychemauth.classifier.simca.SIMCA_Authenticator,
+                    pychemauth.classifier.simca.SIMCA_Model,
+                    pychemauth.classifier.simca.DDSIMCA_Model,
+                    pychemauth.manifold.elliptic.EllipticManifold_Authenticator,
+                    pychemauth.manifold.elliptic.EllipticManifold_Model,
+                ]:
+                    # Tag as classifier
+                    return "tabular-classification"
+                elif _type in [
+                    pychemauth.regressor.pcr.PCR,
+                    pychemauth.regressor.pls.PLS,
+                ]:
+                    # Tag as regressor
+                    return "tabular-regression"
+                else:
+                    # No tags - e.g., PCA.
+                    return "other"
 
         # Save all files in a temporary directory and push them in a single commit
         try:
