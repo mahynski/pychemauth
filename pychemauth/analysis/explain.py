@@ -587,6 +587,7 @@ class CAM2D(CAMBaseExplainer):
         series_cmap="Reds",
         encoder=None,
         correct_label=None,
+        origin="upper",
     ):
         """
         Visualize the CAM explaination of a 2D, single-channel image.
@@ -619,6 +620,9 @@ class CAM2D(CAMBaseExplainer):
 
         correct_label : str, optional(default=None)
             Correct label for the series (e.g., from y_train). Used to label the output figures.
+
+        origin : str, optional(default='upper')
+            Origin convention for 2D images; see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html.
 
         Returns
         -------
@@ -719,7 +723,7 @@ class CAM2D(CAMBaseExplainer):
             hspace=0.01,
         )
 
-        if y is not None:
+        if (y is not None) and (x is not None):
             ax_left = fig2.add_subplot(gs[1, 0])
             ax_left.plot(y, x)
             ax_left.set_ylim([x.min(), x.max()])
@@ -728,6 +732,9 @@ class CAM2D(CAMBaseExplainer):
             ax_left.set_xticks([])
             ax_left.set_yticks([])
             ax_left.invert_xaxis()
+
+            if origin == "upper":
+                ax_left.invert_yaxis()
 
             ax_top1 = fig2.add_subplot(gs[0, 1])
             ax_top1.plot(x, y)
@@ -744,14 +751,14 @@ class CAM2D(CAMBaseExplainer):
 
         # Plot the image
         ax_gaf = fig2.add_subplot(gs[1, 1])
-        im1 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin="lower")
+        im1 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin=origin)
         ax_gaf.set_xticks([])
         ax_gaf.set_yticks([])
         ax_gaf.set_title("Image", y=-0.09)
 
         # Plot class activations
         ax_cam = fig2.add_subplot(gs[1, 3])
-        im2 = ax_cam.imshow(cmap_heatmap, cmap=image_cmap, origin="lower")
+        im2 = ax_cam.imshow(cmap_heatmap, cmap=image_cmap, origin=origin)
         ax_cam.set_xticks([])
         ax_cam.set_yticks([])
         if self.style == "grad":
@@ -762,7 +769,7 @@ class CAM2D(CAMBaseExplainer):
         # Plot the image with alpha to indicate relevance / explanation
         ax_expl = fig2.add_subplot(gs[1, 5])
         im3 = ax_expl.imshow(
-            image[:, :, 0], cmap=image_cmap, origin="lower", alpha=importances
+            image[:, :, 0], cmap=image_cmap, origin=origin, alpha=importances
         )
         ax_expl.set_xticks([])
         ax_expl.set_yticks([])

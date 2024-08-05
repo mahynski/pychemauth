@@ -6,6 +6,7 @@ author: nam
 import unittest
 import keras
 import tempfile
+import pytest
 
 import numpy as np
 
@@ -26,6 +27,7 @@ class TestNNTools(unittest.TestCase):
         self.n_classes = len(np.unique(self._y))
         self._y = LabelEncoder().fit_transform(self._y)
 
+    @pytest.mark.dependency(name="test_make_npy_xloader")
     def test_make_npy_xloader(self):
         """Build an XLoader from data on disk."""
         dir_ = tempfile.TemporaryDirectory()
@@ -91,6 +93,7 @@ class TestNNTools(unittest.TestCase):
 
         return model
 
+    @pytest.mark.dependency(name="test_find_learning_rate")
     def test_find_learning_rate(self):
         """Test learning rate finder loop with callback."""
         try:
@@ -110,6 +113,45 @@ class TestNNTools(unittest.TestCase):
         np.testing.assert_almost_equal(finder.start_lr, 1.0e-8)
         np.testing.assert_almost_equal(finder.end_lr, 10.0)
 
+    @pytest.mark.dependency(
+        depends=["test_make_npy_xloader", "test_find_learning_rate"]
+    )
+    def test_find_learning_rate_iter(self):
+        """Test learning rate finder loop with callback using a data iterator."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Write dataset to disk and create data loader
+        _ = utils.write_dataset(
+            dir_.name + "/train",
+            self._X,
+            self._y,
+            overwrite=False,
+            augment=False,
+        )
+        data = utils.NNTools.build_loader(
+            dir_.name + "/train", batch_size=10, shuffle=True
+        )
+
+        try:
+            finder = utils.NNTools.find_learning_rate(
+                self._make_model(),
+                data,
+                n_updates=100,
+                start_lr=1.0e-8,
+                end_lr=10.0,
+            )
+        except Exception as e:
+            raise Exception(f"LearningRateFinder failed to run : {e}")
+
+        np.testing.assert_almost_equal(
+            finder.lr_mult, (10.0 / 1.0e-8) ** (1 / 100.0)
+        )
+        np.testing.assert_almost_equal(finder.start_lr, 1.0e-8)
+        np.testing.assert_almost_equal(finder.end_lr, 10.0)
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(name="test_clr_triangular_train")
     def test_clr_triangular_train(self):
         """Test CLR triangular policy during training."""
         clr = utils.NNTools.CyclicalLearningRate(
@@ -164,6 +206,78 @@ class TestNNTools(unittest.TestCase):
                 0.0019,
             ],
         )
+
+    @pytest.mark.dependency(
+        depends=["test_make_npy_xloader", "test_clr_triangular_train"]
+    )
+    def test_clr_triangular_train_iter(self):
+        """Test CLR triangular policy during training using a data iterator."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Write dataset to disk and create data loader
+        _ = utils.write_dataset(
+            dir_.name + "/train",
+            self._X,
+            self._y,
+            overwrite=False,
+            augment=False,
+        )
+        data = utils.NNTools.build_loader(
+            dir_.name + "/train", batch_size=10, shuffle=True
+        )
+
+        clr = utils.NNTools.CyclicalLearningRate(
+            base_lr=0.001,
+            max_lr=0.01,
+            step_size=10,
+            mode="triangular",
+        )
+
+        model = utils.NNTools.train(
+            model=self._make_model(),
+            data=data,
+            fit_kwargs={
+                "epochs": 20,
+                "shuffle": True,
+                "callbacks": [clr],
+            },
+            model_filename=None,
+            history_filename=None,
+            wandb_project=None,
+        )
+
+        # Should go back to min
+        np.testing.assert_almost_equal(model.optimizer.lr, 0.001)
+        np.testing.assert_almost_equal(
+            clr.history["iterations"], np.arange(1, 20 + 1)
+        )
+        np.testing.assert_almost_equal(
+            clr.history["lr"],
+            [
+                0.001,
+                0.0019,
+                0.0028,
+                0.0037,
+                0.0046,
+                0.0055,
+                0.0064,
+                0.0073,
+                0.0082,
+                0.0091,
+                0.01,
+                0.0091,
+                0.0082,
+                0.0073,
+                0.0064,
+                0.0055,
+                0.0046,
+                0.0037,
+                0.0028,
+                0.0019,
+            ],
+        )
+
+        dir_.cleanup()
 
     def test_clr_triangular2_train(self):
         """Test CLR triangular2 policy during training."""

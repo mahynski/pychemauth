@@ -50,7 +50,7 @@ setup(
         "pyts==0.13.0",
         "pillow>=10.0.0",
         "visualkeras>=0.1.3",
-        "opencv-python==4.10.0",  # For SHAP explanations
+        "opencv-python==4.10.0.82",  # For SHAP explanations
         "huggingface_hub==0.23.4",
         "tensorflow==2.14.0",  # This command should install keras==2.14.0 as well - based on Keras recommendation (https://keras.io/getting_started/#installing-keras-3) for creating a "universal GPU environment" based on Colab recommendations: https://colab.research.google.com/drive/13cpd3wCwEHpsmypY9o6XB6rXgBm5oSxu
     ],
