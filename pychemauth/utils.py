@@ -1010,7 +1010,7 @@ class NNTools:
                 "epochs": epochs,
                 "validation_split": 0.0,  # No validation for this search
                 "validation_data": None,
-                "shuffle": True, # Automatically ignored if data is an iterator
+                "shuffle": True,  # Automatically ignored if data is an iterator
                 "callbacks": [
                     finder,  # Update LR after each batch
                 ],
@@ -1177,7 +1177,7 @@ class NNTools:
             "epochs": 100,
             "validation_split": 0.0,
             "validation_data": None,
-            "shuffle": True, # Automatically ignored if data is an iterator
+            "shuffle": True,  # Automatically ignored if data is an iterator
             "callbacks": [
                 keras.callbacks.ModelCheckpoint(
                     filepath="./checkpoints/model.{epoch:05d}",
@@ -1526,6 +1526,7 @@ class HuggingFace:
 
             # First check if this is a NN model
             if isinstance(model, keras.Model):
+
                 def _is_classifier(model):
                     # If final layer is explicitly as activation then assume only linear is compatible with regression.
                     # This logic is valid if last layer is explicity a keras.layer.Activation or keras.layer.Dense
@@ -1533,12 +1534,14 @@ class HuggingFace:
                         return False
                     else:
                         return True
-                
+
                 classifier = _is_classifier(model)
-                if len(model.input_shape) == 3: # (index, D1, 1)
+                if len(model.input_shape) == 3:  # (index, D1, 1)
                     # Effectively tabular
                     return f"tabular-{'classification' if _is_classifier(model) else 'regression'}"
-                elif len(model.input_shape) == 4: # (index, D1, D2, C) where C is channels
+                elif (
+                    len(model.input_shape) == 4
+                ):  # (index, D1, D2, C) where C is channels
                     # Effectively working with images (2D) data
                     if _is_classifier(model):
                         return "image-classification"
