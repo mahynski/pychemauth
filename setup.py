@@ -25,7 +25,7 @@ setup(
     ],
     install_requires=[
         "baycomp==1.0.3",
-        "bokeh>=3.4.3", # Default in Colab
+        "bokeh>=3.4.3",  # Default in Colab
         "bokeh_sampledata==2024.2",
         "BorutaShap @ git+https://github.com/Ekeany/Boruta-Shap.git@38af879",
         "imbalanced-learn==0.11.0",
@@ -33,8 +33,8 @@ setup(
         "ipywidgets",
         "matplotlib==3.7.2",
         "nodejs==0.1.1",
-        "numpy==1.26.4", # 1.24.3",
-        "pandas==2.1.4", # 1.5.3", # For Colab
+        "numpy==1.26.4",
+        "pandas==2.1.4", # For Colab
         "pre-commit==3.3.3",
         "scikit-learn==1.3.0",
         "scipy==1.11.1",

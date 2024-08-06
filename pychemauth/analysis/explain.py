@@ -1228,13 +1228,16 @@ def _make_cam(
     # Due to issues with running this on certain gpus, we can force this to operate on the CPU.
     # This seems to arise when using certain CNN Bases which have, e.g., batch norms inside.
     from tensorflow.python.client import device_lib
+
     cpu_name = None
     for dev in device_lib.list_local_devices():
-        if dev.device_type == 'CPU':
+        if dev.device_type == "CPU":
             cpu_name = dev.name
             break
     if cpu_name is None:
-        raise Exception('Could not locate the CPU to compute class activation map.')
+        raise Exception(
+            "Could not locate the CPU to compute class activation map."
+        )
 
     with tf.device(cpu_name):
         (
@@ -1289,7 +1292,9 @@ def _make_cam(
                 # We multiply each channel in the feature map array
                 # by "how important this channel is" with regard to the top predicted class
                 # then sum all the channels to obtain the class activation map.
-                class_act_map = conv_layer_output @ pooled_grads[..., tf.newaxis]
+                class_act_map = (
+                    conv_layer_output @ pooled_grads[..., tf.newaxis]
+                )
             elif style == "hires":
                 # Use the 'HiResCAM' algorithm instead.
                 class_act_map = tf.math.multiply(grads, conv_layer_output)
@@ -1306,9 +1311,9 @@ def _make_cam(
 
             # For visualization purpose, it is conventional to normalize the heatmap between 0 & 1 after
             # a ReLU so we only focus on what positively affects the CAM with respect to the class.
-            asymm_class_act_map = tf.maximum(class_act_map, 0) / tf.math.reduce_max(
-                class_act_map
-            )
+            asymm_class_act_map = tf.maximum(
+                class_act_map, 0
+            ) / tf.math.reduce_max(class_act_map)
             if dim == 2:
                 symm_class_act_map = (
                     class_act_map + tf.transpose(class_act_map)
@@ -1444,7 +1449,9 @@ def color_series(
     y = np.asarray(y, dtype=np.float64).ravel()
     importance_values = np.asarray(importance_values, dtype=np.float64).ravel()
     if not (len(x) == len(y) and len(x) == len(importance_values)):
-        raise ValueError(f"Lengths of x ({len(x)}), y ({len(y)}), and importance_values ({len(importance_values)}) should match.")
+        raise ValueError(
+            f"Lengths of x ({len(x)}), y ({len(y)}), and importance_values ({len(importance_values)}) should match."
+        )
 
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=figsize)
     if background:
@@ -1521,12 +1528,14 @@ def bokeh_color_spectrum(
 
     plot_figure = figure(
         title="Importance-Colored Value",
-        tools=("pan, wheel_zoom, box_select, box_zoom, lasso_select, crosshair, tap, examine, reset"),
+        tools=(
+            "pan, wheel_zoom, box_select, box_zoom, lasso_select, crosshair, tap, examine, reset"
+        ),
         x_axis_label="Center",
         y_axis_label="Value",
         y_axis_type=y_axis_type,
         width=900,
-        aspect_ratio=1.5
+        aspect_ratio=1.5,
     )
 
     plot_figure.add_tools(
