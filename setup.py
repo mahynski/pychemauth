@@ -33,8 +33,8 @@ setup(
         "ipywidgets",
         "matplotlib==3.7.2",
         "nodejs==0.1.1",
-        "numpy==1.24.3",
-        "pandas==1.5.3",
+        "numpy==1.26.4", # 1.24.3",
+        "pandas==2.1.4", # 1.5.3", # For Colab
         "pre-commit==3.3.3",
         "scikit-learn==1.3.0",
         "scipy==1.11.1",
