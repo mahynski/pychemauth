@@ -1432,7 +1432,7 @@ def color_series(
     y = np.asarray(y, dtype=np.float64).ravel()
     importance_values = np.asarray(importance_values, dtype=np.float64).ravel()
     if not (len(x) == len(y) and len(x) == len(importance_values)):
-        raise ValueError("Lengths of x, y, and importance_values should match.")
+        raise ValueError(f"Lengths of x ({len(x)}), y ({len(y)}), and importance_values ({len(importance_values)}) should match.")
 
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=figsize)
     if background:
@@ -1478,6 +1478,16 @@ def bokeh_color_spectrum(
 
     y_axis_type : str, optional(default=None)
         Optional transformation of y axis, e.g., y_axis_type="log".
+
+    Notes
+    -----
+    If using this in a Jupyter Norebook be sure to set the output correctly (see example below)
+
+    Examples
+    --------
+    >>> from bokeh.io import output_notebook()
+    >>> output_notebook()
+    >>> bokeh_color_spectrum(...)
     """
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()
@@ -1499,12 +1509,12 @@ def bokeh_color_spectrum(
 
     plot_figure = figure(
         title="Importance-Colored Value",
-        plot_width=900,
-        plot_height=600,
-        tools=("pan, wheel_zoom, reset"),
+        tools=("pan, wheel_zoom, box_select, box_zoom, lasso_select, crosshair, tap, examine, reset"),
         x_axis_label="Center",
         y_axis_label="Value",
         y_axis_type=y_axis_type,
+        width=900,
+        aspect_ratio=1.5
     )
 
     plot_figure.add_tools(
@@ -1525,16 +1535,16 @@ def bokeh_color_spectrum(
     )
 
     plot_figure.line(
-        "Center",
-        "Value",
+        x="Center",
+        y="Value",
         source=datasource,
         color="black",
         line_width=1,
         line_alpha=0.25,
     )
-    plot_figure.circle(
-        "Center",
-        "Value",
+    plot_figure.scatter(
+        x="Center",
+        y="Value",
         source=datasource,
         color=dict(field="Importance", transform=color_mapping),
         line_alpha=0.6,
