@@ -1227,7 +1227,7 @@ def _make_cam(
     """
     # Due to issues with running this on certain gpus, we can force this to operate on the CPU.
     # This seems to arise when using certain CNN Bases which have, e.g., batch norms inside.
-    from tf.python.client import device_lib
+    from tensorflow.python.client import device_lib
     cpu_name = None
     for dev in device_lib.list_local_devices():
         if dev.device_type == 'CPU':
