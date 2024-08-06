@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Files from testing
+docs/jupyter/api/1d-dataset*
+docs/jupyter/api/2d-dataset*
+docs/jupyter/api/wandb*

@@ -1225,99 +1225,111 @@ def _make_cam(
     Exception
         The Keras model architecture is incorrect.
     """
-    (
-        valid,
-        _,
-        dim,
-        conv_layer_name,
-        effective_mode,
-    ) = check_cam_model_architecture(
-        model=model, style=style, conv_layer_name=conv_layer_name, mode=mode
-    )
-    if valid:
-        last_layer_act = model.layers[-1].activation
+    # Due to issues with running this on certain gpus, we can force this to operate on the CPU.
+    # This seems to arise when using certain CNN Bases which have, e.g., batch norms inside.
+    from tf.python.client import device_lib
+    cpu_name = None
+    for dev in device_lib.list_local_devices():
+        if dev.device_type == 'CPU':
+            cpu_name = dev.name
+            break
+    if cpu_name is None:
+        raise Exception('Could not locate the CPU to compute class activation map.')
 
-        # 1. Deactivate the activation to get the raw score value
-        model.layers[-1].activation = None
-
-        # 2. Create a model that maps the input image to the activations
-        # of the layer of interest, as well as the output predictions.
-        grad_model = keras.models.Model(
-            model.inputs,
-            [
-                model.get_layer(conv_layer_name).output
-                if effective_mode == "output"
-                else model.get_layer(conv_layer_name).input,
-                model.output,
-            ],
+    with tf.device(cpu_name):
+        (
+            valid,
+            _,
+            dim,
+            conv_layer_name,
+            effective_mode,
+        ) = check_cam_model_architecture(
+            model=model, style=style, conv_layer_name=conv_layer_name, mode=mode
         )
+        if valid:
+            last_layer_act = model.layers[-1].activation
 
-        # 3. Compute the gradient of the top predicted class for our input image
-        # with respect to the activations.
-        with tf.GradientTape() as tape:
-            conv_layer_output, preds = grad_model(input)
-            if pred_index is None:
-                pred_index = tf.argmax(preds[0])
-            class_channel = preds[:, pred_index]
+            # 1. Deactivate the activation to get the raw score value
+            model.layers[-1].activation = None
 
-        # This is the gradient of the output neuron (top predicted or chosen)
-        # with regard to the output feature map of the last conv layer
-        grads = tape.gradient(class_channel, conv_layer_output)
-
-        conv_layer_output = conv_layer_output[0]
-
-        if style == "grad":
-            # Use standard 'Grad-CAM' algorithm.
-
-            # Mean intensity of the gradient over a specific feature map channel
-            pooled_grads = tf.reduce_mean(
-                grads, axis=(0, 1, 2) if dim == 2 else (0, 1)
+            # 2. Create a model that maps the input image to the activations
+            # of the layer of interest, as well as the output predictions.
+            grad_model = keras.models.Model(
+                model.inputs,
+                [
+                    model.get_layer(conv_layer_name).output
+                    if effective_mode == "output"
+                    else model.get_layer(conv_layer_name).input,
+                    model.output,
+                ],
             )
 
-            # We multiply each channel in the feature map array
-            # by "how important this channel is" with regard to the top predicted class
-            # then sum all the channels to obtain the class activation map.
-            class_act_map = conv_layer_output @ pooled_grads[..., tf.newaxis]
-        elif style == "hires":
-            # Use the 'HiResCAM' algorithm instead.
-            class_act_map = tf.math.multiply(grads, conv_layer_output)
-            class_act_map = tf.reduce_sum(
-                class_act_map, axis=-1
-            )  # "channels last" means feature maps in last dim
+            # 3. Compute the gradient of the top predicted class for our input image
+            # with respect to the activations.
+            with tf.GradientTape() as tape:
+                conv_layer_output, preds = grad_model(input)
+                if pred_index is None:
+                    pred_index = tf.argmax(preds[0])
+                class_channel = preds[:, pred_index]
+
+            # This is the gradient of the output neuron (top predicted or chosen)
+            # with regard to the output feature map of the last conv layer
+            grads = tape.gradient(class_channel, conv_layer_output)
+
+            conv_layer_output = conv_layer_output[0]
+
+            if style == "grad":
+                # Use standard 'Grad-CAM' algorithm.
+
+                # Mean intensity of the gradient over a specific feature map channel
+                pooled_grads = tf.reduce_mean(
+                    grads, axis=(0, 1, 2) if dim == 2 else (0, 1)
+                )
+
+                # We multiply each channel in the feature map array
+                # by "how important this channel is" with regard to the top predicted class
+                # then sum all the channels to obtain the class activation map.
+                class_act_map = conv_layer_output @ pooled_grads[..., tf.newaxis]
+            elif style == "hires":
+                # Use the 'HiResCAM' algorithm instead.
+                class_act_map = tf.math.multiply(grads, conv_layer_output)
+                class_act_map = tf.reduce_sum(
+                    class_act_map, axis=-1
+                )  # "channels last" means feature maps in last dim
+            else:
+                raise ValueError("Unrecognized CAM style")
+
+            class_act_map = tf.squeeze(class_act_map)
+
+            # 4. Reactivate final layer activation.
+            model.layers[-1].activation = last_layer_act
+
+            # For visualization purpose, it is conventional to normalize the heatmap between 0 & 1 after
+            # a ReLU so we only focus on what positively affects the CAM with respect to the class.
+            asymm_class_act_map = tf.maximum(class_act_map, 0) / tf.math.reduce_max(
+                class_act_map
+            )
+            if dim == 2:
+                symm_class_act_map = (
+                    class_act_map + tf.transpose(class_act_map)
+                ) / 2.0
+                symm_class_act_map = tf.maximum(
+                    symm_class_act_map, 0
+                ) / tf.math.reduce_max(symm_class_act_map)
+            else:
+                symm_class_act_map = asymm_class_act_map
+
+            return (
+                asymm_class_act_map.numpy(),
+                symm_class_act_map.numpy(),
+                preds[0].numpy(),
+                pred_index.numpy(),
+                conv_layer_name,
+            )
         else:
-            raise ValueError("Unrecognized CAM style")
-
-        class_act_map = tf.squeeze(class_act_map)
-
-        # 4. Reactivate final layer activation.
-        model.layers[-1].activation = last_layer_act
-
-        # For visualization purpose, it is conventional to normalize the heatmap between 0 & 1 after
-        # a ReLU so we only focus on what positively affects the CAM with respect to the class.
-        asymm_class_act_map = tf.maximum(class_act_map, 0) / tf.math.reduce_max(
-            class_act_map
-        )
-        if dim == 2:
-            symm_class_act_map = (
-                class_act_map + tf.transpose(class_act_map)
-            ) / 2.0
-            symm_class_act_map = tf.maximum(
-                symm_class_act_map, 0
-            ) / tf.math.reduce_max(symm_class_act_map)
-        else:
-            symm_class_act_map = asymm_class_act_map
-
-        return (
-            asymm_class_act_map.numpy(),
-            symm_class_act_map.numpy(),
-            preds[0].numpy(),
-            pred_index.numpy(),
-            conv_layer_name,
-        )
-    else:
-        raise Exception(
-            f"Model does not have the right architecture to be explained with the {style} method."
-        )
+            raise Exception(
+                f"Model does not have the right architecture to be explained with the {style} method."
+            )
 
 
 def _color_1d(x, y, importances, cmap="Reds", interp=True, bounds=None):
