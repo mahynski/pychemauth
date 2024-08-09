@@ -560,7 +560,7 @@ class NNTools:
 
             return ax
 
-        def estimate_clr(self, frac=0.75):
+        def estimate_clr(self, frac=0.75, skip=0):
             """
             Automatically estimate the upper and lower cyclical learning rate bounds.
 
@@ -575,6 +575,11 @@ class NNTools:
                 Determines the lower bound on the learning rate which is set when the
                 loss is 100*(1-frac)% of the way from the value at a learning rate of
                 0 to the minimum.
+        
+            skip : int, optional(default=0)
+                Number of points to skip from the beginning of the sweep when performing 
+                analysis.  This can be helpful to trim off any initial dips or other 
+                unusual behavior from the warmup stage.
 
             Returns
             -------
@@ -590,37 +595,40 @@ class NNTools:
                 Minimum in smoothed loss vs. learning rate occurs in the first 1/5 of the rates.
                 The estimate of the loss when the learning rate goes to 0 is higher than the minimum.
             """
-            min_idx_ = np.argmin(self._smoothed_loss)
+            _smoothed_loss = copy.copy(self._smoothed_loss[skip:])
+            _lr = copy.copy(self._lr[skip:])
+
+            min_idx_ = np.argmin(_smoothed_loss)
             limit_ = 5  # The mean of the first 1/limit_ "chunk" of losses will be taken as an estimate of LR -> 0
-            if min_idx_ < len(self._lr) // limit_:
+            if min_idx_ < len(_lr) // limit_:
                 raise Exception(
                     f"Minimum in loss occurs in the first 1/{limit_} of the learning rates; recommend reducing the lower bound and re-running."
                 )
 
             # Round down to nearest order of magnitude for maximum LR at best loss
-            max_lr = 10 ** (np.floor(np.log10(self._lr[min_idx_])))
+            max_lr = 10 ** (np.floor(np.log10(_lr[min_idx_])))
 
             # Find the location that corresponds to just below the max_lr
-            idx_ = np.argmin((np.array(self._lr) - max_lr) ** 2)
-            while self._lr[idx_] > max_lr and idx_ >= 0:
+            idx_ = np.argmin((np.array(_lr) - max_lr) ** 2)
+            while _lr[idx_] > max_lr and idx_ >= 0:
                 idx_ -= 1
 
             # Take lower bound of LR as the point where 90% of the gap from LR -> 0 and best LR
             baseline_loss_ = np.mean(
-                self._smoothed_loss[: (len(self._lr) // limit_)]
+                _smoothed_loss[: (len(_lr) // limit_)]
             )
-            if baseline_loss_ < self._smoothed_loss[idx_]:
+            if baseline_loss_ < _smoothed_loss[idx_]:
                 raise Exception(
                     "Cannot estimate cyclical learning rate bounds automatically; inspect visually instead."
                 )
-            threshold_ = self._smoothed_loss[idx_] + frac * (
-                baseline_loss_ - self._smoothed_loss[idx_]
+            threshold_ = _smoothed_loss[idx_] + frac * (
+                baseline_loss_ - _smoothed_loss[idx_]
             )
 
             # Walk toward LR = 0 to find this point
-            while self._smoothed_loss[idx_] < threshold_ and idx_ >= 0:
+            while _smoothed_loss[idx_] < threshold_ and idx_ >= 0:
                 idx_ -= 1
-            base_lr = self._lr[idx_ + 1]
+            base_lr = _lr[idx_ + 1]
 
             return base_lr, max_lr
 
