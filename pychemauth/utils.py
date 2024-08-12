@@ -1320,7 +1320,7 @@ class NNTools:
         tf.config.experimental.enable_op_determinism()
 
         if NNTools._is_data_iter(data):
-            _, N_batches, unique_targets, X, y = NNTools._summarize_batches(
+            _, _, unique_targets, X, y = NNTools._summarize_batches(
                 data
             )
             N_data = len(unique_targets)
@@ -1383,10 +1383,10 @@ class NNTools:
         # Add class_weight to fit_kwargs
         fit_kwargs["class_weight"] = class_weight
 
-        # Update callbacks with WandB logger, if used
+        # Update callbacks with W&B logger, if used
         if wandb_project is not None:
             import wandb
-            from wandb.integration.keras import WandbMetricsLogger
+            from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 
             wandb.login()
             _ = wandb.init(
@@ -1410,10 +1410,16 @@ class NNTools:
             )
 
             logger = WandbMetricsLogger(log_freq="batch")  # vs. 'epoch' default
+            chkpt = WandbModelCheckpoint( # Opt to save as much detail as possible to W&B
+                filepath="checkpoints/checkpoint.{epoch:05d}",
+                save_weights_only=True,
+                save_freq="epoch",
+                save_best_only=False,
+            )
             if "callbacks" in fit_kwargs:
-                fit_kwargs["callbacks"].append(logger)
+                fit_kwargs["callbacks"].append([logger, chkpt])
             else:
-                fit_kwargs["callbacks"] = [logger]
+                fit_kwargs["callbacks"] = [logger, chkpt]
 
         # Fit model with incremental saving / checkpointing
         if NNTools._is_data_iter(data):
@@ -1424,9 +1430,13 @@ class NNTools:
         # Write the final model and full training history
         if model_filename is not None:
             model.save(model_filename, overwrite=True)
+            if wandb_project is not None:
+                wandb.save(model_filename) # Also save to W&B
         if history_filename is not None:
             with open(history_filename, "wb") as f:
                 pickle.dump(model.history.history, f)
+            if wandb_project is not None:
+                wandb.save(history_filename) # Also save to W&B
 
         return model
 
