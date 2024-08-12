@@ -1213,6 +1213,7 @@ class NNTools:
         wandb_kwargs=None,
         model_filename="trained_model.keras",
         history_filename="training_history.pkl",
+        restart=None
     ):
         """
         Train a Keras model.
@@ -1260,6 +1261,9 @@ class NNTools:
         history_filename : str, optional(default='training_history.pkl')
             Name of the file to save the training history to when finished training. If None the history will not be saved.
 
+        restart : None or dict, optional(default=None)
+            If None, start training from scratch. Otherwise should be a dictionary of the following form: {"from_wandb": bool, "filepath": str, "weights_only": bool}.  "from_wandb" refers to whether or not to load from a W&B project online, "filepath" is either the local checkpoint / model or the path to the W&B artifact, and "weights_only" specifies if the saved checkpoint / model contains only weights or not. By default, checkpoints only save weights to W&B while the complete model is saved once at the end of the run.  For example, to restart from an old W&B checkpoint, use {"from_wandb": True, "filepath": "user-name/project-name/artifact-name:latest", "weights_only": True}; you can also specify the model name saved at the end of a run (`model_filename`) and set `weights_only=False`.  To load a local restart file set the `filepath` to the local filename instead, e.g., "/path/to/my/model_filename".
+
         Returns
         -------
         model : keras.Model
@@ -1269,7 +1273,7 @@ class NNTools:
         -----
         The Keras seed and other factors are set at the begnning of this function in the interest of reproducibility.  The produces identical initial layer weights, etc. between different runs with the same seed.
 
-        With the default parameters above (1) model checkpoints are writted to 'checkpoints/model.{epoch:05d}', (2) the final model is saved locally to 'model_filename', and (3) the model history is saved locally to 'history_filename'.  The `save_best_only=False` option in the keras.callbacks.ModelCheckpoint will save all checkpoints, which could take up disk space; consider `save_best_only=True` if that is an issue. Also, the `save_weights_only=True` option helps save disk space by only saving weights; to load a new model from these weights use `NNTools.load(filepath=filepath, weights_only=True, model=same_model)` where `filepath` refers to weights you wish to load.
+        With the default parameters above (1) model checkpoints are written locally to 'checkpoints/model.{epoch:05d}', (2) the final model is saved locally to 'model_filename', and (3) the model history is saved locally to 'history_filename'.  The `save_best_only=False` option in the keras.callbacks.ModelCheckpoint will save all checkpoints, which could take up disk space; consider `save_best_only=True` if that is an issue. Also, the `save_weights_only=True` option helps save disk space by only saving weights; to load a new model from these weights use `NNTools.load(filepath=filepath, weights_only=True, model=same_model)` where `filepath` refers to weights you wish to load.
 
         If you use wandb to track the run a "wandb" folder will also be created locally.
 
@@ -1406,12 +1410,15 @@ class NNTools:
                     "history_filename": ""
                     if history_filename is None
                     else history_filename,
+                    "restart": "" 
+                    if restart is None
+                    else NNTools._json_serializable(restart)
                 },
             )
 
             logger = WandbMetricsLogger(log_freq="batch")  # vs. 'epoch' default
             chkpt = WandbModelCheckpoint( # Opt to save as much detail as possible to W&B
-                filepath="checkpoints/checkpoint.{epoch:05d}",
+                filepath="checkpoints/",
                 save_weights_only=True,
                 save_freq="epoch",
                 save_best_only=False,
@@ -1420,6 +1427,24 @@ class NNTools:
                 fit_kwargs["callbacks"].append([logger, chkpt])
             else:
                 fit_kwargs["callbacks"] = [logger, chkpt]
+
+        # Restarting
+        if restart is not None:
+            try:
+                if restart['from_wandb']:
+                    temp_dir = tempfile.TemporaryDirectory()
+
+                    api = wandb.Api()
+                    artifact = api.artifact(restart['filepath'])
+                    checkpoint = temp_dir+'/restart-checkpoint'
+                    artifact.download(checkpoint)
+
+                    model = NNTools.load(filepath=checkpoint, weights_only=restart['weights_only'], model=model)
+                    temp_dir.cleanup()
+                else:
+                    model = NNTools.load(filepath=restart['filepath'], weights_only=restart['weights_only'], model=model)
+            except Exception as e:
+                raise Exception(f"Unable to restart : {e}")
 
         # Fit model with incremental saving / checkpointing
         if NNTools._is_data_iter(data):
