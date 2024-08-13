@@ -1432,15 +1432,23 @@ class NNTools:
         if restart is not None:
             try:
                 if restart['from_wandb']:
-                    temp_dir = tempfile.TemporaryDirectory()
-
+                    import wandb
+                    
                     api = wandb.Api()
                     artifact = api.artifact(restart['filepath'])
-                    checkpoint = temp_dir+'/restart-checkpoint'
+                    name_ = str(datetime.datetime.now()).replace(" ", "-")
+                    checkpoint = str(
+                        os.path.join(
+                            os.path.abspath(os.getcwd()), 
+                            f'restart-{name_}/' # The trailing "/" is critical here for keras to understand
+                        )
+                    ) 
+                    if os.path.isdir(checkpoint): # Remove any existing directory
+                        shutil.rmtree(checkpoint)
                     artifact.download(checkpoint)
 
                     model = NNTools.load(filepath=checkpoint, weights_only=restart['weights_only'], model=model)
-                    temp_dir.cleanup()
+                    # Do not cleanup the restart file - it is necessary
                 else:
                     model = NNTools.load(filepath=restart['filepath'], weights_only=restart['weights_only'], model=model)
             except Exception as e:
