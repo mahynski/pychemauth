@@ -29,8 +29,11 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
     alpha : scalar(float), optional(default=0.05)
         Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
 
-    gamma : scalar(float), optional(default=0.01)
+    gamma : scalar(float), optional(default=None)
         Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
+        Typically, `gamma=0.01` for many applications.  If `None` then no outlier detection is
+        performed on the training data; this also disables the `sft` option
+        which only makes sense if you specify a `gamma` value.
 
     target_class : scalar(str or int), optional(default=None)
         The class used to fit the SIMCA model; the rest are used
@@ -40,8 +43,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Type of SIMCA to use ("simca" or "dd-simca")
 
     use : str, optional(default="rigorous")
-        Which methodology to use to evaluate the model ("rigorous", "compliant")
-        (default="rigorous"). See Ref. [1] for more details.
+        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc")
+        (default="rigorous"). See Ref. [1] for more details.  The "acc" option
+        uses accuracy instead of TSNS or TEFF metrics; this enables more straightforward
+        comparison to discriminative classifiers, but is not conventional.
 
     scale_x : scalar(bool), optional(default=True)
         Whether or not to scale X by its sample standard deviation or not.
@@ -70,7 +75,8 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         are only computed during the outlier removal loop(s) while the final
         "clean" data uses classical estimates.  This option may throw away data
         it is originally provided for training; it keeps only "regular" samples
-        (inliers and extremes) to train the model.
+        (inliers and extremes) to train the model.  If a `gamma` value is not 
+        specified then this option is not available.
 
     Note
     ----
@@ -113,7 +119,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         self,
         n_components=1,
         alpha=0.05,
-        gamma=0.01,
+        gamma=None,
         target_class=None,
         style="dd-simca",
         use="rigorous",
@@ -415,13 +421,13 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         "better" model.
         """
         check_is_fitted(self, "is_fitted_")
-        if self.use == "rigorous":
+        if self.use.lower() == "rigorous":
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
 
             m = self.metrics(X, y)
             return -((m["TSNS"] - (1 - self.alpha)) ** 2)
-        elif self.use == "compliant":
+        elif self.use.lower() == "compliant":
             # Make sure we have alternatives to test on
             a = set(np.unique(y))
             a.discard(self.target_class)
@@ -432,6 +438,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
             m = self.metrics(X, y)
             return m["TEFF"]
+        elif self.use.lower() == "acc":
+            # For accuracy we need to convert y to boolean array of inliers vs. outliers
+            y_in = np.asarray(y) == self.target_class
+            return self.__model_.accuracy(X, y_in)
         else:
             raise ValueError("Unrecognized setting use=" + str(self.use))
 
@@ -1038,8 +1048,10 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
     alpha : scalar(float), optional(default=0.05)
         Significance level.
 
-    gamma : scalar(float), optional(default=0.01)
-        Outlier significance level.
+    gamma : scalar(float), optional(default=None)
+        Outlier significance level.  If `None` then no outlier detection is
+        performed on the training data; this also disables the `sft` option
+        which only makes sense if you specify a `gamma` value.
 
     scale_x : scalar(bool), optional(default=True)
         Whether or not to scale X by its sample standard deviation or not.
@@ -1068,7 +1080,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         outlier removal loop(s) while the final "clean" data uses classical
         estimates.  This option may throw away data it is originally provided
         for training; it keeps only "regular" samples (inliers and extremes)
-        to train the model.
+        to train the model.  If a `gamma` value is not specified then this
+        option is not available.
 
     Note
     ----
@@ -1097,7 +1110,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         self,
         n_components,
         alpha=0.05,
-        gamma=0.01,
+        gamma=None,
         scale_x=True,
         robust="semi",
         sft=False,
@@ -1255,16 +1268,23 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             )
 
             # Eq. 20 in [2]
-            self.__c_out_ = scipy.stats.chi2.ppf(
-                (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
-                self.__Nh_ + self.__Nq_,
-            )
+            if self.gamma is None:
+                self.__c_out_ = self.__c_crit_
+            else:
+                self.__c_out_ = scipy.stats.chi2.ppf(
+                    (1.0 - self.gamma) ** (1.0 / self.__X_.shape[0]),
+                    self.__Nh_ + self.__Nq_,
+                )
 
         # This is based on [3]
         if not self.sft:
             train(X, robust=self.robust)
             self.__sft_history_ = {}
         else:
+            # SFT only really makes sense if you have an outlier significance level
+            if self.gamma is None:
+                raise Exception('Specify a gamma value to use sft.')
+            
             X_tmp = np.array(X).copy()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
@@ -1863,8 +1883,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         outlier_curve : scalar(bool), optional(default=True)
             Whether or not to display the outlier threshold curve and characterize
-            any points as "extreme."  If False, then all points will be labeled as
-            inliers vs. outliers only.
+            any points as "extreme" if you specified a `gamma` value.  If False, 
+            then all points will be labeled as inliers vs. outliers only, based 
+            on your alpha value.
 
         Returns
         -------
@@ -1912,7 +1933,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             np.log(1.0 + q_lim / self.__q0_) if log else q_lim / self.__q0_,
             "g-",
         )
-        if outlier_curve:
+        if outlier_curve and self.gamma is not None:
             axis.plot(
                 np.log(1.0 + h_lim_out / self.__h0_)
                 if log
@@ -1956,22 +1977,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             in_mask = self.predict(X[y == class_])
             ext_mask, out_mask = self.check_outliers(X[y == class_])
 
-            if not outlier_curve:
-                categories_ = [
-                    (
-                        "g",
-                        in_mask,
-                        "{} = Inlier ({})".format(class_, np.sum(in_mask)),
-                    ),
-                    (
-                        "r",
-                        (ext_mask | out_mask),
-                        "{} = Outlier ({})".format(
-                            class_, np.sum(out_mask) + np.sum(ext_mask)
-                        ),
-                    ),
-                ]
-            else:
+            if outlier_curve and self.gamma is not None:
                 categories_ = [
                     (
                         "g",
@@ -1987,6 +1993,21 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
                         "r",
                         out_mask,
                         "{} = Outlier ({})".format(class_, np.sum(out_mask)),
+                    ),
+                ]
+            else:
+                categories_ = [
+                    (
+                        "g",
+                        in_mask,
+                        "{} = Inlier ({})".format(class_, np.sum(in_mask)),
+                    ),
+                    (
+                        "r",
+                        (ext_mask | out_mask),
+                        "{} = Outlier ({})".format(
+                            class_, np.sum(out_mask) + np.sum(ext_mask)
+                        ),
                     ),
                 ]
 
