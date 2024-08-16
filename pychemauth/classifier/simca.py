@@ -75,7 +75,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         are only computed during the outlier removal loop(s) while the final
         "clean" data uses classical estimates.  This option may throw away data
         it is originally provided for training; it keeps only "regular" samples
-        (inliers and extremes) to train the model.  If a `gamma` value is not 
+        (inliers and extremes) to train the model.  If a `gamma` value is not
         specified then this option is not available.
 
     Note
@@ -439,9 +439,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             m = self.metrics(X, y)
             return m["TEFF"]
         elif self.use.lower() == "acc":
-            # For accuracy we need to convert y to boolean array of inliers vs. outliers
-            y_in = np.asarray(y) == self.target_class
-            return self.__model_.accuracy(X, y_in)
+            # Technically we do not need the target class to be present to
+            # compute accuracy.
+            m = self.metrics(X, y)
+            return m["ACC"]
         else:
             raise ValueError("Unrecognized setting use=" + str(self.use))
 
@@ -460,7 +461,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Returns
         -------
         metrics : dict(str:float)
-            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS"}.
+            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS", "ACC"}.
 
         Note
         ----
@@ -518,11 +519,16 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         else:
             TEFF_ = np.sqrt(TSNS_ * TSPS_)
 
+        # For accuracy we need to convert y to boolean array of inliers vs. outliers
+        y_in = y == self.target_class
+        ACC_ = self.__model_.accuracy(X, y_in)
+
         metrics = {
             "TEFF": TEFF_,
             "TSNS": TSNS_,
             "TSPS": TSPS_,
             "CSPS": CSPS_,
+            "ACC": ACC_,
         }
         return metrics
 
@@ -1283,8 +1289,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         else:
             # SFT only really makes sense if you have an outlier significance level
             if self.gamma is None:
-                raise Exception('Specify a gamma value to use sft.')
-            
+                raise Exception("Specify a gamma value to use sft.")
+
             X_tmp = np.array(X).copy()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
@@ -1883,8 +1889,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         outlier_curve : scalar(bool), optional(default=True)
             Whether or not to display the outlier threshold curve and characterize
-            any points as "extreme" if you specified a `gamma` value.  If False, 
-            then all points will be labeled as inliers vs. outliers only, based 
+            any points as "extreme" if you specified a `gamma` value.  If False,
+            then all points will be labeled as inliers vs. outliers only, based
             on your alpha value.
 
         Returns

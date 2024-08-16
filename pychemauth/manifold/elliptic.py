@@ -149,12 +149,12 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         of the mean in the original data space.
 
     target_class : scalar(str or int), optional(default=None)
-        The class used to fit the SIMCA model; the rest are used
-        to test specificity.
+        The class used to fit the model; the rest are used to test specificity.
 
     use : str, optional(default="rigorous")
-        Which methodology to use to evaluate the model ("rigorous", "compliant")
-        (default="rigorous"). See Ref. [1] for more details.
+        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc")
+        (default="rigorous"). See Ref. [1] for more details. "acc" refers to accuracy,
+        though it is not as conventional to use this for such a model.
 
     Note
     ----
@@ -470,13 +470,13 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        if self.use == "rigorous":
+        if self.use.lower() == "rigorous":
             # Make sure we have the target class to test on
             assert self.target_class in set(np.unique(y))
 
             m = self.metrics(X, y)
             return -((m["TSNS"] - (1 - self.alpha)) ** 2)
-        elif self.use == "compliant":
+        elif self.use.lower() == "compliant":
             # Make sure we have alternatives to test on
             a = set(np.unique(y))
             a.discard(self.target_class)
@@ -487,6 +487,11 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
             m = self.metrics(X, y)
             return m["TEFF"]
+        elif self.use.lower() == "acc":
+            # Technically we do not need the target class to be present to
+            # compute accuracy.
+            m = self.metrics(X, y)
+            return m["ACC"]
         else:
             raise ValueError("Unrecognized setting use=" + str(self.use))
 
@@ -505,7 +510,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         Returns
         -------
         metrics : dict(str:float)
-            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS"}.
+            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS", "ACC"}.
 
         Note
         ----
@@ -536,25 +541,21 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         CSPS_ = {}
         for class_ in self.__alternatives_:
             mask = y == class_
-            CSPS_[class_] = 1.0 - np.sum(
-                self.__model_.predict(X[mask])
-            ) / np.sum(mask)
+            CSPS_[class_] = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
 
         mask = y != self.target_class
         if np.sum(mask) == 0:
             # Testing on nothing but the target class, can't evaluate TSPS
             TSPS_ = np.nan
         else:
-            TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(mask)
+            TSPS_ = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
 
         mask = y == self.target_class
         if np.sum(mask) == 0:
             # Testing on nothing but alternative classes, can't evaluate TSNS
             TSNS_ = np.nan
         else:
-            TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
-                mask
-            )  # TSNS = CSNS
+            TSNS_ = np.sum(self.predict(X[mask])) / np.sum(mask)  # TSNS = CSNS
 
         if np.isnan(TSNS_):
             TEFF_ = TSPS_
@@ -563,12 +564,18 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         else:
             TEFF_ = np.sqrt(TSNS_ * TSPS_)
 
+        # Compute accuracy
+        y_in = y == self.target_class
+        ACC_ = np.sum(self.predict(X) == y_in) / X.shape[0]
+
         metrics = {
             "TEFF": TEFF_,
             "TSNS": TSNS_,
             "TSPS": TSPS_,
             "CSPS": CSPS_,
+            "ACC": ACC_,
         }
+
         return metrics
 
     def _get_tags(self):
