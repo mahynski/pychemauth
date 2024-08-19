@@ -21,7 +21,7 @@ from pychemauth.utils import (
     pos_def_mat,
     CovarianceEllipse,
     OneDimLimits,
-    _multiclass_cm_metrics,
+    _multi_cm_metrics,
 )
 
 
@@ -799,7 +799,7 @@ n_features [{}])] = [{}, {}].".format(
         )
         assert np.sum(Itot) == len(actual)
 
-        results = _multiclass_cm_metrics(
+        results = _multi_cm_metrics(
             df=df,
             Itot=Itot,
             trained_classes=trained_classes,

@@ -14,7 +14,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from sklearn.preprocessing import LabelEncoder
 
-from pychemauth.utils import _multiclass_cm_metrics, _occ_cm_metrics
+from pychemauth.utils import _multi_cm_metrics, _occ_cm_metrics
 
 
 class OpenSetClassifier(ClassifierMixin, BaseEstimator):
@@ -462,8 +462,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         assert np.sum(Itot) == len(actual)
 
         if self.score_using.lower() == "all":
-            # Evaluate as a multiclass classifier / authenticator
-            fom = _multiclass_cm_metrics(
+            # Evaluate as a multiclass, possibly multilabel (depends on clf_style) classifier
+            fom = _multi_cm_metrics(
                 df=df,
                 Itot=Itot,
                 trained_classes=self.knowns_,

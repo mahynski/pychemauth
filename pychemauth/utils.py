@@ -925,11 +925,11 @@ def _logistic_proba(x):
     return prob
 
 
-def _multiclass_cm_metrics(
+def _multi_cm_metrics(
     df, Itot, trained_classes, use_classes, style, not_assigned, actual
 ):
     """
-    Compute metrics for a multiclass classifier / authenticator using the confusion matrix.
+    Compute metrics for a (possibly) multiclass, multilabel classifier / authenticator using the confusion matrix.
 
     Parameters
     ----------
@@ -947,6 +947,7 @@ def _multiclass_cm_metrics(
 
     style : str
         Either "hard" or "soft' denoting whether a point can be assigned to one or multiple classes, respectively.
+        This determines whether the metrics are multilabel (soft) or not (hard).
 
     not_assigned : str or int
         The designation for an "unknown" or unrecognized class.
@@ -1005,7 +1006,7 @@ def _multiclass_cm_metrics(
         else:
             # Consider an assignment as "unknown" a correct assignment (TN)
             correct_ += df[not_assigned][class_]
-    ACC = correct_ / Itot.sum() # df.sum().sum()
+    ACC = correct_ / Itot.sum()
 
     # Class-wise FoM
     # Sensitivity is "true positive" rate and is only defined for trained/known classes.
@@ -1060,7 +1061,7 @@ def _multiclass_cm_metrics(
     # entries is also 0 (df[k][k]).
     TSPS = 1.0 - (
         df[use_classes].sum().sum() - np.sum([df[kk][kk] for kk in use_classes])
-    ) / np.sum(Itot) / (
+    ) / Itot.sum() / (
         1.0 if style.lower() == "hard" else len(trained_classes) - 1.0
     )
     # Soft models can assign a point to all categories which would make this
