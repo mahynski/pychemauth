@@ -17,7 +17,12 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits, _multiclass_cm_metrics
+from pychemauth.utils import (
+    pos_def_mat,
+    CovarianceEllipse,
+    OneDimLimits,
+    _multiclass_cm_metrics,
+)
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):
@@ -795,104 +800,16 @@ n_features [{}])] = [{}, {}].".format(
         assert np.sum(Itot) == len(actual)
 
         results = _multiclass_cm_metrics(
-            df=df, 
-            Itot=Itot, 
-            trained_classes=trained_classes, 
-            use_classes=use_classes, 
-            style=self.style, 
-            not_assigned=self.not_assigned, 
-            actual=actual
+            df=df,
+            Itot=Itot,
+            trained_classes=trained_classes,
+            use_classes=use_classes,
+            style=self.style,
+            not_assigned=self.not_assigned,
+            actual=actual,
         )
-        
+
         return results
-
-        # # Class-wise FoM
-        # # Sensitivity is "true positive" rate and is only defined for
-        # # trained/known classes
-        # CSNS = pd.Series(
-        #     [
-        #         df[kk][kk] / Itot[kk] if Itot[kk] > 0 else np.nan
-        #         for kk in trained_classes
-        #     ],
-        #     index=trained_classes,
-        # )
-
-        # # Specificity is the fraction of points that are NOT a given class that
-        # # are correctly predicted to be something besides the class. Thus,
-        # # specificity can only be computed for the columns that correspond to
-        # # known classes since we have only trained on them. These are "true
-        # # negatives". This is always >= 0.
-        # CSPS = pd.Series(
-        #     [
-        #         1.0
-        #         - np.sum(df[kk][df.index != kk])  # Column sum
-        #         / np.sum(Itot[Itot.index != kk])
-        #         for kk in trained_classes
-        #     ],
-        #     index=trained_classes,
-        # )
-
-        # # If CSNS can't be calculated, using CSPS as efficiency;
-        # # Oliveri & Downey introduced this "efficiency" used in [1]
-        # CEFF = pd.Series(
-        #     [
-        #         np.sqrt(CSNS[c] * CSPS[c]) if not np.isnan(CSNS[c]) else CSPS[c]
-        #         for c in trained_classes
-        #     ],
-        #     index=trained_classes,
-        # )
-
-        # # Total FoM
-
-        # # Evaluates overall ability to recognize a class is itself.  If you
-        # # show the model some class it hasn't trained on, it can't be predicted
-        # # so no contribution to the diagonal.  We will normalize by total
-        # # number of points shown [1].  If some classes being tested were seen in
-        # # training they contribute, otherwise TSNS goes down for a class never
-        # # seen before.  This might seem unfair, but TSNS only makes sense if
-        # # (1) you are examining what you have trained on or (2) you are
-        # # examining extraneous objects so you don't calculate this at all.
-        # TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / np.sum(Itot)
-
-        # # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
-        # # won't contribute to df[use_classes].sum().sum().  Also, unseen
-        # # classes can't be assigned to so the diagonal components for those
-        # # entries is also 0 (df[k][k]).
-        # TSPS = 1.0 - (
-        #     df[use_classes].sum().sum()
-        #     - np.sum([df[kk][kk] for kk in use_classes])
-        # ) / np.sum(Itot) / (
-        #     1.0 if self.style.lower() == "hard" else len(trained_classes) - 1.0
-        # )
-        # # Soft models can assign a point to all categories which would make this
-        # # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
-        # # number of classes, TSPS is always positive; TSPS = 0 means all points
-        # # assigned to all classes (trivial result) vs. TSPS = 1 means no mistakes.
-
-        # # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
-        # # previously unseen samples).
-        # TEFF = np.sqrt(TSPS * TSNS)
-
-        # return dict(
-        #     zip(
-        #         ["CM", "I", "CSNS", "CSPS", "CEFF", "TSNS", "TSPS", "TEFF"],
-        #         (
-        #             df[
-        #                 [c for c in df.columns if c in trained_classes]
-        #                 + [self.not_assigned]
-        #             ][
-        #                 [x in np.unique(actual) for x in df.index]
-        #             ],  # Re-order for easy visualization
-        #             Itot,
-        #             CSNS,
-        #             CSPS,
-        #             CEFF,
-        #             TSNS,
-        #             TSPS,
-        #             TEFF,
-        #         ),
-        #     )
-        # )
 
     def score(self, X, y):
         """

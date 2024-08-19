@@ -924,7 +924,10 @@ def _logistic_proba(x):
 
     return prob
 
-def _multiclass_cm_metrics(df, Itot, trained_classes, use_classes, style, not_assigned, actual):
+
+def _multiclass_cm_metrics(
+    df, Itot, trained_classes, use_classes, style, not_assigned, actual
+):
     """
     Compute metrics for a multiclass classifier / authenticator using the confusion matrix.
 
@@ -938,16 +941,16 @@ def _multiclass_cm_metrics(df, Itot, trained_classes, use_classes, style, not_as
 
     trained_classes : numpy.ndarray(str or int)
         Classes seen during training.
-     
+
     use_classes : numpy.ndarray(str or int)
         Classes to use when computing metrics; this includes all classes seen during testing excluding the "unknown" class.
-    
+
     style : str
         Either "hard" or "soft' denoting whether a point can be assigned to one or multiple classes, respectively.
-     
+
     not_assigned : str or int
         The designation for an "unknown" or unrecognized class.
-     
+
     actual : numpy.ndarray(str or int)
         True target (y) values.
 
@@ -995,18 +998,17 @@ def _multiclass_cm_metrics(df, Itot, trained_classes, use_classes, style, not_as
     right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
     Chemometrics (2018). https://doi.org/10.1002/cem.3030.
     """
-
     # Define accuracy so it works in hard or soft cases
     correct_ = 0.0
     for class_ in df.index:  # All input classes
-        if (
-            class_ in trained_classes
-        ):  # Things to classifier knows about (TP)
+        if class_ in trained_classes:  # Things to classifier knows about (TP)
             correct_ += df[class_][class_]
         else:
             # Consider an assignment as "unknown" a correct assignment (TN)
             correct_ += df[not_assigned][class_]
-    ACC = correct_ / df.sum().sum() # This normalization guarantees 0 <= ACC <= 1
+    ACC = (
+        correct_ / df.sum().sum()
+    )  # This normalization guarantees 0 <= ACC <= 1
 
     # Class-wise FoM
     # Sensitivity is "true positive" rate and is only defined for trained/known classes
@@ -1060,8 +1062,7 @@ def _multiclass_cm_metrics(df, Itot, trained_classes, use_classes, style, not_as
     # classes can't be assigned to so the diagonal components for those
     # entries is also 0 (df[k][k]).
     TSPS = 1.0 - (
-        df[use_classes].sum().sum()
-        - np.sum([df[kk][kk] for kk in use_classes])
+        df[use_classes].sum().sum() - np.sum([df[kk][kk] for kk in use_classes])
     ) / np.sum(Itot) / (
         1.0 if style.lower() == "hard" else len(trained_classes) - 1.0
     )
@@ -1096,7 +1097,10 @@ def _multiclass_cm_metrics(df, Itot, trained_classes, use_classes, style, not_as
         )
     )
 
-def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actual):
+
+def _occ_cm_metrics(
+    df, Itot, target_class, trained_classes, not_assigned, actual
+):
     """
     Compute one-class classifier metrics from the confusion matrix.
 
@@ -1110,10 +1114,10 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
 
     trained_classes : numpy.ndarray(str or int)
         Classes seen during training.
-     
+
     not_assigned : str or int
         The designation for an "unknown" or unrecognized class.
-     
+
     actual : numpy.ndarray(str or int)
         True target (y) values.
 
@@ -1143,7 +1147,6 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
         ACC : scalar(float)
             Accuracy.
     """
-
     alternatives = [class_ for class_ in df.index if class_ != target_class]
 
     correct_ = df[target_class][target_class]  # (TP)
@@ -1156,9 +1159,7 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
     CSPS = {}
     for class_ in alternatives:
         if np.sum(Itot[class_]) > 0:
-            CSPS[class_] = 1.0 - df[class_][target_class] / np.sum(
-                Itot[class_]
-            )
+            CSPS[class_] = 1.0 - df[class_][target_class] / np.sum(Itot[class_])
         else:
             CSPS[class_] = np.nan
 
@@ -1167,8 +1168,7 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
         TSPS = np.nan
     else:
         TSPS = 1.0 - (
-            df[target_class].sum()
-            - df[target_class][target_class]
+            df[target_class].sum() - df[target_class][target_class]
         ) / (Itot.sum() - Itot[target_class])
 
     # TSNS = CSNS
@@ -1176,10 +1176,7 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
         # Testing on nothing but alternative classes, can't evaluate TSNS
         TSNS = np.nan
     else:
-        TSNS = (
-            df[target_class][target_class]
-            / Itot[target_class]
-        )
+        TSNS = df[target_class][target_class] / Itot[target_class]
 
     if np.isnan(TSNS):
         TEFF = TSPS
@@ -1210,6 +1207,7 @@ def _occ_cm_metrics(df, Itot, target_class, trained_classes, not_assigned, actua
 
     return fom
 
+
 def _occ_metrics(X, y, target_class, predict_function):
     """
     Compute one-class classifier (OCC) metrics directly from data.
@@ -1224,7 +1222,7 @@ def _occ_metrics(X, y, target_class, predict_function):
 
     target_class : str or int
         Target class being modeled by the OCC; should have the same type as `y`.
-        
+
     predict_function : callable
         Should return a 1D numpy array of booleans corresponding to whether a point
         is an inlier.
@@ -1248,7 +1246,7 @@ def _occ_metrics(X, y, target_class, predict_function):
 
         ACC : scalar(float)
             Accuracy.
-    
+
     alternatives : list(str or int)
         Classes besides the target class present in `y`.
     """
@@ -1284,4 +1282,10 @@ def _occ_metrics(X, y, target_class, predict_function):
     y_in = y == target_class
     ACC = np.sum(predict_function(X) == y_in) / X.shape[0]
 
-    return {"CSPS": CSPS, "TSNS": TSNS, "TSPS": TSPS, "TEFF": TEFF, "ACC": ACC}, alternatives
+    return {
+        "CSPS": CSPS,
+        "TSNS": TSNS,
+        "TSPS": TSPS,
+        "TEFF": TEFF,
+        "ACC": ACC,
+    }, alternatives

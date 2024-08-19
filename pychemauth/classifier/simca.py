@@ -444,7 +444,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             m = self.metrics(X, y)
             return m["ACC"]
         else:
-            raise ValueError("Unrecognized setting use=" + str(self.use))
+            raise ValueError("Unrecognized setting use = " + str(self.use))
 
     def metrics(self, X, y):
         """
@@ -484,54 +484,14 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        
-        metrics, self.__alternatives_ = _occ_metrics(X=X, y=y, target_class=self.target_class, predict_function=self.predict)
 
-        # self.__alternatives_ = [
-        #     c for c in sorted(np.unique(y)) if c != self.target_class
-        # ]
+        metrics, self.__alternatives_ = _occ_metrics(
+            X=X,
+            y=y,
+            target_class=self.target_class,
+            predict_function=self.predict,
+        )
 
-        # CSPS_ = {}
-        # for class_ in self.__alternatives_:
-        #     mask = y == class_
-        #     CSPS_[class_] = 1.0 - np.sum(
-        #         self.__model_.predict(X[mask])
-        #     ) / np.sum(mask)
-
-        # mask = y != self.target_class
-        # if np.sum(mask) == 0:
-        #     # Testing on nothing but the target class, can't evaluate TSPS
-        #     TSPS_ = np.nan
-        # else:
-        #     TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(mask)
-
-        # mask = y == self.target_class
-        # if np.sum(mask) == 0:
-        #     # Testing on nothing but alternative classes, can't evaluate TSNS
-        #     TSNS_ = np.nan
-        # else:
-        #     TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
-        #         mask
-        #     )  # TSNS = CSNS for SIMCA
-
-        # if np.isnan(TSNS_):
-        #     TEFF_ = TSPS_
-        # elif np.isnan(TSPS_):
-        #     TEFF_ = TSNS_
-        # else:
-        #     TEFF_ = np.sqrt(TSNS_ * TSPS_)
-
-        # # For accuracy we need to convert y to boolean array of inliers vs. outliers
-        # y_in = y == self.target_class
-        # ACC_ = self.__model_.accuracy(X, y_in)
-
-        # metrics = {
-        #     "TEFF": TEFF_,
-        #     "TSNS": TSNS_,
-        #     "TSPS": TSPS_,
-        #     "CSPS": CSPS_,
-        #     "ACC": ACC_,
-        # }
         return metrics
 
     def _get_tags(self):
