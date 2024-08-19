@@ -998,7 +998,6 @@ def _multiclass_cm_metrics(
     right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
     Chemometrics (2018). https://doi.org/10.1002/cem.3030.
     """
-    # Define accuracy so it works in hard or soft cases
     correct_ = 0.0
     for class_ in df.index:  # All input classes
         if class_ in trained_classes:  # Things to classifier knows about (TP)
@@ -1006,12 +1005,10 @@ def _multiclass_cm_metrics(
         else:
             # Consider an assignment as "unknown" a correct assignment (TN)
             correct_ += df[not_assigned][class_]
-    ACC = (
-        correct_ / df.sum().sum()
-    )  # This normalization guarantees 0 <= ACC <= 1
+    ACC = correct_ / Itot.sum() # df.sum().sum()
 
     # Class-wise FoM
-    # Sensitivity is "true positive" rate and is only defined for trained/known classes
+    # Sensitivity is "true positive" rate and is only defined for trained/known classes.
     CSNS = pd.Series(
         [
             df[kk][kk] / Itot[kk] if Itot[kk] > 0 else np.nan
@@ -1055,7 +1052,7 @@ def _multiclass_cm_metrics(
     # seen before.  This might seem unfair, but TSNS only makes sense if
     # (1) you are examining what you have trained on or (2) you are
     # examining extraneous objects so you don't calculate this at all.
-    TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / np.sum(Itot)
+    TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / Itot.sum()
 
     # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
     # won't contribute to df[use_classes].sum().sum().  Also, unseen
@@ -1102,7 +1099,10 @@ def _occ_cm_metrics(
     df, Itot, target_class, trained_classes, not_assigned, actual
 ):
     """
-    Compute one-class classifier metrics from the confusion matrix.
+    Compute one-class classifier (OCC) metrics from the confusion matrix.
+
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
+    and only one class since they are mutually exclusive.
 
     Parameters
     ----------
@@ -1211,6 +1211,9 @@ def _occ_cm_metrics(
 def _occ_metrics(X, y, target_class, predict_function):
     """
     Compute one-class classifier (OCC) metrics directly from data.
+
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
+    and only one class since they are mutually exclusive.
 
     Parameters
     ----------
