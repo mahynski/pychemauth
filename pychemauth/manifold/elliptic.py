@@ -17,6 +17,7 @@ from pychemauth.utils import (
     CovarianceEllipse,
     OneDimLimits,
     _logistic_proba,
+    _occ_metrics
 )
 
 
@@ -534,47 +535,49 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        self.__alternatives_ = [
-            c for c in sorted(np.unique(y)) if c != self.target_class
-        ]
+        metrics, self.__alternatives_ = _occ_metrics(X=X, y=y, target_class=self.target_class, predict_function=self.predict)
 
-        CSPS_ = {}
-        for class_ in self.__alternatives_:
-            mask = y == class_
-            CSPS_[class_] = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
+        # self.__alternatives_ = [
+        #     c for c in sorted(np.unique(y)) if c != self.target_class
+        # ]
 
-        mask = y != self.target_class
-        if np.sum(mask) == 0:
-            # Testing on nothing but the target class, can't evaluate TSPS
-            TSPS_ = np.nan
-        else:
-            TSPS_ = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
+        # CSPS_ = {}
+        # for class_ in self.__alternatives_:
+        #     mask = y == class_
+        #     CSPS_[class_] = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
 
-        mask = y == self.target_class
-        if np.sum(mask) == 0:
-            # Testing on nothing but alternative classes, can't evaluate TSNS
-            TSNS_ = np.nan
-        else:
-            TSNS_ = np.sum(self.predict(X[mask])) / np.sum(mask)  # TSNS = CSNS
+        # mask = y != self.target_class
+        # if np.sum(mask) == 0:
+        #     # Testing on nothing but the target class, can't evaluate TSPS
+        #     TSPS_ = np.nan
+        # else:
+        #     TSPS_ = 1.0 - np.sum(self.predict(X[mask])) / np.sum(mask)
 
-        if np.isnan(TSNS_):
-            TEFF_ = TSPS_
-        elif np.isnan(TSPS_):
-            TEFF_ = TSNS_
-        else:
-            TEFF_ = np.sqrt(TSNS_ * TSPS_)
+        # mask = y == self.target_class
+        # if np.sum(mask) == 0:
+        #     # Testing on nothing but alternative classes, can't evaluate TSNS
+        #     TSNS_ = np.nan
+        # else:
+        #     TSNS_ = np.sum(self.predict(X[mask])) / np.sum(mask)  # TSNS = CSNS
 
-        # Compute accuracy
-        y_in = y == self.target_class
-        ACC_ = np.sum(self.predict(X) == y_in) / X.shape[0]
+        # if np.isnan(TSNS_):
+        #     TEFF_ = TSPS_
+        # elif np.isnan(TSPS_):
+        #     TEFF_ = TSNS_
+        # else:
+        #     TEFF_ = np.sqrt(TSNS_ * TSPS_)
 
-        metrics = {
-            "TEFF": TEFF_,
-            "TSNS": TSNS_,
-            "TSPS": TSPS_,
-            "CSPS": CSPS_,
-            "ACC": ACC_,
-        }
+        # # Compute accuracy
+        # y_in = y == self.target_class
+        # ACC_ = np.sum(self.predict(X) == y_in) / X.shape[0]
+
+        # metrics = {
+        #     "TEFF": TEFF_,
+        #     "TSNS": TSNS_,
+        #     "TSPS": TSPS_,
+        #     "CSPS": CSPS_,
+        #     "ACC": ACC_,
+        # }
 
         return metrics
 
