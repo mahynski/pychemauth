@@ -203,12 +203,14 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.isnan(fom["TSNS"]))
         self.assertTrue(np.abs(fom["TSPS"] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - fom["TSPS"]) < 1.0e-12)
 
         # Check score
-        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
+        self.assertTrue(
+            np.abs(plsda.score(raw_x, raw_y) - fom["TEFF"]) < 1.0e-12
+        )
 
     def test_plsda3_soft(self):
         """Test PLSDA on a 3-class example with soft decision boundaries."""
@@ -387,12 +389,14 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.isnan(fom["TSNS"]))
         self.assertTrue(np.abs(fom["TSPS"] - 0.9924242424242424) < 1.0e-12)
-        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - fom["TSPS"]) < 1.0e-12)
 
         # Check score
-        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
+        self.assertTrue(
+            np.abs(plsda.score(raw_x, raw_y) - fom["TEFF"]) < 1.0e-12
+        )
 
     def test_plsda2_hard(self):
         """Test PLSDA on a 2-class example with hard decision boundaries."""
@@ -538,12 +542,14 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.isnan(fom["TSNS"]))
         self.assertTrue(np.abs(fom["TSPS"] - 0.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - fom["TSPS"]) < 1.0e-12)
 
         # Check score
-        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
+        self.assertTrue(
+            np.abs(plsda.score(raw_x, raw_y) - fom["TEFF"]) < 1.0e-12
+        )
 
     def test_plsda2_soft(self):
         """Test PLSDA on a 2-class example with soft decision boundaries."""
@@ -700,9 +706,11 @@ class TestPLSDA(unittest.TestCase):
         err = np.all(np.abs((fom["CEFF"].values - x)) < 1.0e-6)
         self.assertTrue(err)
 
-        self.assertTrue(np.abs(fom["TSNS"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.isnan(fom["TSNS"]))
         self.assertTrue(np.abs(fom["TSPS"] - 1.0) < 1.0e-12)
-        self.assertTrue(np.abs(fom["TEFF"] - 0.0) < 1.0e-12)
+        self.assertTrue(np.abs(fom["TEFF"] - fom["TSPS"]) < 1.0e-12)
 
         # Check score
-        self.assertTrue(np.abs(plsda.score(raw_x, raw_y) - 0.0) < 1.0e-12)
+        self.assertTrue(
+            np.abs(plsda.score(raw_x, raw_y) - fom["TEFF"]) < 1.0e-12
+        )

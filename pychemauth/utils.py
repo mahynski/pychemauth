@@ -934,16 +934,16 @@ def _multi_cm_metrics(
     Parameters
     ----------
     df : pandas.DataFrame
-        Inputs (index) vs. predictions (columns); akin to a confusion matrix.
+        Inputs (index) vs. predictions (columns); akin to a confusion matrix.  Should have a row for all `use_classes` and a column for all of these plus one for `not_assigned`; thus, the shape is (N, N+1).
 
     Itot : pandas.Series
-        Number of each class asked to classify.
+        Number of each class asked to classify.  Should have a row for each class in `use_classes`; e.g., 0 for classes seen during training but not testing.
 
     trained_classes : numpy.ndarray(str or int)
         Classes seen during training.
 
     use_classes : numpy.ndarray(str or int)
-        Classes to use when computing metrics; this includes all classes seen during testing excluding the "unknown" class.
+        Classes to use when computing metrics; this includes all classes seen during testing and training excluding the "unknown" class.
 
     style : str
         Either "hard" or "soft' denoting whether a point can be assigned to one or multiple classes, respectively.
@@ -1044,23 +1044,21 @@ def _multi_cm_metrics(
     )
 
     # Total FoM
-
-    # Evaluates overall ability to recognize a class is itself.  If you
-    # show the model some class it hasn't trained on, it can't be predicted
-    # so no contribution to the diagonal.  We will normalize by total
-    # number of points shown [1].  If some classes being tested were seen in
-    # training they contribute, otherwise TSNS goes down for a class never
-    # seen before.  This might seem unfair, but TSNS only makes sense if
-    # (1) you are examining what you have trained on or (2) you are
-    # examining extraneous objects so you don't calculate this at all.
-    TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / Itot.sum()
+    if len(set(actual).intersection(set(trained_classes))) > 0:
+        TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / float(
+            np.sum([Itot[kk] for kk in trained_classes])
+        )  # Itot.sum()
+    else:
+        # No trained classes are being provided for testing
+        TSNS = np.nan
 
     # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
     # won't contribute to df[use_classes].sum().sum().  Also, unseen
     # classes can't be assigned to so the diagonal components for those
     # entries is also 0 (df[k][k]).
     TSPS = 1.0 - (
-        df[use_classes].sum().sum() - np.sum([df[kk][kk] for kk in use_classes])
+        df[use_classes].sum().sum()
+        - np.sum([df[kk][kk] for kk in trained_classes])
     ) / Itot.sum() / (
         1.0 if style.lower() == "hard" else len(trained_classes) - 1.0
     )
@@ -1071,7 +1069,10 @@ def _multi_cm_metrics(
 
     # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
     # previously unseen samples).
-    TEFF = np.sqrt(TSPS * TSNS)
+    if not np.isnan(TSNS):
+        TEFF = np.sqrt(TSPS * TSNS)
+    else:
+        TEFF = TSPS
 
     return dict(
         zip(
