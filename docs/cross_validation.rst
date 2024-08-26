@@ -5,7 +5,8 @@ Cross Validation
 
 Here are some links to other resources:
 
-* `"Model selection and overfitting," Lever, J., Krzywinski,M., Altman, N., Nature Methods 13, 703-704 (2016).<https://www.nature.com/articles/nmeth.3968.pdf>`_
+* `"Model selection and overfitting," Lever, J., Krzywinski, M., Altman, N., Nature Methods 13, 703-704 (2016). <https://www.nature.com/articles/nmeth.3968.pdf>`_
+
 * `"Cross-Validation," The Pennsylvania State University, STAT 555 (2018). <https://online.stat.psu.edu/stat555/node/118/>`_
 
 .. nbgallery::
