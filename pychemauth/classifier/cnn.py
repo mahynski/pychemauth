@@ -24,6 +24,8 @@ class CNNFactory:
         cam=True,
         dropout=0.0,
         kwargs={},
+        include_preprocessing=True,
+        trainable_connector=False,
     ):
         """
         Instantiate the factory.
@@ -53,6 +55,12 @@ class CNNFactory:
         kwargs : dict(str, object), optional(default={})
             Optional keyword arguments to the model. Important keywords will be overriden internally, but some models have additional tuning parameters (e.g., MobileNet `alpha`) that can be adjusted.
 
+        include_preprocessing : bool, optional(default=True)
+            Whether to include preprocessing in the base model.  This varies from model to model, as defined by its original training, and is already implemented.  It might be interesting to disable this in certain cases, but normally it is best to leave this as `include_preprocessing=True`.
+
+        trainable_connector : bool, optional(default=False)
+            The "connector" is the convolutional layer than converts inputs from 1 channel to 3 channels to be compatible with base models.  This is accomplished by using a layer with 3 filters each with a kernel size of 1, which is just a floating point number that multiplies the input and sends it to each of 3 output channels; the default behavior sets these (3) numbers to a value of "1" creating a copy of the input for each channel.  Alternatively, these values can be set as trainable (`trainable_connector=True`).  For inputs with 3 channels, this is ignored.  Many model preprocessors involve simple scaling so this should not have an effect in those cases.
+
         Notes
         -----
         Some base models have minimum image sizes; e.g., Xception requires images to be atleast (71, 71, 3).  An appropriate Exception should be generated if you try to use an image which is too small; if you receive such an error either increase the size of your image, if possible, or select a different model.
@@ -68,6 +76,8 @@ class CNNFactory:
                 "cam": cam,
                 "dropout": dropout,
                 "kwargs": kwargs,
+                "include_preprocessing": include_preprocessing,
+                "trainable_connector": trainable_connector,
             }
         )
 
@@ -87,6 +97,8 @@ class CNNFactory:
             "cam": self.cam,
             "dropout": self.dropout,
             "kwargs": self.kwargs,
+            "include_preprocessing": self.include_preprocessing,
+            "trainable_connector": self.trainable_connector,
         }
 
     def _validate_inputs(self):
@@ -507,7 +519,7 @@ class CNNFactory:
             "weights": "imagenet",
             "input_shape": (self.input_size[0], self.input_size[1], 3),
             "pooling": None,
-            "include_preprocessing": True,  # Do preprocessing as part of the pipeline automatically
+            "include_preprocessing": self.include_preprocessing,
         }
 
         # Remove any keywords that would conflict with above
@@ -529,27 +541,35 @@ class CNNFactory:
         # Build model
         input_ = keras.layers.Input(shape=self.input_size)
 
-        if self.input_size[2] != 3:
+        if self.input_size[2] == 1:
             # https://discuss.pytorch.org/t/best-way-to-deal-with-1-channel-images/26699
             # Much better for memory than copying the channel in the input
             layer = (
                 keras.layers.Conv2D if self.dim == 2 else keras.layers.Conv1D
             )
-            l_ = layer(
-                filters=3,  # Convert (N, N, C < 3) --> (N, N, 3)
+            l_ = layer(  # "Connector" layer
+                filters=3,  # Convert (N, N, 1) --> (N, N, 3)
                 kernel_size=1,  # Focus on 1 pixel at a time
                 padding="same",
                 strides=1,
-                activation=None,  # This just multiplies the input pixel by some weight and applies no function
+                activation=None,  # This just multiplies the input pixel by some weight and applies no activation function
                 use_bias=False,  # No bias to shift input_
                 kernel_initializer=tf.keras.initializers.Ones(),  # Set all weights to "1" so input_ is essentially just copied
                 data_format="channels_last",  # Should serve as a basic check that input is provided in this format
-                trainable=False,  # This "conversion" layer is not trainable so weights will not change
+                trainable=self.trainable_connector,
             )
             x = l_(input_)
-            x = preprocessor(x)  # Prepare input for model
+            if self.include_preprocessing:
+                x = preprocessor(x)  # Prepare input for model
+        elif self.input_size[2] == 3:
+            if self.include_preprocessing:
+                x = preprocessor(input_)  # Prepare input for model
+            else:
+                x = input_
         else:
-            x = preprocessor(input_)  # Prepare input for model
+            raise Exception(
+                f"Unexpected input_size ({self.input_size}). This should end in either 1 or 3 channels."
+            )
         x = base_model(x, training=False)
 
         if self.cam:

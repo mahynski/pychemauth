@@ -575,10 +575,10 @@ class NNTools:
                 Determines the lower bound on the learning rate which is set when the
                 loss is 100*(1-frac)% of the way from the value at a learning rate of
                 0 to the minimum.
-        
+
             skip : int, optional(default=0)
-                Number of points to skip from the beginning of the sweep when performing 
-                analysis.  This can be helpful to trim off any initial dips or other 
+                Number of points to skip from the beginning of the sweep when performing
+                analysis.  This can be helpful to trim off any initial dips or other
                 unusual behavior from the warmup stage.
 
             Returns
@@ -614,9 +614,7 @@ class NNTools:
                 idx_ -= 1
 
             # Take lower bound of LR as the point where 90% of the gap from LR -> 0 and best LR
-            baseline_loss_ = np.mean(
-                _smoothed_loss[: (len(_lr) // limit_)]
-            )
+            baseline_loss_ = np.mean(_smoothed_loss[: (len(_lr) // limit_)])
             if baseline_loss_ < _smoothed_loss[idx_]:
                 raise Exception(
                     "Cannot estimate cyclical learning rate bounds automatically; inspect visually instead."
@@ -1213,7 +1211,7 @@ class NNTools:
         wandb_kwargs=None,
         model_filename="trained_model.keras",
         history_filename="training_history.pkl",
-        restart=None
+        restart=None,
     ):
         """
         Train a Keras model.
@@ -1324,9 +1322,7 @@ class NNTools:
         tf.config.experimental.enable_op_determinism()
 
         if NNTools._is_data_iter(data):
-            _, _, unique_targets, X, y = NNTools._summarize_batches(
-                data
-            )
+            _, _, unique_targets, X, y = NNTools._summarize_batches(data)
             N_data = len(unique_targets)
             vals = sorted(unique_targets.keys())
             counts = np.array([unique_targets[k] for k in vals])
@@ -1390,7 +1386,10 @@ class NNTools:
         # Update callbacks with W&B logger, if used
         if wandb_project is not None:
             import wandb
-            from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
+            from wandb.integration.keras import (
+                WandbMetricsLogger,
+                WandbModelCheckpoint,
+            )
 
             wandb.login()
             _ = wandb.init(
@@ -1410,14 +1409,14 @@ class NNTools:
                     "history_filename": ""
                     if history_filename is None
                     else history_filename,
-                    "restart": "" 
+                    "restart": ""
                     if restart is None
-                    else NNTools._json_serializable(restart)
+                    else NNTools._json_serializable(restart),
                 },
             )
 
             logger = WandbMetricsLogger(log_freq="batch")  # vs. 'epoch' default
-            chkpt = WandbModelCheckpoint( # Opt to save as much detail as possible to W&B
+            chkpt = WandbModelCheckpoint(  # Opt to save as much detail as possible to W&B
                 filepath="checkpoints/",
                 save_weights_only=True,
                 save_freq="epoch",
@@ -1431,26 +1430,36 @@ class NNTools:
         # Restarting
         if restart is not None:
             try:
-                if restart['from_wandb']:
+                if restart["from_wandb"]:
                     import wandb
-                    
+
                     api = wandb.Api()
-                    artifact = api.artifact(restart['filepath'])
+                    artifact = api.artifact(restart["filepath"])
                     name_ = str(datetime.datetime.now()).replace(" ", "-")
                     checkpoint = str(
                         os.path.join(
-                            os.path.abspath(os.getcwd()), 
-                            f'restart-{name_}/' # The trailing "/" is critical here for keras to understand
+                            os.path.abspath(os.getcwd()),
+                            f"restart-{name_}/",  # The trailing "/" is critical here for keras to understand
                         )
-                    ) 
-                    if os.path.isdir(checkpoint): # Remove any existing directory
+                    )
+                    if os.path.isdir(
+                        checkpoint
+                    ):  # Remove any existing directory
                         shutil.rmtree(checkpoint)
                     artifact.download(checkpoint)
 
-                    model = NNTools.load(filepath=checkpoint, weights_only=restart['weights_only'], model=model)
+                    model = NNTools.load(
+                        filepath=checkpoint,
+                        weights_only=restart["weights_only"],
+                        model=model,
+                    )
                     # Do not cleanup the restart file - it is necessary
                 else:
-                    model = NNTools.load(filepath=restart['filepath'], weights_only=restart['weights_only'], model=model)
+                    model = NNTools.load(
+                        filepath=restart["filepath"],
+                        weights_only=restart["weights_only"],
+                        model=model,
+                    )
             except Exception as e:
                 raise Exception(f"Unable to restart : {e}")
 
@@ -1464,12 +1473,12 @@ class NNTools:
         if model_filename is not None:
             model.save(model_filename, overwrite=True)
             if wandb_project is not None:
-                wandb.save(model_filename) # Also save to W&B
+                wandb.save(model_filename)  # Also save to W&B
         if history_filename is not None:
             with open(history_filename, "wb") as f:
                 pickle.dump(model.history.history, f)
             if wandb_project is not None:
-                wandb.save(history_filename) # Also save to W&B
+                wandb.save(history_filename)  # Also save to W&B
 
         return model
 
