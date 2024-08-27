@@ -70,8 +70,8 @@ class TestCNNFactory(unittest.TestCase):
         cnn_builder = CNNFactory(
             name="mobilenet",
             input_size=self.image_size,
+            pixel_range=(-1, 1),
             n_classes=self.n_classes,
-            dim=2,
             cam=True,
             dropout=0.2,
         )
@@ -188,8 +188,8 @@ class TestCNNFactory(unittest.TestCase):
                 CNNFactory(
                     name=name,
                     input_size=self.image_size,
+                    pixel_range=(-1, 1),
                     n_classes=self.n_classes,
-                    dim=2,
                 ).build()
             except Exception as e:
                 raise Exception(f"Unable to build {name} model : {e}")

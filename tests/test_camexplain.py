@@ -531,7 +531,7 @@ def _model_factory(idx):
             name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=True,
             dropout=0.0,
         )
@@ -542,7 +542,7 @@ def _model_factory(idx):
             name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=True,
             dropout=0.0,
         )
@@ -553,7 +553,7 @@ def _model_factory(idx):
             name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=True,
             dropout=0.2,
         )
@@ -564,7 +564,7 @@ def _model_factory(idx):
             name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=True,
             dropout=0.2,
         )
@@ -575,7 +575,7 @@ def _model_factory(idx):
             name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=False,
             dropout=0.0,
         )
@@ -586,7 +586,7 @@ def _model_factory(idx):
             name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=False,
             dropout=0.0,
         )
@@ -597,7 +597,7 @@ def _model_factory(idx):
             name="mobilenet",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=False,
             dropout=0.2,
         )
@@ -608,7 +608,7 @@ def _model_factory(idx):
             name="xception",
             input_size=(2631, 2631, 1),
             n_classes=10,
-            dim=2,
+            pixel_range=(0, 255),
             cam=False,
             dropout=0.2,
         )
