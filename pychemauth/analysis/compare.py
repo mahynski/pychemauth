@@ -201,7 +201,9 @@ class Compare:
         pass
 
     @staticmethod
-    def visualize(results, n_repeats, alpha=0.05, ignore=np.nan, cmap='viridis'):
+    def visualize(
+        results, n_repeats, alpha=0.05, ignore=np.nan, cmap="viridis"
+    ):
         """
         Plot a radial graph of performances for different pipelines.
 
@@ -227,7 +229,7 @@ class Compare:
             warning is raised if any scores are ignored.
 
         cmap : str, optional(default='viridis')
-            Name of matplotlib colormap to use when coloring the dial. 
+            Name of matplotlib colormap to use when coloring the dial.
             See https://matplotlib.org/stable/users/explain/colors/colormaps.html.
 
         Returns
