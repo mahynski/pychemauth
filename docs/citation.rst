@@ -135,6 +135,18 @@ PyChemAuth is configured to use the `tensorflow <>`_ backend of Keras, so if you
    year={2015},
    }
 
+If you use "DIME" to perform out-of-distribution detection on a neural network model, please cite:
+
+.. code-block:: bibtex
+   @misc{sjogren2021outofdistribution,
+   title={Out-of-Distribution Example Detection in Deep Neural Networks using Distance to Modelled Embedding},
+   author={Rickard Sjögren and Johan Trygg},
+   year={2021},
+   eprint={2108.10673},
+   archivePrefix={arXiv},
+   primaryClass={cs.LG}
+   }
+
 If you use `visualkeras <https://github.com/paulgavrikov/visualkeras>`_ to visualize any Keras models, please cite:
 
 .. code-block:: bibtex

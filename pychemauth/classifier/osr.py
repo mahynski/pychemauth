@@ -5,16 +5,629 @@ author: nam
 """
 import sys
 import copy
+import keras
+import scipy
+import torch
 
 import numpy as np
-
 import pandas as pd
+import matplotlib.pyplot as plt
 
-from sklearn.base import BaseEstimator, ClassifierMixin
+from dime import DIME
+
+from sklearn.base import BaseEstimator, ClassifierMixin, OutlierMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from sklearn.preprocessing import LabelEncoder
 
+from pychemauth import utils
 
+class DeepOOD:
+    """Deep neural network out-of-distribution (OOD) tools and models."""
+    class _ODBase:
+        """Base model for out-of-distribution detectors for deep neural networks."""
+        def set_params(self, **parameters):
+            """Set parameters; for consistency with scikit-learn's estimator API."""
+            for parameter, value in parameters.items():
+                setattr(self, parameter, value)
+            return self
+        
+        def get_params(self, deep=False):
+            """Get parameters; for consistency with scikit-learn's estimator API."""
+            raise NotImplementedError
+            
+        def predict(self, X):
+            """
+            Predict if samples belong to the known distribution.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Data the `model` can accept as input.
+                
+            Returns
+            -------
+            inlier : ndarray(bool, ndim=1)
+                Array of booleans where inliers are considered `True`.
+            """
+            check_is_fitted(self, "is_fitted_")
+            return self.score_samples(X) > self.threshold
+        
+        def score_samples(self, X, featurized=False):
+            """Score the samples."""
+            raise NotImplementedError
+        
+        def fit(self, X):
+            """
+            Fit the detector.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Training data the model can accept as input.
+                
+            Returns
+            -------
+            self
+            """
+            if not (0.0 < self.alpha < 1.0):
+                raise ValueError('alpha should be between 0 and 1')
+            
+            # 1. Check the model ends in a softmax or logistic so that the output is a probability.
+            if self.model is not None:
+                _  = DeepOOD._check_end(
+                    self.model, 
+                    disable=False
+                )
+
+            # 2. Compute threshold cutoff.
+            self._X_train_scores = self.score_samples(
+                X, 
+                featurized=True if self.model is None else False
+            )
+            self.threshold = np.percentile( # Score below this will be outlier
+                self._X_train_scores,
+                self.alpha*100.0
+            )
+    
+            self.is_fitted_ = True
+
+            return self
+        
+        def visualize(self, bins=25, ax=None, X_test=None, test_label=None, no_train=False, density=True):
+            """
+            Visualize the distribution of training scores, and others if desired.
+            
+            Parameters
+            ----------
+            bins : int
+                Number of bins to use in the histogram.
+                
+            ax : matplotlib.pyplot.Axes, optional(default=None)
+                Axes to plot the results on. This is created if not provided.
+            
+            X_test : ndarray(float) or iterator, optional(default=None)
+                Alternate data the model can accept as input. If `X_test=None` just plot the training data.
+                
+            test_label : str, optional(default=None)
+                Label for any test data provided.
+                
+            no_train : bool, optional(default=False)
+                If `no_train=True` do not plot the training data.
+                
+            density : bool, optional(default)
+                Whether to normalize the historgram to a probability distribution.
+                
+            Returns
+            -------
+            ax : matplotlib.pyplot.Axes
+                Axes the histogram is plotted on.
+            """
+            check_is_fitted(self, "is_fitted_")
+            
+            if ax is None:
+                fig, ax = plt.subplots(nrows=1, ncols=1)
+                
+            if not no_train:
+                ax.hist(
+                    self._X_train_scores, 
+                    bins=bins, 
+                    label='Training Set', 
+                    density=density, 
+                    alpha=0.5
+                )
+            ax.axvline(
+                self.threshold, 
+                color='red', 
+                label=f'Threshold ({"%.2f"%(100.0*self.alpha)}%)'
+            )
+            
+            if X_test is not None:
+                ax.hist(
+                    self.score_samples(
+                        X_test,
+                        featurized=True if self.model is None else False,
+                    ), 
+                    bins=bins, 
+                    label=test_label, 
+                    density=density, 
+                    alpha=0.5
+                )
+            
+            ax.legend(loc='best')
+            ax.set_xlabel('Score')
+            
+            return ax
+        
+    def _check_end(model, disable=False):
+        """
+        Check a Keras model ends with a softmax or logistic function.
+        
+        Parameters
+        ----------
+        model : keras.Model
+            Keras model to check.
+            
+        disable : bool, optional(default=False)
+            Whether to disable the final activation function in the model, if and only if the 
+            model architecture is valid.
+        
+        Returns
+        -------
+        valid : bool
+            If the model architecture is valid.
+            
+        original_activation : keras.activations
+            Activation function used in the original model.
+        """
+        valid_activations = [
+            keras.activations.softmax,
+            keras.activations.sigmoid,
+        ]  # Could be softmax (multiclass) or logistic (binary)
+        
+        original_activation = model.layers[-1].activation
+        valid = False
+        if isinstance(model.layers[-1], keras.layers.Dense):
+            # Ends with a dense layer with a softmax activation
+            if original_activation in valid_activations:
+                valid = True
+        elif isinstance(model.layers[-1], keras.layers.Activation):
+            # Activation specified manually after a linear dense layer
+            if original_activation in valid_activations:
+                if isinstance(model.layers[-2], keras.layers.Dense):
+                    if (
+                        model.layers[-2].activation == keras.activations.linear
+                    ):  # Must not be an activation here
+                        valid = True
+        
+        if valid:
+            if disable:
+                model.layers[-1].activation = None
+        
+        return valid, original_activation
+        
+    class DIME(OutlierMixin, _ODBase):
+        """
+        Use DIME to detect out-of-distribution points.
+        
+        This is just a wrapper for the code originally developed in [1].
+        The code is available at https://github.com/sartorius-research/dime.pytorch
+        
+        Notes
+        -----
+        From [1]: "By approximating the training set embedding into feature space as a linear hyperplane, 
+        we derive a simple, unsupervised, highly performant and computationally efficient method [to detect 
+        out-of-distribution examples during prediction time]."  Essentially, PCA is performed on the 
+        featurized training data; these features are assumed here to be the 2D output of the model at some
+        intermediate stage.  For example, the output of a convolutional base before global average pooling
+        and subsequent classification with a dense head.  The user can create a model from a pretrained
+        one as in the example below; this allows the user to select the stage at which OOD detection is
+        performed.
+        
+        References
+        ----------
+        1. Sjoegren and Trygg, arXiv (2021) https://arxiv.org/pdf/2108.10673.pdf
+        
+        Examples
+        --------
+        A simple example of using a pretrained model as a featurizer.
+        >>> model = keras.models.load_model('my_model.pkl') # Model: [CNN Base] -> GAP -> Dense (see CNNFactory)
+        >>> featurizer = keras.Sequential(orig_model.layers[:-1]) # Exclude the final Dense layer
+        >>> ood = DeepOOD.DIME(
+        ...     model=featurizer,
+        ...     alpha=0.01,
+        ...     k=20
+        ... )
+        >>> ood.fit(X_train)
+        >>> ax = ood.visualize(X_test=X_test)
+        
+        We can also train the model by pre-featurizing the dataset.
+        >>> ood = DeepOOD.DIME(
+        ...     model=None,
+        ...     alpha=0.01,
+        ...     k=20
+        ... )
+        >>> X_feature = featurizer.predict(X_train) # Expensive step
+        >>> _ = ood.fit( # Essentially instantaneous
+        ...     X_feature
+        ... )
+        >>> ax = ood.visualize(X_test=featurizer.predict(X_test))
+        """
+        def __init__(self, model, k, alpha=0.05):
+            """
+            Instantiate the class.
+            
+            Parameters
+            ----------
+            model : keras.Model or None
+                A trained Keras model which outputs a transformed version of the input. For example, a CNN base
+                used for transfer learning.  This must implement a `predict` method. Setting `model=None`
+                will make the detector assume that all `X` passed to it have already been featurized. It can be 
+                advantageous to pre-featurize the data by running it through this model before optimizing a 
+                detector since it can dramatically increase the speed of training by avoiding this (usually 
+                expensive) calculation.
+                
+            k : scalar(int)
+                Number of dimensions in the final embedding.
+                
+            alpha : scalar(float), optional(default=0.05)
+                Type I error rate.
+                
+            """
+            self.set_params(
+                **{
+                    'model': model, 
+                    'k': k, 
+                    'alpha': alpha
+                }
+            )
+
+        def get_params(self, deep=False):
+            """Get parameters; for consistency with scikit-learn's estimator API."""
+            if deep:
+                raise NotImplementedError
+            return {
+                "model": self.model, # This can't really be deep copied easily
+                "k": self.k,
+                "alpha": self.alpha
+            }
+        
+        def score_samples(self, X, featurized=False):
+            """
+            Compute the (negative) distance to the modeled embedding for each observation.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Training data the `model` can accept as input.  If `model=None` assume that `X` is 
+                already featurized.  It can be advantageous to pre-featurize the data by running it through
+                this model before optimizing a DIME OOD detector since it can dramatically increase the speed
+                of training by avoiding this (usually expensive) calculation.
+                
+            featurized : bool, optional(default=False)
+                Whether `X` has already been featurized already.  If `model=None` this is ignored 
+                and it is assumed `X` has been featurized.
+                
+            Returns
+            -------
+            scores : ndarray(float, ndim=1)
+                Negative distance for each observation in X. The lower, the more abnormal.
+            """
+            def _scores(X):
+                """Compute the scores for a batch of data."""
+                if featurized or (self.model is None):
+                    X_ = torch.tensor(X)
+                else:
+                    X_ = torch.tensor(self._featurize(X))
+                scores = -self.dime.distance_to_hyperplane(X_).numpy()
+
+                return scores
+            
+            if utils.NNTools._is_data_iter(X):
+                scores = []
+                for X_batch_, _ in X:
+                    scores.append(_scores(X_batch_))
+                return np.concatenate(scores)
+            else:
+                return _scores(X)
+            
+        def _featurize(self, X):
+            """Featurize the data."""
+            if utils.NNTools._is_data_iter(X):
+                X_feature = []
+                for X_batch_, _ in X:
+                    X_feature.append(self.model.predict(X_batch_))
+                return np.concatenate(X_feature)
+            else:
+                return self.model.predict(X)
+           
+        def fit(self, X):
+            """
+            Fit the detector.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Training data the `model` can accept as input.  If `model=None` assume that `X` is 
+                already featurized.  It can be advantageous to pre-featurize the data by running it through
+                this model before optimizing a DIME OOD detector since it can dramatically increase the speed
+                of training by avoiding this (usually expensive) calculation.
+                
+            Returns
+            -------
+            self
+            """
+            if not (0.0 < self.alpha < 1.0):
+                raise ValueError('alpha should be between 0 and 1')
+            if self.k < 1:
+                raise ValueError('k should be at least 1')
+        
+            # 1. Fit DIME on features
+            if self.model is None:
+                X_feature = X # Assume X is already featurized
+            else:
+                X_feature = self._featurize(X)
+                
+            self.dime = DIME(
+                explained_variance_threshold=self.k, 
+                n_percentiles=10000
+            ).fit(
+                torch.tensor(X_feature),
+                calibrate_against_trainingset=True,
+            )
+            self._X_train_scores = self.score_samples(X_feature, featurized=True)
+
+            self.threshold = np.percentile( # Score below this will be outlier 
+                self._X_train_scores,
+                self.alpha*100.0
+            )
+
+            self.is_fitted_ = True
+
+            return self
+        
+    class Energy(OutlierMixin, _ODBase):
+        """
+        Use an energy-based score to detect out-of-distribution points.
+        
+        Notes
+        -----
+        The softmax logits are used to compute a "Helmholtz free energy" for each observation.  These free
+        energies are collected over the training data, which should be composed only of samples which are,
+        "in-distribution", and a threshold is established. When a test point is predicted, if the (negative)
+        free energy score is below this threshold the point is considered out-of-distribution.
+        
+        References
+        ----------
+        1. Liu et al., NIPS (2020) https://proceedings.neurips.cc/paper/2020/file/f5496252609c43eb8a3d147ab9b9c006-Paper.pdf
+        
+        Examples
+        --------
+        A simple example of using a pretrained model as a featurizer.
+        >>> model = keras.models.load_model('my_model.pkl') # Model: [CNN Base] -> GAP -> Dense (see CNNFactory)
+        >>> ood = DeepOOD.Energy(
+        ...     model=model,
+        ...     alpha=0.01,
+        ...     T=1.0
+        ... )
+        >>> ood.fit(X_train)
+        >>> ax = ood.visualize(X_test=X_test)
+        
+        We can also train the model by pre-featurizing the dataset.
+        >>> ood = DeepOOD.Energy(
+        ...     model=None,
+        ...     alpha=0.01,
+        ...     T=1.0
+        ... )
+        >>> featurizer = model
+        >>> featurizer.layers[-1].activation = None # Remove softmax activation to get logits as output
+        >>> X_logits = featurizer.predict(X_train) # Expensive step
+        >>> _ = ood.fit( # Essentially instantaneous
+        ...     X_logits
+        ... )
+        >>> ax = ood.visualize(X_test=featurizer.predict(X_test))
+        """
+        def __init__(self, model, alpha=0.05, T=1.0):
+            """
+            Instantiate the class.
+            
+            Parameters
+            ----------
+            model : keras.Model
+                A trained Keras classification model which outputs a probability.  This model should terminate
+                in a softmax or logistic activation function. Setting `model=None` will make the detector assume 
+                that all `X` passed to it have already been featurized (i.e., are logits not raw inputs). It can be 
+                advantageous to pre-featurize the data by running it through this model before optimizing a  
+                detector since it can dramatically increase the speed of training by avoiding this (usually 
+                expensive) calculation.
+                
+            alpha : scalar(float), optional(default=0.05)
+                The free energy of each obseravtion is computed over the training set; the lower alpha percentile 
+                of this is taken as a threshold below which a prediction is considered an outlier.
+                
+            T : scalar(float), optional(default=1.0)
+                Temperature scale to use.
+            """
+            self.set_params(
+                **{
+                    'model': model, 
+                    'alpha': alpha,
+                    'T': T
+                }
+            )
+
+        def get_params(self, deep=False):
+            """Get parameters; for consistency with scikit-learn's estimator API."""
+            if deep:
+                raise NotImplementedError
+            return {
+                "model": self.model, # This can't really be deep copied easily
+                "alpha": self.alpha,
+                "T": self.T
+            }
+        
+        def score_samples(self, X, featurized=False):
+            """
+            Compute the energy score for each observation.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Data the model can accept as input.
+                
+            featurized : bool, optional(default=False)
+                Whether `X` has already been featurized already; i.e., if the `X` matrix is the logits for 
+                each observation not the raw data.  If `model=None` this is ignored and it is assumed `X` 
+                has been featurized.
+                
+            Returns
+            -------
+            scores : ndarray(float, ndim=1)
+                Negative energy score for each observation in X. The lower, the more abnormal.
+            """
+            if self.T < 0:
+                raise ValueError("T should be non-negative")
+                
+            if featurized or (self.model is None):
+                featurized = True
+                
+            # If valid, deactivate activation function to obtian raw logits
+            if self.model is not None:
+                valid, original_activation = DeepOOD._check_end(self.model, disable=True)
+            else:
+                valid = True
+                
+            if valid:
+                def negative_energy(logits):
+                    return self.T * scipy.special.logsumexp(np.asarray(logits)/self.T, axis=1)
+                
+                try:
+                    if utils.NNTools._is_data_iter(X):
+                        scores = []
+                        for X_batch_, _ in X:
+                            scores.append(negative_energy(X_batch_ if featurized else self.model.predict(X_batch_)))
+                        scores = np.concatenate(scores)
+                    else:
+                        scores = negative_energy(X if featurized else self.model.predict(X))
+                except Exception as e:
+                    if self.model is not None:
+                        self.model.layers[-1].activation = original_activation # Return model to original state
+                    raise Exception(e)
+                else:
+                    if self.model is not None:
+                        self.model.layers[-1].activation = original_activation # Return model to original state
+                    return scores
+            else:
+                raise Exception('Invalid model; cannot compute energy scores.')
+
+    class Softmax(OutlierMixin, _ODBase):
+        """
+        Use the softmax confidence score to detect out-of-distribution points.
+        
+        Notes
+        -----
+        From [1]: "Correctly classified examples tend to have greater maximum softmax probabilities 
+        than erroneously classified and out-of-distribution examples, allowing for their detection."
+        Essentially, class probabilities are computed for each training observation.  The maximum 
+        probability is the predicted class.  These maximums are collected over the training data, which
+        should be composed only of samples which are "in-distribution", and a threshold is established.
+        When a test point is predicted, if the maximum softmax score is below this threshold the
+        point is considered out-of-distribution.
+        
+        References
+        ----------
+        1. Hendrycks and Gimpel, ICLR (2017) https://arxiv.org/pdf/1610.02136.pdf
+        
+        Examples
+        --------
+        A simple example of using a pretrained model as a featurizer.
+        >>> model = keras.models.load_model('my_model.pkl') # Model: [CNN Base] -> GAP -> Dense (see CNNFactory)
+        >>> ood = DeepOOD.Softmax(
+        ...     model=model,
+        ...     alpha=0.01,
+        ... )
+        >>> ood.fit(X_train)
+        >>> ax = ood.visualize(X_test=X_test)
+        
+        We can also train the model by pre-featurizing the dataset.
+        >>> ood = DeepOOD.Softmax(
+        ...     model=None,
+        ...     alpha=0.01,
+        ... )
+        >>> X_probabilities = model.predict(X_train) # Expensive step
+        >>> _ = ood.fit( # Essentially instantaneous
+        ...     X_probabilities
+        ... )
+        >>> ax = ood.visualize(X_test=model.predict(X_test))
+        """
+        def __init__(self, model, alpha=0.05):
+            """
+            Instantiate the class.
+            
+            Parameters
+            ----------
+            model : keras.Model
+                A trained Keras classification model which outputs a probability.  This model should terminate
+                in a softmax or logistic activation function. Setting `model=None` will make the detector assume 
+                that all `X` passed to it have already been featurized (i.e., are class probabilities not raw inputs). 
+                It can be advantageous to pre-featurize the data by running it through this model before optimizing 
+                a detector since it can dramatically increase the speed of training by avoiding this (usually 
+                expensive) calculation.
+                
+            alpha : float, optional(default=0.05)
+                The probabilities of the predicted class (max probability for an observation) is computed 
+                over the training set; the lower alpha percentile of this is taken as a threshold below which 
+                a prediction is considered an outlier.
+            """
+            self.set_params(
+                **{
+                    'model': model, 
+                    'alpha': alpha
+                }
+            )
+
+        def get_params(self, deep=False):
+            """Get parameters; for consistency with scikit-learn's estimator API."""
+            if deep:
+                raise NotImplementedError
+            return {
+                "model": self.model, # This can't really be deep copied easily
+                "alpha": self.alpha
+            }
+        
+        def score_samples(self, X, featurized=False):
+            """
+            Compute the softmax score for each observation.
+            
+            Parameters
+            ----------
+            X : ndarray(float) or iterator
+                Data the model can accept as input.
+                
+            featurized : bool, optional(default=False)
+                Whether `X` has already been featurized already; i.e., if the `X` matrix is the class
+                probabilities for each observation not the raw data.  If `model=None` this is ignored 
+                and it is assumed `X` has been featurized.
+                
+            Returns
+            -------
+            scores : ndarray(float, ndim=1)
+                Maximum class probability predicted for each observation in X. The lower, the more abnormal.
+            """
+            if featurized or (self.model is None):
+                featurized = True
+                
+            def softmax_confidence(probabilities):
+                """Compute softmax confidence for a batch of data."""
+                return np.max(probabilities, axis=1)
+                
+            if utils.NNTools._is_data_iter(X):
+                scores = []
+                for X_batch_, _ in X:
+                    scores.append(softmax_confidence(X_batch_ if featurized else self.model.predict(X_batch_)))
+                return np.concatenate(scores)
+            else:
+                return softmax_confidence(X if featurized else self.model.predict(X))
+            
 class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     """
     Train a composite classifier with a reject option to work under open-set conditions.
@@ -22,15 +635,21 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     Parameters
     ----------
     clf_model : object, optional(default=None)
-        Unfitted classification model. Must support `.fit()` and `.predict()` methods.
+        Unfitted or fitted classification model. Must support `.fit()` and `.predict()` methods.
 
     outlier_model : object, optional(default=None)
         Unfitted outlier detection model. Must support `.fit()` and `.predict()` methods.
         This should return a value of `inlier_value` for points which are considered inliers.
         If `None` then all points will be passed to the classifier.
 
+    clf_prefit : bool, optional(default=False)
+        Whether the `clf_model` is already fit or not.  If `clf_prefit=True` the model will not be
+        refit.  This is advantageous when using a model which is expensive to train, such as a
+        deep neural network.
+
     clf_kwargs : dict, optional(default={})
-        Keyword arguments to instantiate the classification model with.
+        Keyword arguments to instantiate the classification model with.  If `clf_prefit=True` these
+        are ignored since they are not used.
 
     outlier_kwargs : dict, optional(default={})
         Keyword arguments to instantiate the outlier model with.
@@ -82,6 +701,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         self,
         clf_model=None,
         outlier_model=None,
+        clf_prefit=False,
         clf_kwargs={},
         outlier_kwargs={},
         known_classes=None,
@@ -96,6 +716,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             **{
                 "clf_model": clf_model,
                 "outlier_model": outlier_model,
+                "clf_prefit": clf_prefit,
                 "clf_kwargs": clf_kwargs,
                 "outlier_kwargs": outlier_kwargs,
                 "known_classes": known_classes,
@@ -118,6 +739,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         return {
             "clf_model": self.clf_model,
             "outlier_model": self.outlier_model,
+            "clf_prefit": self.clf_prefit,
             "clf_kwargs": self.clf_kwargs,
             "outlier_kwargs": self.outlier_kwargs,
             "known_classes": self.known_classes,
@@ -225,8 +847,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             )
 
         try:
-            self.clf_ = self.clf_model(**self.clf_kwargs)
-            self.clf_.fit(X[composite_mask, :], y[composite_mask])
+            if not clf_prefit:
+                self.clf_ = self.clf_model(**self.clf_kwargs)
+                self.clf_.fit(X[composite_mask, :], y[composite_mask])
         except:
             raise Exception(
                 f"Unable to fit classification model : {sys.exc_info()[0]}"
