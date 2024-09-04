@@ -24,7 +24,7 @@ setup(
         "Operating System :: POSIX :: Linux",
     ],
     install_requires=[
-        "torch", # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
+        "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
         "dime-pytorch==1.0.1",
         "baycomp==1.0.3",
         "bokeh>=3.4.3",  # Default in Colab
@@ -57,6 +57,6 @@ setup(
         "tensorflow-cpu==2.14.0",  # This command should install keras==2.14.0 as well - based on Keras recommendation (https://keras.io/getting_started/#installing-keras-3) for creating a "universal GPU environment" based on Colab recommendations: https://colab.research.google.com/drive/13cpd3wCwEHpsmypY9o6XB6rXgBm5oSxu - CPU only default is more portable, we can overwrite on Colab
     ],
     dependency_links=[
-        "https://download.pytorch.org/whl/cpu", # For torch
-    ]
+        "https://download.pytorch.org/whl/cpu",  # For torch
+    ],
 )

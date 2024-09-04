@@ -262,7 +262,17 @@ class NNTools:
         ... )
         """
 
-        def __init__(self, x_files, y, batch_size, fmt="npy", shuffle=False):
+        def __init__(
+            self,
+            x_files,
+            y,
+            batch_size,
+            fmt="npy",
+            shuffle=False,
+            include=None,
+            exclude=None,
+            filter=None,
+        ):
             """
             Instantiate the class.
 
@@ -283,6 +293,15 @@ class NNTools:
             shuffle : bool, optional(default=False)
                 Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
 
+            include : array-like, optional(default=None)
+                List of `y` values to include when iterating.  If specified, only instances where `y` is in this list will be returned.  This will create uneven or empty batches. You cannot specify this and `exclude` simultaneously.
+
+            exclude : array-like, optional(default=None)
+                List of `y` values to exclude when iterating.  This allows you to filter out certain classes.  This will create uneven or empty batches. You cannot specify this and `include` simultanously.
+
+            filter : numpy.ndarray(bool, ndim=1)
+                Mask to filter instances. The length of this filter should be equal to that of `x_files`.  All instances for which `filter=False` will not be calculated.  The order corresponds to the ordering of `x_files` when instantiated.  This filter will be shuffled consistently with `x_files` and `y` at the end of an epoch, if desired.  This will create uneven or empty batches.  This can be simultaneously specified with either `include` or `exclude`.  Only observations which satisfy both criteria are calculated and returned.
+
             Raises
             ------
             NotImplementedError
@@ -291,21 +310,63 @@ class NNTools:
             if len(x_files) != len(y):
                 raise Exception("X and y should have the same length.")
 
-            self.x, self.y = x_files, y
-            self.x_orig, self.y_orig = copy.copy(self.x), copy.copy(
-                self.y
+            self.__x, self.__y = x_files, y
+            self.x_orig, self.y_orig = copy.copy(self.__x), copy.copy(
+                self.__y
             )  # Save the original ordering
+
+            # This is only intended to be used when instantiated
+            self._set_filter(filter)
+            self.filter_orig = copy.copy(self.__filter)
+
             self.batch_size = int(batch_size)
             self.shuffle = shuffle
+
+            self.__exclude, self.__include = None, None
+            self.set_include(include)
+            self.set_exclude(exclude)
 
             if fmt == "npy":
                 self.load = fastnumpyio.load  # faster than np.load
             else:
                 raise NotImplementedError(f"Cannot load data in {fmt} format")
 
+        def set_include(self, include):
+            """Set the include value."""
+            if self.__exclude is not None:
+                raise Exception(
+                    "You cannot specify include and exclude simultaneously."
+                )
+            self.__include = include
+
+        def set_exclude(self, exclude):
+            """Set the exclude value."""
+            if self.__include is not None:
+                raise Exception(
+                    "You cannot specify include and exclude simultaneously."
+                )
+            self.__exclude = exclude
+
+        def _set_filter(self, filter):
+            """
+            Set the filter value.
+
+            Notes
+            -----
+            This is only intended to be used when instantiated.
+            """
+            if filter is not None:
+                self.__filter = np.asarray(filter, dtype=bool)
+                assert (
+                    self.__filter.ndim == 1
+                ), "Filter should only have 1 dimension."
+                assert self.__filter.shape[0] == len(self.x_orig)
+            else:
+                self.__filter = None
+
         def __len__(self):
             """Return the number of datapoints in a batch."""
-            return int(np.ceil(len(self.x) / self.batch_size))
+            return int(np.ceil(len(self.__x) / self.batch_size))
 
         def __getitem__(self, idx):
             """
@@ -327,22 +388,61 @@ class NNTools:
             low = idx * self.batch_size
             # Cap upper bound at array length; the last batch may be smaller
             # if the total number of items is not a multiple of batch size.
-            high = min(low + self.batch_size, len(self.x))
-            batch_x = self.x[low:high]
-            batch_y = self.y[low:high]
+            high = min(low + self.batch_size, len(self.__x))
+            batch_x = self.__x[low:high]
+            batch_y = self.__y[low:high]
 
-            return np.array(
-                [self.load(file_name) for file_name in batch_x]
-            ), np.array(batch_y)
+            # Possibly filter out X
+            if self.__filter is None:
+                filter_mask = np.array([True] * len(batch_y), dtype=bool)
+            else:
+                filter_mask = self.__filter[low:high]
+
+            # Possibly filter out based on y values
+            if (self.__exclude is not None) and (self.__include is not None):
+                raise Exception(
+                    "You cannot specify include and exclude simultaneously."
+                )
+
+            if self.__include is not None:
+                mask = np.array(
+                    [y_ in self.__include for y_ in batch_y], dtype=bool
+                )
+            elif self.__exclude is not None:
+                mask = ~np.array(
+                    [y_ in self.__exclude for y_ in batch_y], dtype=bool
+                )
+            else:
+                mask = np.array([True] * len(batch_y), dtype=bool)
+
+            # Net filter
+            mask = mask & filter_mask
+
+            return (
+                np.array([self.load(file_name) for file_name in batch_x])[mask],
+                np.array(batch_y)[mask],
+            )
 
         def on_epoch_end(self):
             """Execute changes at the end of a training epoch."""
             if self.shuffle:  # Shuffle if desired
-                self.x, self.y = skshuffle(self.x, self.y)
+                if self.__filter is None:
+                    self.__x, self.__y = skshuffle(self.__x, self.__y)
+                else:
+                    self.__x, self.__y, self.__filter = skshuffle(
+                        self.__x, self.__y, self.__filter
+                    )
 
     @staticmethod
     def build_loader(
-        directory, loader="x", batch_size=1, fmt="npy", shuffle=False
+        directory,
+        loader="x",
+        batch_size=1,
+        fmt="npy",
+        shuffle=False,
+        include=None,
+        exclude=None,
+        filter=None,
     ):
         """
         Build a dataset loader from a directory.
@@ -363,6 +463,15 @@ class NNTools:
 
         shuffle : bool, optional(default=False)
             Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
+
+        include : array-like, optional(default=None)
+            List of `y` values to include when iterating. If specified, only instances where `y` is in this list will be returned. This will create uneven or empty batch sizes. You cannot specify this and `exclude` simultaneously.
+
+        exclude : array-like, optional(default=None)
+            List of `y` values to exclude when iterating. This allows you to filter out certain classes. This will create uneven or empty batch sizes. You cannot specify this and `include` simultaneously.
+
+        filter : numpy.ndarray(bool, ndim=1)
+            Mask to filter instances. The length of this filter should be equal to that of `y`.  All instances for which `filter=False` will not be calculated.  The order corresponds to the ordering when instantiated.  This filter will be shuffled consistently with `x` and `y` at the end of an epoch, if desired.  This will create uneven or empty batches.  This can be simultaneously specified with either `include` or `exclude`.  Only observations which satisfy both criteria are calculated and returned.
 
         Notes
         -----
@@ -395,6 +504,9 @@ class NNTools:
                 batch_size=batch_size,
                 fmt=fmt,
                 shuffle=shuffle,
+                include=include,
+                exclude=exclude,
+                filter=filter,
             )
 
         else:
@@ -1114,15 +1226,12 @@ class NNTools:
 
         classification = False
         if y_.ndim == 1:  # Single target
-            if type(y_[0].item()) in [
-                str,
-                int,
-            ]:  # If y contains ints or strings assume we are doing classification
+            if (y_.dtype.type == np.str_) or (y_.dtype == int):
                 classification = True
         elif (
             y_.ndim == 2
         ):  # If classification then this must be OHE matrix so only ints valid
-            if type(y_[0][0].item()) == int:
+            if y_.dtype == int:
                 classification = True
         else:
             raise Exception("Target should have no more than 2 dimensions.")
@@ -1137,7 +1246,7 @@ class NNTools:
                         *np.unique(y_batch, return_counts=True),
                     )
                 )
-            elif y_batch == 2:  # OHE integers for classes
+            elif y_batch.ndim == 2:  # OHE integers for classes
                 d = dict(
                     map(
                         lambda i, j: (i, j),
