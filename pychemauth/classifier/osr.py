@@ -654,7 +654,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     Parameters
     ----------
     clf_model : object, optional(default=None)
-        Unfitted or fitted classification model. Must support `.fit()` and `.predict()` methods.
+        Unfitted or fitted classification model. Must support `.fit()` and `.predict()` methods. Only 
+        the latter is required if the `clf_prefit=True`.
 
     outlier_model : object, optional(default=None)
         Unfitted outlier detection model. Must support `.fit()` and `.predict()` methods.
@@ -787,6 +788,20 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                     [type(y_) for y_ in y]
                 )
             )
+        
+    class _DeepWrapper:
+        """
+        Wrapper for Keras models.
+        
+        Deep classification models output a vector of probabilities not the index with the maximum probability.  This is akin to an sklean model.predict_proba() member.  This code expects the result (index or string) returned so this wrapper changes the functionality of .predict() to conform to this expectation.
+        """
+        def __init__(self, keras_model):
+            """Instantiate the class."""
+            self.keras_model = keras_model
+
+        def predict(self, X):
+            """Return the index of maximum probability."""
+            return np.argmax(np.asarray(self.model.predict(X)), axis=1)
 
     def fit(self, X, y=None):
         """
@@ -805,16 +820,13 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         self : OpenWorldClassifier
             Fitted model.
         """
+        self.deep_ = False
         if isinstance(self.clf_model, keras.Model):
-            deep_ = True
-            if not self.clf_prefit:
-                raise Exception("Deep models must be prefit.")
-        else:
-            deep_ = False
+            self.deep_ = True
 
         self.knowns_ = None
         y_check_ = None
-        if not deep_:
+        if not self.deep_:
             # Shallow models should have 2D input, deep models might have higher dimensional tensors
             if utils.NNTools._is_data_iter(X):
                 raise NotImplementedError(
@@ -822,7 +834,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 )
 
             X, y = check_X_y(X, y, accept_sparse=False)
-            self.n_features_in_ = X.shape[1]
+            self.n_features_in_ = X.shape[1:]
             self._check_category_type(y.ravel())
             assert self.unknown_class not in set(
                 y
@@ -911,6 +923,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         if not self.clf_prefit:
             # Deep models must be prefit and data iterators are only supported for deep models
             # so models here are "shallow" and data is raw 2D input here.
+            if self.deep_:
+                raise Exception("Deep models must be prefit.")
 
             # Predict for all X for simplicity. The composite mask will only allow knowns
             # which are not outliers through.
@@ -938,7 +952,13 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                     f"Unable to fit classification model : {sys.exc_info()[0]}"
                 )
         else:
-            self.clf_ = self.clf_model
+            # Deep or shallow models could be prefit
+            if self.deep_:
+                # Deep models need to have their .predict() method wrapped to output the prediction index instead of probabilities.
+                self.clf_ = OpenSetClassifier._DeepWrapper(keras_model=self.clf_model)
+            else:
+                # Otherwise just use the model provided.
+                self.clf_ = self.clf_model
 
         self.is_fitted_ = True
         return self
@@ -954,21 +974,17 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        predictions : array_like(int or str, ndim=2)
-            Class, or classes, assigned to each point.  Points considered outliers are
-            assigned the value `unknown_class`.
+        predictions : list(array_like(int or str, ndim=1))
+            Class, or classes, assigned to each point.  Points considered outliers are assigned the value `unknown_class`. This is returned as a list to accomodate multi-label, or soft, classifiers which can return multiple predictions for each observation.
         """
         check_is_fitted(self, "is_fitted_")
 
         if not utils.NNTools._is_data_iter(X):
-            X = check_array(X, accept_sparse=False)
-            assert X.shape[1] == self.n_features_in_
+            assert X.shape[1:] == self.n_features_in_
 
         # 1. Check for outliers
         if self.od_ is None:
-            if not isinstance(
-                self.clf_, keras.Model
-            ) and utils.NNTools._is_data_iter(X):
+            if not self.deep_ and utils.NNTools._is_data_iter(X):
                 raise NotImplementedError(
                     "Data iterators are only supported for deep models."
                 )
