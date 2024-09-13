@@ -333,7 +333,7 @@ class NNTools:
 
         def set_include(self, include):
             """Set the include value."""
-            if self.__exclude is not None:
+            if self.__exclude is not None and include is not None:
                 raise Exception(
                     "You cannot specify include and exclude simultaneously."
                 )
@@ -341,7 +341,7 @@ class NNTools:
 
         def set_exclude(self, exclude):
             """Set the exclude value."""
-            if self.__include is not None:
+            if self.__include is not None and exclude is not None:
                 raise Exception(
                     "You cannot specify include and exclude simultaneously."
                 )

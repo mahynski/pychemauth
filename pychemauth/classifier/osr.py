@@ -654,7 +654,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
     Parameters
     ----------
     clf_model : object, optional(default=None)
-        Unfitted or fitted classification model. Must support `.fit()` and `.predict()` methods. Only 
+        Unfitted or fitted classification model. Must support `.fit()` and `.predict()` methods. Only
         the latter is required if the `clf_prefit=True`.
 
     outlier_model : object, optional(default=None)
@@ -788,11 +788,11 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                     [type(y_) for y_ in y]
                 )
             )
-        
+
     class _DeepWrapper:
         """
         Wrapper for Keras models.
-        
+
         Deep classification models output a vector of probabilities not the index with the maximum probability.  This is akin to an sklean model.predict_proba() member.  This code expects the result (index or string) returned so this wrapper changes the functionality of .predict() to conform to this expectation.
         """
         def __init__(self, keras_model):
@@ -955,7 +955,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             # Deep or shallow models could be prefit
             if self.deep_:
                 # Deep models need to have their .predict() method wrapped to output the prediction index instead of probabilities.
-                self.clf_ = OpenSetClassifier._DeepWrapper(keras_model=self.clf_model)
+                self.clf_ = OpenSetClassifier._DeepWrapper(
+                    keras_model=self.clf_model
+                )
             else:
                 # Otherwise just use the model provided.
                 self.clf_ = self.clf_model
@@ -999,9 +1001,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 if np.sum(inlier_mask) > 0:
                     pred = self.clf_.predict(X[inlier_mask, :])
             else:
-                predictions = [[]] * ((len(X) - 1) * X.batch_size + len(
-                    X[len(X) - 1][0]
-                ))
+                predictions = [[]] * (
+                    (len(X) - 1) * X.batch_size + len(X[len(X) - 1][0])
+                )
 
                 X = copy.deepcopy(X)
                 X._set_filter(inlier_mask)

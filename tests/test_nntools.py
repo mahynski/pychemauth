@@ -25,7 +25,9 @@ class TestNNTools(unittest.TestCase):
         self.image_size = (self._X.shape[1], 1)
         self._X = np.expand_dims(self._X, axis=-1)
         self.n_classes = len(np.unique(self._y))
-        self._y = LabelEncoder().fit_transform(self._y)
+        self._y_str = self._y
+        self._enc = LabelEncoder()
+        self._y = self._enc.fit_transform(self._y)
 
     @pytest.mark.dependency(name="test_make_npy_xloader")
     def test_make_npy_xloader(self):
@@ -54,6 +56,928 @@ class TestNNTools(unittest.TestCase):
             for i in range(min(batch_size, self._X.shape[0] - idx)):
                 np.testing.assert_allclose(self._X[idx], X_[i])
                 np.testing.assert_allclose(self._y[idx], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_filter(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y_str,  # Write y as strings
+            overwrite=False,
+            augment=False,
+        )
+
+        filter = self._y_str == "Coal and Coke"
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            filter=filter,
+        )
+
+        # Indices where 'Coal and Coke' is
+        correct_indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            30,
+            31,
+            32,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertEqual(y_[i], "Coal and Coke")
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y_str[correct_indices[idx]], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_filter_include(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y_str,  # Write y as strings
+            overwrite=False,
+            augment=False,
+        )
+
+        filter = [False] * (len(self._y) // 2) + [True] * (
+            len(self._y) - len(self._y) // 2
+        )  # Arbitrarily filter out the first half
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            filter=filter,
+            include=["Coal and Coke", "Biomass"],
+        )
+
+        # Indices where ['Coal and Coke', 'Biomass'] is in the second "half" of the data
+        correct_indices = [
+            183,
+            184,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertIn(y_[i], ["Coal and Coke", "Biomass"])
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y_str[correct_indices[idx]], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_include_str(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y_str,  # Write y as strings
+            overwrite=False,
+            augment=False,
+        )
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            include=["Coal and Coke", "Biomass"],
+        )
+
+        # Indices where ['Coal and Coke', 'Biomass'] are
+        correct_indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            183,
+            184,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertIn(y_[i], ["Coal and Coke", "Biomass"])
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y_str[correct_indices[idx]], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_include_int(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y,  # Write y as integers
+            overwrite=False,
+            augment=False,
+        )
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            include=self._enc.transform(["Coal and Coke", "Biomass"]),
+        )
+
+        # Indices where ['Coal and Coke', 'Biomass'] are
+        correct_indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            183,
+            184,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertIn(
+                    y_[i], self._enc.transform(["Coal and Coke", "Biomass"])
+                )
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y[correct_indices[idx]], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_exclude_str(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y_str,  # Write y as strings
+            overwrite=False,
+            augment=False,
+        )
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            exclude=[
+                "Carbon Powder",
+                "Concrete",
+                "Dolomitic Limestone",
+                "Forensic Glass",
+                "Fuel Oil",
+                "Graphite/Urea Mixture",
+                "Lubricating Oil",
+                "Phosphate Rock",
+                "Steel",
+                "Titanium Alloy",
+                "Zircaloy",
+            ],
+        )
+
+        # Indices where only the remaining classes ['Coal and Coke', 'Biomass'] are
+        correct_indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            183,
+            184,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertIn(y_[i], ["Coal and Coke", "Biomass"])
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y_str[correct_indices[idx]], y_[i])
+                idx += 1
+
+        dir_.cleanup()
+
+    @pytest.mark.dependency(depends=["test_make_npy_xloader"])
+    def test_xloader_exclude_int(self):
+        """Build an XLoader from data on disk."""
+        dir_ = tempfile.TemporaryDirectory()
+
+        # Create a dataset on disk
+        x_f_, y_f_ = utils.write_dataset(
+            dir_.name + "/dummy",
+            self._X,
+            self._y,  # Write y as integers
+            overwrite=False,
+            augment=False,
+        )
+
+        # Build the loader
+        batch_size = 10
+        data = utils.NNTools.build_loader(
+            dir_.name + "/dummy",
+            batch_size=batch_size,
+            loader="x",
+            fmt="npy",
+            exclude=self._enc.transform(
+                [
+                    "Carbon Powder",
+                    "Concrete",
+                    "Dolomitic Limestone",
+                    "Forensic Glass",
+                    "Fuel Oil",
+                    "Graphite/Urea Mixture",
+                    "Lubricating Oil",
+                    "Phosphate Rock",
+                    "Steel",
+                    "Titanium Alloy",
+                    "Zircaloy",
+                ]
+            ),
+        )
+
+        # Indices where only the remaining classes ['Coal and Coke', 'Biomass'] are
+        correct_indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            183,
+            184,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235,
+            236,
+            237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255,
+            256,
+            257,
+            258,
+            259,
+            260,
+            261,
+            262,
+            263,
+            264,
+            265,
+            266,
+            267,
+            268,
+            269,
+            270,
+            271,
+            272,
+            273,
+            274,
+            275,
+            276,
+            277,
+            278,
+            279,
+            280,
+            281,
+            282,
+            283,
+            284,
+            285,
+            286,
+            287,
+            288,
+            289,
+        ]
+        idx = 0
+        for b in range(len(data)):
+            X_, y_ = data[b]
+            for i in range(len(X_)):
+                self.assertIn(
+                    y_[i], self._enc.transform(["Coal and Coke", "Biomass"])
+                )
+                np.testing.assert_allclose(self._X[correct_indices[idx]], X_[i])
+                self.assertEqual(self._y[correct_indices[idx]], y_[i])
                 idx += 1
 
         dir_.cleanup()
