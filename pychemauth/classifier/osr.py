@@ -801,7 +801,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         def predict(self, X):
             """Return the index of maximum probability."""
-            return np.argmax(np.asarray(self.model.predict(X)), axis=1)
+            return np.argmax(np.asarray(self.keras_model.predict(X)), axis=1)
 
     def fit(self, X, y=None):
         """
@@ -974,8 +974,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        predictions : list(array_like(int or str, ndim=1))
-            Class, or classes, assigned to each point.  Points considered outliers are assigned the value `unknown_class`. This is returned as a list to accomodate multi-label, or soft, classifiers which can return multiple predictions for each observation.
+        predictions : array_like(int or str, ndim=2)
+            Class, or classes, assigned to each point.  Points considered outliers are assigned the value `unknown_class`. This is returned as a list to accommodate multi-label, or soft, classifiers which can return multiple predictions for each observation.
         """
         check_is_fitted(self, "is_fitted_")
 
@@ -999,9 +999,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 if np.sum(inlier_mask) > 0:
                     pred = self.clf_.predict(X[inlier_mask, :])
             else:
-                predictions = [[]] * (len(X) - 1) * X.batch_size + len(
+                predictions = [[]] * ((len(X) - 1) * X.batch_size + len(
                     X[len(X) - 1][0]
-                )
+                ))
 
                 X = copy.deepcopy(X)
                 X._set_filter(inlier_mask)
