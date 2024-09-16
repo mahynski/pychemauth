@@ -3,7 +3,6 @@ Unittests for DeepOOD.
 
 author: nam
 """
-import pytest
 import unittest
 import keras
 import os
