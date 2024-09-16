@@ -25,6 +25,99 @@ from pychemauth import utils
 class DeepOOD:
     """Deep neural network out-of-distribution (OOD) tools and models."""
 
+    class ProbaPrefitClf:
+        """
+        Base class for prefit classifiers in `OpenSetClassifier`.
+
+        This class is a wrapper which modifies the behavior of a probabilistic classifier to return a single prediction.
+        Deep classification models end in a softmax layer predicting a floating point probability for each class when model.predict is called, akin to model.predict_proba in sklearn. To make these have the same behaviors, this class is needed.
+        """
+        def __init__(self, model=None):
+            """
+            Instantiate the class.
+
+            Parameters
+            ----------
+            model : object, optional(default=None)
+                Predictive model to use; this assumes `.predict` is implemented.
+            """
+            self.model = model
+            
+        def convert(self, probabilities):
+            """
+            Convert an array of probabilities to a single prediction.
+            
+            Parameters
+            ----------
+            probabilities : ndarray(float, ndim=2)
+                2D array of class proabilities for each input observation.
+
+            Returns
+            -------
+            prediction : ndarray(int, ndim=1)
+                Index of highest probability for each row in `probabilities`.
+            """
+            return np.argmax(np.asarray(probabilities), axis=1)
+            
+        def predict(self, X_feature):
+            """
+            Make a prediction given a featurized input.
+
+            Parameters
+            ----------
+            X_feature : ndarray
+                Input that the model can accept.
+
+            Returns
+            -------
+            prediction : ndarray(int, ndim=1)
+                Index of highest probability for each row in `X_feature`.
+            """
+            return self.convert(self.model.predict(X_feature))
+    
+    class SoftmaxPrefitClf(ProbaPrefitClf):
+        """
+        Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen.
+        """
+        def predict(self, X_feature):
+            """
+            Make a prediction given a featurized input.
+
+            Parameters
+            ----------
+            X_feature : ndarray
+                Input that the model can accept.  Data iterators are not supported at this time.
+
+            Returns
+            -------
+            prediction : ndarray(int, ndim=1)
+                Index of highest probability for each row in `X_feature`.
+            """
+            return self.convert(X_feature) 
+        
+    class EnergyPrefitClf(ProbaPrefitClf):
+        def __init__(self):
+            """
+            Instantiate the class.
+            """
+            self.model = keras.layers.Softmax() 
+        
+        def predict(self, X_feature):
+            """
+            Make a prediction given a featurized input.
+
+            Parameters
+            ----------
+            X_feature : ndarray
+                Input that the model can accept. 
+
+            Returns
+            -------
+            prediction : ndarray(int, ndim=1)
+                Index of highest probability for each row in `X_feature`.
+            """
+            return self.convert(self.model(X_feature))
+
     class _ODBase:
         """Base model for out-of-distribution detectors for deep neural networks."""
 
@@ -789,20 +882,6 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 )
             )
 
-    class _DeepWrapper:
-        """
-        Wrapper for Keras models.
-
-        Deep classification models output a vector of probabilities not the index with the maximum probability.  This is akin to an sklean model.predict_proba() member.  This code expects the result (index or string) returned so this wrapper changes the functionality of .predict() to conform to this expectation.
-        """
-        def __init__(self, keras_model):
-            """Instantiate the class."""
-            self.keras_model = keras_model
-
-        def predict(self, X):
-            """Return the index of maximum probability."""
-            return np.argmax(np.asarray(self.keras_model.predict(X)), axis=1)
-
     def fit(self, X, y=None):
         """
         Fit the composite model.
@@ -955,8 +1034,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             # Deep or shallow models could be prefit
             if self.deep_:
                 # Deep models need to have their .predict() method wrapped to output the prediction index instead of probabilities.
-                self.clf_ = OpenSetClassifier._DeepWrapper(
-                    keras_model=self.clf_model
+                self.clf_ = DeepOOD.ProbaPrefitClf(
+                    model=self.clf_model
                 )
             else:
                 # Otherwise just use the model provided.
