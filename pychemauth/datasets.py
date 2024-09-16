@@ -4,10 +4,18 @@ Load datasets.
 author: nam
 """
 import io
+import requests
+import shutil
+import tqdm
+import os
 
 import pandas as pd
-import requests
+import numpy as np
+
 from sklearn.utils import Bunch
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from pychemauth.utils import NNTools, write_dataset
 
 
 def load_pgaa(return_X_y=False, as_frame=False):
@@ -31,22 +39,22 @@ def load_pgaa(return_X_y=False, as_frame=False):
     data : Bunch
         Dictionary-like object, with the following attributes.
 
-        data{ndarray, DataFrame}
+        data : {ndarray, DataFrame}
             The data matrix. If as_frame=True, data will be a pandas DataFrame.
 
-        target: {ndarray, Series}
+        target : {ndarray, Series}
             The classification target. If as_frame=True, target will be a pandas Series.
 
-        feature_names: list
+        feature_names : list
             The names of the dataset columns.
 
-        target_names: list
+        target_names : list
             The names of target classes.
 
-        frame: DataFrame
+        frame : DataFrame
             Only present when as_frame=True. DataFrame with data and target.
 
-        DESCR: str
+        DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
@@ -79,7 +87,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
     )
     X.columns = feature_names
     if not as_frame:
-        X = X.values
+        X = np.ascontiguousarray(X.values)
 
     target_names = ["Material"]
     url = "https://raw.githubusercontent.com/mahynski/pgaa-material-authentication/master/data/raw/y.csv"
@@ -88,7 +96,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
     ).squeeze()
     y.name = target_names[0]
     if not as_frame:
-        y = y.values
+        y = np.ascontiguousarray(y.values)
 
     if return_X_y:
         return (X, y)
@@ -107,6 +115,213 @@ materials. They have been normalized to sum to 1. The peaks have be binned into 
 centers (energy in keV) are given as the feature_names. y contains the name of each material.",
         )
         return bunch
+
+
+def make_pgaa_images(
+    transformer,
+    exclude_classes=None,
+    directory=None,
+    overwrite=False,
+    fmt="npy",
+    valid_range=(0, 4056),
+    renormalize=True,
+    test_size=0.0,
+    random_state=42,
+    batch_size=10,
+    shuffle=True,
+):
+    """
+    Create iteratable dataset of 2D single-channel "images" from the included example dataset of 1D PGAA spectra.
+
+    This can serve as a template for other "imaging" transformations of 1D series data.
+
+    Parameters
+    ----------
+    transformer : sklearn.base.BaseEstimator
+        A transformer which follows sklearn's estimator API. The `.fit_transform` method will be called to fit the transformer to the training data.
+
+    exclude_classes : array-like, optional(default=None)
+        Iterable containing classes to exlude as strings.  See `pychemauth.datasets.load_pgaa` for classes in this dataset.
+
+    directory : str, optional(default=None)
+        Directory to save transformed images to. If None the images are returned as a numpy array in memory; otherwise an `XLoader` is returned.  Within `directory` both "train" and "test" subdirectories are created with the data split accordingly.
+
+    overwrite : bool, optional(default=False)
+        If saving data to disk, whether to delete any `directory` that already exists.
+
+    fmt : str, optional(default='npy')
+        Format to save the data to disk in.  Default is to use numpy's native "npy" format.
+
+    valid_range : tuple(int, int), optional(default=(0, 4056))
+        A lower (inclusive) and upper (exclusive) bound on the spectra energy indices to use. Default values cover the entire range of the dataset.
+
+    normalization : bool, optional(default=True)
+        Whether to renormalize (sum to 1) the spectra after clipping to `valid_range`.
+
+    test_size : float, optional(default=0.0)
+        Fraction of data to hold out as test set.  If 0 then no test set is created and all data is returned as part of the training set.  Splitting is always done in a stratified manner.
+
+    random_state : int, optional(default=42)
+        Random number generator see for stratified train/test splitting.  If `None` no shuffling will be performed, though by default it is.
+
+    Returns
+    -------
+    If `directory=None`, data is returned in memory as:
+        X_train : ndarray(float, ndim=4)
+            Training data with shape (N, R, R, 1) where N is the number of observations in the set and R is the width of the `valid_range`.
+
+        X_test : ndarray(float, ndim=4)
+            Testing data with similar shape as X_train.
+
+        y_train : ndarray(int, ndim=1)
+            Targets for training data.
+
+        y_test : ndarray(int, ndim=1)
+             Targets for test data.
+
+        transformer : sklearn.base.BaseEstimator
+            Transformer after being trained on X_train.
+
+        encoder : sklearn.preprocessing.LabelEncoder
+            Encoder that transforms y from string classes to integers.
+
+    If `directory` is provided, then the data is transformed and saved to disk so loaders are returned as:
+        train_loader : utils.NNTools.XLoader
+            Dataset loader for the training set.
+
+        test_loader : utils.NNTools.XLoader
+            Dataset loader for the test set.
+
+        encoder : sklearn.preprocessing.LabelEncoder
+            Encoder that transforms y from string classes to integers.
+
+    Notes
+    -----
+    Spectral preprocessing steps include (re)normalization (if desired), then natural logarithm (clipped below 1.0e-7).
+
+    Classes are encoded as integers.
+
+    If `directory` is provided so that data is transformed and written to disk, the `transformer` is fit repeatedly on each individual data point so it does not reflect any average over all X_train.
+
+    Raises
+    ------
+    ValueError
+        Invalid `valid_range` tuple.
+
+    FileExistsError
+        If `directory`, or a required subdirectory, already exists.
+
+    Example
+    -------
+    >>> from pyts.image import GramianAngularField
+    >>> res = make_pgaa_images(
+    ...     transformer=GramianAngularField(method='difference'),
+    ...     exclude_classes=['Carbon Powder', 'Phosphate Rock', 'Zircaloy'],
+    ...     directory='./data',
+    ...     overwrite=False,
+    ...     fmt='npy',
+    ...     valid_range=(0, 2631),
+    ...     renormalize=True,
+    ...     test_size=0.2,
+    ...     random_state=42
+    ... )
+    """
+    # Load 1D PGAA dataset
+    X, y = load_pgaa(return_X_y=True)
+
+    # Exclude any classes desired
+    if hasattr(exclude_classes, "__iter__"):
+        mask = np.array([False] * X.shape[0])
+        for class_ in exclude_classes:
+            mask = mask | (y == class_)
+        X = X[~mask]
+        y = y[~mask]
+
+    # Possibly clip and normalize
+    if valid_range[0] >= valid_range[1]:
+        raise ValueError("valid_range should go from low to high.")
+    else:
+        X = X[:, valid_range[0] : valid_range[1]]
+        if renormalize:
+            X = (X.T / np.sum(X, axis=1)).T
+
+    # Convert to logscale
+    X = np.log(np.clip(X, a_min=1.0e-7, a_max=None))
+
+    # Perform test/train splitting if desired
+    if test_size > 0.0:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=test_size,
+            random_state=random_state,
+            shuffle=False if random_state is None else True,
+            stratify=y,
+        )
+    else:
+        X_train, X_test = X, None
+        y_train, y_test = y, None
+
+    # Encode y as integers
+    encoder = LabelEncoder()
+    y_train = encoder.fit_transform(y_train)
+    y_test = encoder.transform(y_test) if y_test is not None else y_test
+
+    def _convert(X):  # Convert 2D array to a "single channeled" image
+        return np.expand_dims(X, axis=-1)
+
+    if directory is None:  # Return the imaged dataset in memory
+        X_train = _convert(
+            transformer.fit_transform(X_train)
+        )  # Transform the entire dataset in one step
+        X_test = (
+            _convert(transformer.transform(X_test))
+            if X_test is not None
+            else X_test
+        )
+
+        return X_train, X_test, y_train, y_test, transformer, encoder
+    else:  # Save these images to disk and return an interator to the dataset
+        if overwrite and os.path.isdir(directory):
+            shutil.rmtree(directory)  # Completely wipe old directory
+
+        loaders = {"train": None, "test": None}
+        for dset_, y_, subdir_ in [
+            (X_train, y_train, "train"),
+            (X_test, y_test, "test"),
+        ]:
+            if dset_ is not None:
+                x_files = []
+                path = os.path.join(directory, subdir_)
+
+                for i in tqdm.tqdm(
+                    range(dset_.shape[0]), desc=f"Transforming {subdir_} set"
+                ):
+                    # Transform one at a time - forced to treat each individual observation as the dataset
+                    X_ = _convert(transformer.fit_transform(dset_[i : i + 1]))
+
+                    x_f_, _ = write_dataset(
+                        directory=path,
+                        X=X_,
+                        y=y_[i : i + 1],
+                        fmt=fmt,
+                        overwrite=overwrite
+                        if i == 0
+                        else False,  # User preference on the first point, otherwise False because we are writing incrementally
+                        augment=True,
+                    )
+                    x_files += x_f_
+
+                # Create Sequence
+                loaders[subdir_] = NNTools.XLoader(
+                    x_files=x_files,
+                    y=y_,
+                    batch_size=batch_size,
+                    fmt=fmt,
+                    shuffle=shuffle,
+                )
+
+        return loaders["train"], loaders["test"], encoder
 
 
 def load_stamp2010(return_X_y=False, as_frame=False):
@@ -130,22 +345,22 @@ def load_stamp2010(return_X_y=False, as_frame=False):
     data : Bunch
         Dictionary-like object, with the following attributes.
 
-        data{ndarray, DataFrame}
+        data : {ndarray, DataFrame}
             The data matrix. If as_frame=True, data will be a pandas DataFrame.
 
-        target: {ndarray, DataFrame}
+        target : {ndarray, DataFrame}
             The classification target. If as_frame=True, target will be a pandas DataFrame.
 
-        feature_names: list
+        feature_names : list
             The names of the dataset columns.
 
-        target_names: list
+        target_names : list
             The names of target classes.
 
-        frame: DataFrame
+        frame : DataFrame
             Only present when as_frame=True. DataFrame with data and target.
 
-        DESCR: str
+        DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
@@ -178,13 +393,13 @@ def load_stamp2010(return_X_y=False, as_frame=False):
     )
     feature_names = X.columns.tolist()
     if not as_frame:
-        X = X.values
+        X = np.ascontiguousarray(X.values)
 
     url = "https://raw.githubusercontent.com/mahynski/stamp-dataset-1999-2010/master/y.csv"
     y = pd.read_csv(io.StringIO(requests.get(url).content.decode("utf-8")))
     target_names = y.columns.tolist()
     if not as_frame:
-        y = y.values
+        y = np.ascontiguousarray(y.values)
 
     if return_X_y:
         return (X, y)

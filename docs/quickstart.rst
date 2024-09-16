@@ -19,7 +19,7 @@ You can also download the `repository <https://github.com/mahynski/pychemauth>`_
    git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1
    cd pychemauth
    pip install .
-   pytest # Optional, but recommended to run unittests
+   python -m pytest # Optional, but recommended to run unittests
 
 Note that there are warnings raised by theses tests which indicate certain default checks, used to determine if a class is compatible with sklearn's `estimator api <https://scikit-learn.org/stable/developers/develop.html>`_, have been skipped.  This is expected as certain checks have been disabled intentionally; it does not indicate a problem with the code or its installation.
 
