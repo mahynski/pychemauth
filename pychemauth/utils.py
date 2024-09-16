@@ -2349,3 +2349,374 @@ def _logistic_proba(x):
     prob[:, 0] = 1.0 - p_inlier
 
     return prob
+
+
+def _multi_cm_metrics(
+    df, Itot, trained_classes, use_classes, style, not_assigned, actual
+):
+    """
+    Compute metrics for a (possibly) multiclass, multilabel classifier / authenticator using the confusion matrix.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Inputs (index) vs. predictions (columns); akin to a confusion matrix.  Should have a row for all `use_classes` and a column for all of these plus one for `not_assigned`; thus, the shape is (N, N+1).
+
+    Itot : pandas.Series
+        Number of each class asked to classify.  Should have a row for each class in `use_classes`; e.g., 0 for classes seen during training but not testing.
+
+    trained_classes : numpy.ndarray(str or int)
+        Classes seen during training.
+
+    use_classes : numpy.ndarray(str or int)
+        Classes to use when computing metrics; this includes all classes seen during testing and training excluding the "unknown" class.
+
+    style : str
+        Either "hard" or "soft' denoting whether a point can be assigned to one or multiple classes, respectively.
+        This determines whether the metrics are multilabel (soft) or not (hard).
+
+    not_assigned : str or int
+        The designation for an "unknown" or unrecognized class.
+
+    actual : numpy.ndarray(str or int)
+        True target (y) values.
+
+    Returns
+    -------
+    fom : dict
+        Dictionary object with the following attributes.
+
+        CM : pandas.DataFrame
+            Inputs (index) vs. predictions (columns); akin to a confusion matrix.
+
+        I : pandas.Series
+            Number of each class asked to classify.  This is the same as the `Itot` input.
+
+        CSNS : pandas.Series
+            Class sensitivity.
+
+        CSPS : pandas.Series
+            Class specificity.
+
+        CEFF : pandas.Series
+            Class efficiency.
+
+        TSNS : scalar(float)
+            Total sensitivity.
+
+        TSPS : scalar(float)
+            Total specificity.
+
+        TEFF : scalar(float)
+            Total efficiency.
+
+        ACC : scalar(float)
+            Accuracy.
+
+    Note
+    ----
+    When making predictions about extraneous classes (not in training set)
+    class efficiency (CEFF) is given as simply class specificity (CSPS)
+    since class sensitivity (CSNS) cannot be calculated.
+
+    References
+    ----------
+    [1] "Multiclass partial least squares discriminant analysis: Taking the
+    right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
+    Chemometrics (2018). https://doi.org/10.1002/cem.3030.
+    """
+    correct_ = 0.0
+    for class_ in df.index:  # All input classes
+        if class_ in trained_classes:  # Things to classifier knows about (TP)
+            correct_ += df[class_][class_]
+        else:
+            # Consider an assignment as "unknown" a correct assignment (TN)
+            correct_ += df[not_assigned][class_]
+    ACC = correct_ / Itot.sum()
+
+    # Class-wise FoM
+    # Sensitivity is "true positive" rate and is only defined for trained/known classes.
+    CSNS = pd.Series(
+        [
+            df[kk][kk] / Itot[kk] if Itot[kk] > 0 else np.nan
+            for kk in trained_classes
+        ],
+        index=trained_classes,
+    )
+
+    # Specificity is the fraction of points that are NOT a given class that
+    # are correctly predicted to be something besides the class. Thus,
+    # specificity can only be computed for the columns that correspond to
+    # known classes since we have only trained on them. These are "true
+    # negatives". This is always >= 0.
+    CSPS = pd.Series(
+        [
+            1.0
+            - np.sum(df[kk][df.index != kk])  # Column sum
+            / np.sum(Itot[Itot.index != kk])
+            for kk in trained_classes
+        ],
+        index=trained_classes,
+    )
+
+    # If CSNS can't be calculated, using CSPS as efficiency;
+    # Oliveri & Downey introduced this "efficiency" used in [1]
+    CEFF = pd.Series(
+        [
+            np.sqrt(CSNS[c] * CSPS[c]) if not np.isnan(CSNS[c]) else CSPS[c]
+            for c in trained_classes
+        ],
+        index=trained_classes,
+    )
+
+    # Total FoM
+    if len(set(actual).intersection(set(trained_classes))) > 0:
+        TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / float(
+            np.sum([Itot[kk] for kk in trained_classes])
+        )  # Itot.sum()
+    else:
+        # No trained classes are being provided for testing
+        TSNS = np.nan
+
+    # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
+    # won't contribute to df[use_classes].sum().sum().  Also, unseen
+    # classes can't be assigned to so the diagonal components for those
+    # entries is also 0 (df[k][k]).
+    TSPS = 1.0 - (
+        df[use_classes].sum().sum()
+        - np.sum([df[kk][kk] for kk in trained_classes])
+    ) / Itot.sum() / (
+        1.0 if style.lower() == "hard" else len(trained_classes) - 1.0
+    )
+    # Soft models can assign a point to all categories which would make this
+    # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
+    # number of classes, TSPS is always positive; TSPS = 0 means all points
+    # assigned to all classes (trivial result) vs. TSPS = 1 means no mistakes.
+
+    # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
+    # previously unseen samples).
+    if not np.isnan(TSNS):
+        TEFF = np.sqrt(TSPS * TSNS)
+    else:
+        TEFF = TSPS
+
+    return dict(
+        zip(
+            ["CM", "I", "CSNS", "CSPS", "CEFF", "TSNS", "TSPS", "TEFF", "ACC"],
+            (
+                df[
+                    [c for c in df.columns if c in trained_classes]
+                    + [not_assigned]
+                ][
+                    [x in np.unique(actual) for x in df.index]
+                ],  # Re-order for easy visualization
+                Itot,
+                CSNS,
+                CSPS,
+                CEFF,
+                TSNS,
+                TSPS,
+                TEFF,
+                ACC,
+            ),
+        )
+    )
+
+
+def _occ_cm_metrics(
+    df, Itot, target_class, trained_classes, not_assigned, actual
+):
+    """
+    Compute one-class classifier (OCC) metrics from the confusion matrix.
+
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
+    and only one class since they are mutually exclusive.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Inputs (index) vs. predictions (columns); akin to a confusion matrix.
+
+    Itot : pandas.Series
+        Number of each class asked to classify.
+
+    trained_classes : numpy.ndarray(str or int)
+        Classes seen during training.
+
+    not_assigned : str or int
+        The designation for an "unknown" or unrecognized class.
+
+    actual : numpy.ndarray(str or int)
+        True target (y) values.
+
+    Returns
+    -------
+    fom : dict
+        Dictionary object with the following attributes.
+
+        CM : pandas.DataFrame
+            Inputs (index) vs. predictions (columns); akin to a confusion matrix.
+
+        I : pandas.Series
+            Number of each class asked to classify.  This is the same as the `Itot` input.
+
+        CSPS : pandas.Series
+            Class specificity.
+
+        TSNS : scalar(float)
+            Total sensitivity.  For OCC this is also the CSNS.
+
+        TSPS : scalar(float)
+            Total specificity.
+
+        TEFF : scalar(float)
+            Total efficiency.
+
+        ACC : scalar(float)
+            Accuracy.
+    """
+    alternatives = [class_ for class_ in df.index if class_ != target_class]
+
+    correct_ = df[target_class][target_class]  # (TP)
+    for class_ in alternatives:  # All "negative" classes
+        # Number of times an observation NOT from target_class was correctly not assigned to target_class
+        # Assigning to multiple alternatives does not influence this in the spirit of OCC
+        correct_ += Itot[class_] - df[target_class][class_]  # (TN)
+    ACC = correct_ / float(Itot.sum())
+
+    CSPS = {}
+    for class_ in alternatives:
+        if np.sum(Itot[class_]) > 0:
+            CSPS[class_] = 1.0 - df[class_][target_class] / np.sum(Itot[class_])
+        else:
+            CSPS[class_] = np.nan
+
+    if np.all(actual == target_class):
+        # Testing on nothing but the target class, can't evaluate TSPS
+        TSPS = np.nan
+    else:
+        TSPS = 1.0 - (
+            df[target_class].sum() - df[target_class][target_class]
+        ) / (Itot.sum() - Itot[target_class])
+
+    # TSNS = CSNS
+    if target_class not in set(actual):
+        # Testing on nothing but alternative classes, can't evaluate TSNS
+        TSNS = np.nan
+    else:
+        TSNS = df[target_class][target_class] / Itot[target_class]
+
+    if np.isnan(TSNS):
+        TEFF = TSPS
+    elif np.isnan(TSPS):
+        TEFF = TSNS
+    else:
+        TEFF = np.sqrt(TSNS * TSPS)
+
+    fom = dict(
+        zip(
+            ["CM", "I", "CSPS", "TSNS", "TSPS", "TEFF", "ACC"],
+            (
+                df[
+                    [c for c in df.columns if c in trained_classes]
+                    + [not_assigned]
+                ][
+                    [x in np.unique(actual) for x in df.index]
+                ],  # Re-order for easy visualization
+                Itot,
+                CSPS,
+                TSNS,
+                TSPS,
+                TEFF,
+                ACC,
+            ),
+        )
+    )
+
+    return fom
+
+
+def _occ_metrics(X, y, target_class, predict_function):
+    """
+    Compute one-class classifier (OCC) metrics directly from data.
+
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
+    and only one class since they are mutually exclusive.
+
+    Parameters
+    ----------
+    X : array_like(float, ndim=2)
+        Input feature matrix.
+
+    y : array_like(str or int, ndim=1)
+        Class labels or indices.
+
+    target_class : str or int
+        Target class being modeled by the OCC; should have the same type as `y`.
+
+    predict_function : callable
+        Should return a 1D numpy array of booleans corresponding to whether a point
+        is an inlier.
+
+    Returns
+    -------
+    fom : dict
+        Dictionary object with the following attributes.
+
+        CSPS : pandas.Series
+            Class specificity.
+
+        TSNS : scalar(float)
+            Total sensitivity.  For OCC this is also the CSNS.
+
+        TSPS : scalar(float)
+            Total specificity.
+
+        TEFF : scalar(float)
+            Total efficiency.
+
+        ACC : scalar(float)
+            Accuracy.
+
+    alternatives : list(str or int)
+        Classes besides the target class present in `y`.
+    """
+    alternatives = [c for c in sorted(np.unique(y)) if c != target_class]
+
+    CSPS = {}
+    for class_ in alternatives:
+        mask = y == class_
+        CSPS[class_] = 1.0 - np.sum(predict_function(X[mask])) / np.sum(mask)
+
+    mask = y != target_class
+    if np.sum(mask) == 0:
+        # Testing on nothing but the target class, can't evaluate TSPS
+        TSPS = np.nan
+    else:
+        TSPS = 1.0 - np.sum(predict_function(X[mask])) / np.sum(mask)
+
+    mask = y == target_class
+    if np.sum(mask) == 0:
+        # Testing on nothing but alternative classes, can't evaluate TSNS
+        TSNS = np.nan
+    else:
+        TSNS = np.sum(predict_function(X[mask])) / np.sum(mask)  # TSNS = CSNS
+
+    if np.isnan(TSNS):
+        TEFF = TSPS
+    elif np.isnan(TSPS):
+        TEFF = TSNS
+    else:
+        TEFF = np.sqrt(TSNS * TSPS)
+
+    # Compute accuracy
+    y_in = y == target_class
+    ACC = np.sum(predict_function(X) == y_in) / X.shape[0]
+
+    return {
+        "CSPS": CSPS,
+        "TSNS": TSNS,
+        "TSPS": TSPS,
+        "TEFF": TEFF,
+        "ACC": ACC,
+    }, alternatives

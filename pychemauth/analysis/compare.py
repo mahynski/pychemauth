@@ -6,6 +6,7 @@ author: nam
 import math
 import warnings
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
@@ -200,7 +201,9 @@ class Compare:
         pass
 
     @staticmethod
-    def visualize(results, n_repeats, alpha=0.05, ignore=np.nan):
+    def visualize(
+        results, n_repeats, alpha=0.05, ignore=np.nan, cmap="viridis"
+    ):
         """
         Plot a radial graph of performances for different pipelines.
 
@@ -224,6 +227,10 @@ class Compare:
             sklearn's default `error_score` is `np.nan` so this is set as the
             default here, but a numeric value of 0 is also commonly used. A
             warning is raised if any scores are ignored.
+
+        cmap : str, optional(default='viridis')
+            Name of matplotlib colormap to use when coloring the dial.
+            See https://matplotlib.org/stable/users/explain/colors/colormaps.html.
 
         Returns
         -------
@@ -281,7 +288,7 @@ class Compare:
         chart = plt.subplot(projection="polar")
         for i, p in enumerate(performances):
             if not p[-1]:  # REJECT H0, so pipeline 1 DOES outperform this one
-                color = plt.cm.viridis((1.0 + i) / len(performances))
+                color = mpl.colormaps[cmap]((1.0 + i) / len(performances))
                 hue = 1.0
             else:
                 color = "gray"

@@ -19,6 +19,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, OutlierMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from sklearn.preprocessing import LabelEncoder
 
+from pychemauth.utils import _multi_cm_metrics, _occ_cm_metrics
 from pychemauth import utils
 
 
@@ -896,7 +897,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        self : OpenWorldClassifier
+        self : OpenSetClassifier
             Fitted model.
         """
         self.deep_ = False
@@ -1292,185 +1293,25 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         assert np.sum(Itot) == len(actual)
 
         if self.score_using.lower() == "all":
-            correct_ = 0.0
-            for class_ in df.index:  # All input classes
-                if (
-                    class_ in self.knowns_
-                ):  # Things to classifier knows about (TP)
-                    correct_ += df[class_][class_]
-                else:
-                    # Consider an assignment as "unknown" a correct assignment (TN)
-                    correct_ += df[self.unknown_class][class_]
-            ACC = correct_ / df.sum().sum()
-
-            # Class-wise FoM
-            # Sensitivity is "true positive" rate and is only defined for
-            # trained/known classes
-            CSNS = pd.Series(
-                [
-                    df[kk][kk] / Itot[kk] if Itot[kk] > 0 else np.nan
-                    for kk in self.knowns_
-                ],
-                index=self.knowns_,
-            )
-
-            # Specificity is the fraction of points that are NOT a given class that
-            # are correctly predicted to be something besides the class. Thus,
-            # specificity can only be computed for the columns that correspond to
-            # known classes since we have only trained on them. These are "true
-            # negatives". This is always >= 0.
-            CSPS = pd.Series(
-                [
-                    1.0
-                    - np.sum(df[kk][df.index != kk])  # Column sum
-                    / np.sum(Itot[Itot.index != kk])
-                    for kk in self.knowns_
-                ],
-                index=self.knowns_,
-            )
-
-            # If CSNS can't be calculated, using CSPS as efficiency;
-            # Oliveri & Downey introduced this "efficiency" used in [1]
-            CEFF = pd.Series(
-                [
-                    np.sqrt(CSNS[c] * CSPS[c])
-                    if not np.isnan(CSNS[c])
-                    else CSPS[c]
-                    for c in self.knowns_
-                ],
-                index=self.knowns_,
-            )
-
-            # Total FoM
-
-            # Evaluates overall ability to recognize a class is itself.  If you
-            # show the model some class it hasn't trained on, it can't be predicted
-            # so no contribution to the diagonal.  We will normalize by total
-            # number of points shown [1].  If some classes being tested were seen in
-            # training they contribute, otherwise TSNS goes down for a class never
-            # seen before.  This might seem unfair, but TSNS only makes sense if
-            # (1) you are examining what you have trained on or (2) you are
-            # examining extraneous objects so you don't calculate this at all.
-            TSNS = np.sum([df[kk][kk] for kk in self.knowns_]) / np.sum(Itot)
-
-            # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
-            # won't contribute to df[use_classes].sum().sum().  Also, unseen
-            # classes can't be assigned to so the diagonal components for those
-            # entries is also 0 (df[k][k]).
-            TSPS = 1.0 - (
-                df[use_classes].sum().sum()
-                - np.sum([df[kk][kk] for kk in use_classes])
-            ) / np.sum(Itot) / (
-                1.0
-                if self.clf_style.lower() == "hard"
-                else len(self.knowns_) - 1.0
-            )
-            # Soft models can assign a point to all categories which would make this
-            # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
-            # number of classes, TSPS is always positive; TSPS = 0 means all points
-            # assigned to all classes (trivial result) vs. TSPS = 1 means no mistakes.
-
-            # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
-            # previously unseen samples).
-            TEFF = np.sqrt(TSPS * TSNS)
-
-            fom = dict(
-                zip(
-                    [
-                        "CM",
-                        "I",
-                        "CSNS",
-                        "CSPS",
-                        "CEFF",
-                        "TSNS",
-                        "TSPS",
-                        "TEFF",
-                        "ACC",
-                    ],
-                    (
-                        df[
-                            [c for c in df.columns if c in self.knowns_]
-                            + [self.unknown_class]
-                        ][
-                            [x in np.unique(actual) for x in df.index]
-                        ],  # Re-order for easy visualization
-                        Itot,
-                        CSNS,
-                        CSPS,
-                        CEFF,
-                        TSNS,
-                        TSPS,
-                        TEFF,
-                        ACC,
-                    ),
-                )
+            # Evaluate as a multiclass, possibly multilabel (depends on clf_style) classifier
+            fom = _multi_cm_metrics(
+                df=df,
+                Itot=Itot,
+                trained_classes=self.knowns_,
+                use_classes=use_classes,
+                style=self.clf_style,
+                not_assigned=self.unknown_class,
+                actual=actual,
             )
         else:
             # Evaluate as a OCC where the score_using class is the target class.
-            alternatives = [
-                class_ for class_ in df.index if class_ != self.score_using
-            ]
-
-            correct_ = df[self.score_using][self.score_using]  # (TP)
-            for class_ in alternatives:  # All "negative" classes
-                # Number of times an observation NOT from score_using was correctly not assigned to score_using
-                # Assigning to multiple alternatives does not influence this in the spirit of OCC
-                correct_ += Itot[class_] - df[self.score_using][class_]  # (TN)
-            ACC = correct_ / float(Itot.sum())
-
-            CSPS = {}
-            for class_ in alternatives:
-                if np.sum(Itot[class_]) > 0:
-                    CSPS[class_] = 1.0 - df[class_][self.score_using] / np.sum(
-                        Itot[class_]
-                    )
-                else:
-                    CSPS[class_] = np.nan
-
-            if np.all(actual == self.score_using):
-                # Testing on nothing but the target class, can't evaluate TSPS
-                TSPS = np.nan
-            else:
-                TSPS = 1.0 - (
-                    df[self.score_using].sum()
-                    - df[self.score_using][self.score_using]
-                ) / (Itot.sum() - Itot[self.score_using])
-
-            # TSNS = CSNS
-            if self.score_using not in set(actual):
-                # Testing on nothing but alternative classes, can't evaluate TSNS
-                TSNS = np.nan
-            else:
-                TSNS = (
-                    df[self.score_using][self.score_using]
-                    / Itot[self.score_using]
-                )
-
-            if np.isnan(TSNS):
-                TEFF = TSPS
-            elif np.isnan(TSPS):
-                TEFF = TSNS
-            else:
-                TEFF = np.sqrt(TSNS * TSPS)
-
-            fom = dict(
-                zip(
-                    ["CM", "I", "CSPS", "TSNS", "TSPS", "TEFF", "ACC"],
-                    (
-                        df[
-                            [c for c in df.columns if c in self.knowns_]
-                            + [self.unknown_class]
-                        ][
-                            [x in np.unique(actual) for x in df.index]
-                        ],  # Re-order for easy visualization
-                        Itot,
-                        CSPS,
-                        TSNS,
-                        TSPS,
-                        TEFF,
-                        ACC,
-                    ),
-                )
+            fom = _occ_cm_metrics(
+                df=df,
+                Itot=Itot,
+                target_class=self.score_using,
+                trained_classes=self.knowns_,
+                not_assigned=self.unknown_class,
+                actual=actual,
             )
 
         return fom
