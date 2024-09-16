@@ -32,6 +32,7 @@ class DeepOOD:
         This class is a wrapper which modifies the behavior of a probabilistic classifier to return a single prediction.
         Deep classification models end in a softmax layer predicting a floating point probability for each class when model.predict is called, akin to model.predict_proba in sklearn. To make these have the same behaviors, this class is needed.
         """
+
         def __init__(self, model=None):
             """
             Instantiate the class.
@@ -42,11 +43,11 @@ class DeepOOD:
                 Predictive model to use; this assumes `.predict` is implemented.
             """
             self.model = model
-            
+
         def convert(self, probabilities):
             """
             Convert an array of probabilities to a single prediction.
-            
+
             Parameters
             ----------
             probabilities : ndarray(float, ndim=2)
@@ -58,7 +59,7 @@ class DeepOOD:
                 Index of highest probability for each row in `probabilities`.
             """
             return np.argmax(np.asarray(probabilities), axis=1)
-            
+
         def predict(self, X_feature):
             """
             Make a prediction given a featurized input.
@@ -74,11 +75,10 @@ class DeepOOD:
                 Index of highest probability for each row in `X_feature`.
             """
             return self.convert(self.model.predict(X_feature))
-    
+
     class SoftmaxPrefitClf(ProbaPrefitClf):
-        """
-        Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen.
-        """
+        """Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen."""
+
         def predict(self, X_feature):
             """
             Make a prediction given a featurized input.
@@ -93,15 +93,15 @@ class DeepOOD:
             prediction : ndarray(int, ndim=1)
                 Index of highest probability for each row in `X_feature`.
             """
-            return self.convert(X_feature) 
-        
+            return self.convert(X_feature)
+
     class EnergyPrefitClf(ProbaPrefitClf):
+        """Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Energy` is the outlier model chosen."""
+
         def __init__(self):
-            """
-            Instantiate the class.
-            """
-            self.model = keras.layers.Softmax() 
-        
+            """Instantiate the class."""
+            self.model = keras.layers.Softmax()
+
         def predict(self, X_feature):
             """
             Make a prediction given a featurized input.
@@ -109,7 +109,7 @@ class DeepOOD:
             Parameters
             ----------
             X_feature : ndarray
-                Input that the model can accept. 
+                Input that the model can accept.
 
             Returns
             -------
@@ -1034,9 +1034,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             # Deep or shallow models could be prefit
             if self.deep_:
                 # Deep models need to have their .predict() method wrapped to output the prediction index instead of probabilities.
-                self.clf_ = DeepOOD.ProbaPrefitClf(
-                    model=self.clf_model
-                )
+                self.clf_ = DeepOOD.ProbaPrefitClf(model=self.clf_model)
             else:
                 # Otherwise just use the model provided.
                 self.clf_ = self.clf_model

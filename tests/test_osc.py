@@ -5,14 +5,11 @@ author: nam
 """
 import unittest
 
-import sklearn
-
 import numpy as np
 
 from pychemauth.classifier.osr import OpenSetClassifier
 from pychemauth.classifier.plsda import PLSDA
 from pychemauth.manifold.elliptic import EllipticManifold_Model
-from pychemauth.classifier.simca import SIMCA_Authenticator
 
 from sklearn.datasets import load_iris as load_data
 from sklearn.model_selection import train_test_split
