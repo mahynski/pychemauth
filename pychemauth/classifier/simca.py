@@ -75,7 +75,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         are only computed during the outlier removal loop(s) while the final
         "clean" data uses classical estimates.  This option may throw away data
         it is originally provided for training; it keeps only "regular" samples
-        (inliers and extremes) to train the model.  If a `gamma` value is not 
+        (inliers and extremes) to train the model.  If a `gamma` value is not
         specified then this option is not available.
 
     Note
@@ -1283,8 +1283,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         else:
             # SFT only really makes sense if you have an outlier significance level
             if self.gamma is None:
-                raise Exception('Specify a gamma value to use sft.')
-            
+                raise Exception("Specify a gamma value to use sft.")
+
             X_tmp = np.array(X).copy()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
@@ -1883,8 +1883,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         outlier_curve : scalar(bool), optional(default=True)
             Whether or not to display the outlier threshold curve and characterize
-            any points as "extreme" if you specified a `gamma` value.  If False, 
-            then all points will be labeled as inliers vs. outliers only, based 
+            any points as "extreme" if you specified a `gamma` value.  If False,
+            then all points will be labeled as inliers vs. outliers only, based
             on your alpha value.
 
         Returns
