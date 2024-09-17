@@ -11,7 +11,7 @@ Python-based Chemometric Authentication
 <!--[![DOI](https://zenodo.org/badge/{github_id}.svg)](https://zenodo.org/badge/latestdoi/{github_id})-->
 <!--[![codecov](https://codecov.io/gh/mahynski/pychemauth/branch/main/graph/badge.svg?token=YSLBQ33C7F)](https://codecov.io/gh/mahynski/pychemauth)-->
 
-Please refer to the documentation hosted on [readthedocs](https://pychemauth.readthedocs.io/en/latest/index.html).
+For installation information, a quickstart guide, tutorials, and educational materials, please refer to the documentation hosted on [readthedocs](https://pychemauth.readthedocs.io/en/latest/index.html).
 
 # Description
 This is a toolkit to perform chemometric analysis, though it is primarily focused on authentication. These methods are designed to follow scikit-learn’s estimator API so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning (ML) tools.
