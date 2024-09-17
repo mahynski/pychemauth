@@ -23,6 +23,7 @@ import pathlib
 import shutil
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
@@ -1494,7 +1495,6 @@ class NNTools:
 
         # Update callbacks with W&B logger, if used
         if wandb_project is not None:
-            import wandb
             from wandb.integration.keras import (
                 WandbMetricsLogger,
                 WandbModelCheckpoint,
@@ -1540,8 +1540,6 @@ class NNTools:
         if restart is not None:
             try:
                 if restart["from_wandb"]:
-                    import wandb
-
                     api = wandb.Api()
                     artifact = api.artifact(restart["filepath"])
                     name_ = str(datetime.datetime.now()).replace(" ", "-")
