@@ -3,19 +3,19 @@ Install pychemauth.
 
 author: nam
 """
-from setuptools import find_packages, setup
+import setuptools
 
 # Get __version__ from __init__ file
 exec(open("pychemauth/__init__.py").read())
 
-setup(
+setuptools.setup(
     name="pychemauth",
     description="Python-based Chemometric Authentication",
     author="Nathan A. Mahynski",
     homepage="https://github.com/mahynski/pychemauth",
     python_requires=">=3.10.0",
     version=__version__,
-    packages=find_packages(),
+    packages=setuptools.find_packages(),
     license_files=("LICENSE",),
     test_suite="tests",
     tests_require=["pytest"],
