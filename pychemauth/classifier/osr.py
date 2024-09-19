@@ -192,6 +192,7 @@ class DeepOOD:
             X_test=None,
             test_label=None,
             no_train=False,
+            no_threshold=False,
             density=True,
         ):
             """
@@ -199,8 +200,8 @@ class DeepOOD:
 
             Parameters
             ----------
-            bins : int
-                Number of bins to use in the histogram.
+            bins : int or sequence
+                Number of bins to use in the histogram; if it is a sequence, this defines the edges of the bins where the left edge of the first bin is the first entry, and the right edge of last bin is the last entry.
 
             ax : matplotlib.pyplot.Axes, optional(default=None)
                 Axes to plot the results on. This is created if not provided.
@@ -214,7 +215,10 @@ class DeepOOD:
             no_train : bool, optional(default=False)
                 If `no_train=True` do not plot the training data.
 
-            density : bool, optional(default)
+            no_threshold : bool, optional(default=False)
+                If `no_threshold=True` do not plot the threshold.
+
+            density : bool, optional(default=True)
                 Whether to normalize the historgram to a probability distribution.
 
             Returns
@@ -235,11 +239,13 @@ class DeepOOD:
                     density=density,
                     alpha=0.5,
                 )
-            ax.axvline(
-                self.threshold,
-                color="red",
-                label=f'Threshold ({"%.2f"%(100.0*self.alpha)}%)',
-            )
+
+            if not no_threshold:
+                ax.axvline(
+                    self.threshold,
+                    color="red",
+                    label=f'Threshold ({"%.2f"%(100.0*self.alpha)}%)',
+                )
 
             if X_test is not None:
                 ax.hist(
