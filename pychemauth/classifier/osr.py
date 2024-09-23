@@ -26,9 +26,9 @@ from pychemauth import utils
 class DeepOOD:
     """Deep neural network out-of-distribution (OOD) tools and models."""
 
-    class ProbaPrefitClf:
+    class ProbaFeatureClf:
         """
-        Base class for prefit classifiers in `OpenSetClassifier`.
+        Base class for prefit classifiers in `OpenSetClassifier` when using featurized data.
 
         This class is a wrapper which modifies the behavior of a probabilistic classifier to return a single prediction.
         Deep classification models end in a softmax layer predicting a floating point probability for each class when model.predict is called, akin to model.predict_proba in sklearn. To make these have the same behaviors, this class is needed.
@@ -60,7 +60,7 @@ class DeepOOD:
                 Index of highest probability for each row in `probabilities`.
             """
             return np.argmax(np.asarray(probabilities), axis=1)
-
+        
         def predict(self, X_feature):
             """
             Make a prediction given a featurized input.
@@ -77,8 +77,8 @@ class DeepOOD:
             """
             return self.convert(self.model.predict(X_feature))
 
-    class SoftmaxPrefitClf(ProbaPrefitClf):
-        """Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen."""
+    class SoftmaxFeatureClf(ProbaFeatureClf):
+        """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen."""
 
         def predict(self, X_feature):
             """
@@ -96,8 +96,8 @@ class DeepOOD:
             """
             return self.convert(X_feature)
 
-    class EnergyPrefitClf(ProbaPrefitClf):
-        """Classification model to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Energy` is the outlier model chosen."""
+    class EnergyFeatureClf(ProbaFeatureClf):
+        """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Energy` is the outlier model chosen."""
 
         def __init__(self):
             """Instantiate the class."""
@@ -118,6 +118,44 @@ class DeepOOD:
                 Index of highest probability for each row in `X_feature`.
             """
             return self.convert(self.model(X_feature))
+        
+    class DIMEFeatureClf(ProbaFeatureClf):
+        """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.DIME` is the outlier model chosen."""
+
+        def __init__(self, model_loader, input_layer=0, output_layer=-1):
+            """
+            To make this object picklable (e.g., for use in GridSearchCV) we load the model only when it is needed using a function which is picklable.
+            
+            Parameters
+            ----------
+            model_loader : callable
+                HuggingFace name of model repo.  Should be picklable if combined with GridSearchCV, etc.
+                
+            input_layer : int, optional(default=0)
+                Index of the `model.layers` whose input is the featurized data. If no featurization is used, the default of 0 is the correct value.
+                
+            output_layer : int, optional(default=-1)
+                Index of the `model.layers` whose output is the class probabilities. 
+
+            Example
+            -------
+            >>> DIMEFeatureClf(model_loader=utils.HuggingFace.from_pretrained(model_id="mahynski/2d-cnn-demo", input_layer=-2)
+            """
+            self.model_loader = model_loader
+            self.input_layer = input_layer
+            self.output_layer = output_layer
+            self.model_ = None
+            
+        @property
+        def model(self):
+            """This overloads the `.model` property so that it is not loaded until it is needed."""
+            if self.model_ is None:
+                m_ = self.model_loader()
+                self.model_ = keras.Model(
+                    inputs=m_.layers[self.input_layer].input, # Featurization goes up to this layer
+                    outputs=m_.layers[self.output_layer].output 
+                )
+            return self.model_
 
     class _ODBase:
         """Base model for out-of-distribution detectors for deep neural networks."""
@@ -322,7 +360,7 @@ class DeepOOD:
         -----
         From [1]: "By approximating the training set embedding into feature space as a linear hyperplane,
         we derive a simple, unsupervised, highly performant and computationally efficient method [to detect
-        out-of-distribution examples during prediction time]."  Essentially, PCA is performed on the
+        out-of-distribution examples during prediction time]."  Essentially, truncated SVD is performed on the
         featurized training data; these features are assumed here to be the 2D output of the model at some
         intermediate stage.  For example, the output of a convolutional base before global average pooling
         and subsequent classification with a dense head.  The user can create a model from a pretrained
@@ -763,7 +801,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         If `None` then all points will be passed to the classifier.
 
     clf_prefit : bool, optional(default=False)
-        Whether the `clf_model` is already fit or not.  If `clf_prefit=True` the model will not be
+        Whether the `clf_model` is already fit or not; if `clf_prefit=True` the model will not be
         refit.  This is advantageous when using a model which is expensive to train, such as a
         deep neural network.  In fact, if `clf_model` is a Keras model, `clf_prefit=True` is required.
 
@@ -907,7 +945,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             Fitted model.
         """
         self.deep_ = False
-        if isinstance(self.clf_model, keras.Model):
+        if isinstance(self.clf_model, keras.Model) or isinstance(self.clf_model, DeepOOD.ProbaFeatureClf):
             self.deep_ = True
 
         self.knowns_ = None
@@ -1041,7 +1079,12 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             # Deep or shallow models could be prefit
             if self.deep_:
                 # Deep models need to have their .predict() method wrapped to output the prediction index instead of probabilities.
-                self.clf_ = DeepOOD.ProbaPrefitClf(model=self.clf_model)
+                if isinstance(self.clf_model, DeepOOD.ProbaFeatureClf):
+                    # User has already wrapped the model
+                    self.clf_ = self.clf_model
+                else:
+                    # User is providing some generic probabilistic model that needs to have its output wrapped
+                    self.clf_ = DeepOOD.ProbaFeatureClf(model=self.clf_model)
             else:
                 # Otherwise just use the model provided.
                 self.clf_ = self.clf_model
