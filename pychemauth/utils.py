@@ -216,16 +216,6 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
 
     x_files, y_file = [], ""
     if fmt == "npy":
-        # Save X to disk
-        for i in range(X.shape[0]):
-            file = str(
-                pathlib.Path(
-                    os.path.join(directory, f"x_{i+x_start:09}.npy")
-                ).absolute()
-            )
-            fastnumpyio.save(file, X[i])
-            x_files.append(file)
-
         # Save y to disk
         file = str(pathlib.Path(os.path.join(directory, "y.npy")).absolute())
         if augment:
@@ -240,6 +230,16 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
                 y = np.concatenate((y_prev, y), axis=0)
         fastnumpyio.save(file, y)
         y_file = file
+
+        # Save X to disk
+        for i in range(X.shape[0]):
+            file = str(
+                pathlib.Path(
+                    os.path.join(directory, f"x_{i+x_start:09}.npy")
+                ).absolute()
+            )
+            fastnumpyio.save(file, X[i])
+            x_files.append(file)
     else:
         raise NotImplementedError(f"Cannot save data in {fmt} format.")
 
@@ -1219,6 +1219,9 @@ class NNTools:
         y_batch : ndarray
             First batch of y data.
         """
+        if len(data) < 1:
+            raise Exception("data iterator appears to be empty")
+        
         N_data, N_batches = 0, 0
         X_, y_ = data[N_batches]
         X_batch, y_batch = copy.copy(X_), copy.copy(

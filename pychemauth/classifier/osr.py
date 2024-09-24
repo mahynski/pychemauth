@@ -185,7 +185,7 @@ class DeepOOD:
                 Array of booleans where inliers are considered `True`.
             """
             check_is_fitted(self, "is_fitted_")
-            return self.score_samples(X) > self.threshold
+            return self.score_samples(X) >= self.threshold # When numerical precision is an issue, ">=" helps ensure points that should be accepted are vs. just ">"
 
         def score_samples(self, X, featurized=False):
             """Score the samples."""
@@ -216,7 +216,8 @@ class DeepOOD:
                 X, featurized=True if self.model is None else False
             )
             self.threshold = np.percentile(  # Score below this will be outlier
-                self._X_train_scores, self.alpha * 100.0
+                self._X_train_scores, self.alpha * 100.0,
+                method='lower' # When numerical precision is an issue, this helps ensure the boundary is less than the score for points that should be accepted
             )
 
             self.is_fitted_ = True
@@ -465,7 +466,8 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 scores = []
                 for X_batch_, _ in X:
-                    scores.append(_scores(X_batch_))
+                    if X_batch_.size > 0: # Check if batch is empty
+                        scores.append(_scores(X_batch_))
                 return np.concatenate(scores)
             else:
                 return _scores(X)
@@ -475,7 +477,8 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 X_feature = []
                 for X_batch_, _ in X:
-                    X_feature.append(self.model.predict(X_batch_))
+                    if X_batch_.size > 0: # Check if batch is empty
+                        X_feature.append(self.model.predict(X_batch_))
                 return np.concatenate(X_feature)
             else:
                 return self.model.predict(X)
@@ -625,7 +628,7 @@ class DeepOOD:
             if featurized or (self.model is None):
                 featurized = True
 
-            # If valid, deactivate activation function to obtian raw logits
+            # If valid, deactivate activation function to obtain raw logits
             if self.model is not None:
                 valid, original_activation = DeepOOD._check_end(
                     self.model, disable=True
@@ -644,13 +647,14 @@ class DeepOOD:
                     if utils.NNTools._is_data_iter(X):
                         scores = []
                         for X_batch_, _ in X:
-                            scores.append(
-                                negative_energy(
-                                    X_batch_
-                                    if featurized
-                                    else self.model.predict(X_batch_)
+                            if X_batch_.size > 0: # Check if batch is empty
+                                scores.append(
+                                    negative_energy(
+                                        X_batch_
+                                        if featurized
+                                        else self.model.predict(X_batch_)
+                                    )
                                 )
-                            )
                         scores = np.concatenate(scores)
                     else:
                         scores = negative_energy(
@@ -771,13 +775,14 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 scores = []
                 for X_batch_, _ in X:
-                    scores.append(
-                        softmax_confidence(
-                            X_batch_
-                            if featurized
-                            else self.model.predict(X_batch_)
+                    if X_batch_.size > 0: # Check if batch is empty
+                        scores.append(
+                            softmax_confidence(
+                                X_batch_
+                                if featurized
+                                else self.model.predict(X_batch_)
+                            )
                         )
-                    )
                 return np.concatenate(scores)
             else:
                 return softmax_confidence(
@@ -1195,7 +1200,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         if utils.NNTools._is_data_iter(X):
             y = []
             for _, y_batch_ in X:
-                y.append(y_batch_)
+                if y_batch_.size > 0: # Check if batch is empty
+                    y.append(y_batch_)
             y = np.concatenate(y)
         else:
             X, y = np.asarray(X), np.asarray(y)
