@@ -129,6 +129,7 @@ def make_pgaa_images(
     random_state=42,
     batch_size=10,
     shuffle=True,
+    return_spectra=False
 ):
     """
     Create iteratable dataset of 2D single-channel "images" from the included example dataset of 1D PGAA spectra.
@@ -144,7 +145,7 @@ def make_pgaa_images(
         Iterable containing classes to exlude as strings.  See `pychemauth.datasets.load_pgaa` for classes in this dataset.
 
     directory : str, optional(default=None)
-        Directory to save transformed images to. If None the images are returned as a numpy array in memory; otherwise an `XLoader` is returned.  Within `directory` both "train" and "test" subdirectories are created with the data split accordingly.
+        Directory to save transformed images to. If `None` the images are returned as a numpy array in memory; otherwise an `XLoader` is returned.  Within `directory` both "train" and "test" subdirectories are created with the data split accordingly.
 
     overwrite : bool, optional(default=False)
         If saving data to disk, whether to delete any `directory` that already exists.
@@ -155,7 +156,7 @@ def make_pgaa_images(
     valid_range : tuple(int, int), optional(default=(0, 4056))
         A lower (inclusive) and upper (exclusive) bound on the spectra energy indices to use. Default values cover the entire range of the dataset.
 
-    normalization : bool, optional(default=True)
+    renormalize : bool, optional(default=True)
         Whether to renormalize (sum to 1) the spectra after clipping to `valid_range`.
 
     test_size : float, optional(default=0.0)
@@ -163,6 +164,15 @@ def make_pgaa_images(
 
     random_state : int, optional(default=42)
         Random number generator see for stratified train/test splitting.  If `None` no shuffling will be performed, though by default it is.
+
+    batch_size : int, optional(default=10)
+        If `directory` is specified, this is the batch size for the data loader which is returned.
+
+    shuffle : bool, optional(default=False)
+        If `directory` is specified, whether the data loader which is returned should shuffle the data after each epoch.
+
+    return_spectra : bool, optional(default=False)
+        If True, this will also return the 1D PGAA spectra in the same order as the 2D "imaged" data in a pandas.DataFrame.  This can be convenient for comparison or plotting purposes.
 
     Returns
     -------
@@ -185,6 +195,9 @@ def make_pgaa_images(
         encoder : sklearn.preprocessing.LabelEncoder
             Encoder that transforms y from string classes to integers.
 
+        spectra : pandas.DataFrame
+            Original PGAA spectra, if and only if, `return_spectra=True`, otherwise this is not returned.
+
     If `directory` is provided, then the data is transformed and saved to disk so loaders are returned as:
         train_loader : utils.NNTools.XLoader
             Dataset loader for the training set.
@@ -194,6 +207,9 @@ def make_pgaa_images(
 
         encoder : sklearn.preprocessing.LabelEncoder
             Encoder that transforms y from string classes to integers.
+
+        spectra : pandas.DataFrame
+            Original PGAA spectra, if and only if, `return_spectra=True`, otherwise this is not returned.
 
     Notes
     -----
@@ -226,8 +242,14 @@ def make_pgaa_images(
     ...     random_state=42
     ... )
     """
-    # Load 1D PGAA dataset
-    X, y = load_pgaa(return_X_y=True)
+    # Load 1D PGAA dataset as frame which includes centers as column names
+    X_orig, y_orig = load_pgaa(return_X_y=True, as_frame=True)
+
+    X = X_orig.values
+    y = y_orig.values
+
+    spectra = X_orig.copy()
+    spectra['class'] = y_orig
 
     # Exclude any classes desired
     if hasattr(exclude_classes, "__iter__"):
@@ -280,7 +302,10 @@ def make_pgaa_images(
             else X_test
         )
 
-        return X_train, X_test, y_train, y_test, transformer, encoder
+        if return_spectra:
+            return X_train, X_test, y_train, y_test, transformer, encoder, spectra
+        else:
+            return X_train, X_test, y_train, y_test, transformer, encoder
     else:  # Save these images to disk and return an interator to the dataset
         if overwrite and os.path.isdir(directory):
             shutil.rmtree(directory)  # Completely wipe old directory
@@ -321,7 +346,10 @@ def make_pgaa_images(
                     shuffle=shuffle,
                 )
 
-        return loaders["train"], loaders["test"], encoder
+        if return_spectra:
+            return loaders["train"], loaders["test"], encoder, spectra
+        else:
+            return loaders["train"], loaders["test"], encoder
 
 
 def load_stamp2010(return_X_y=False, as_frame=False):
