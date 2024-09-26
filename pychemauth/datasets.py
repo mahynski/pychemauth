@@ -195,8 +195,8 @@ def make_pgaa_images(
         encoder : sklearn.preprocessing.LabelEncoder
             Encoder that transforms y from string classes to integers.
 
-        spectra : pandas.DataFrame
-            Original PGAA spectra, if and only if, `return_spectra=True`, otherwise this is not returned.
+        spectra : tuple(pandas.DataFrame, pandas.DataFrame or None)
+            Original PGAA spectra, if and only if, `return_spectra=True`. This is provided as a tuple of (X_train, X_test) or (X_train, None) if `test_size=0`.
 
     If `directory` is provided, then the data is transformed and saved to disk so loaders are returned as:
         train_loader : utils.NNTools.XLoader
@@ -208,8 +208,8 @@ def make_pgaa_images(
         encoder : sklearn.preprocessing.LabelEncoder
             Encoder that transforms y from string classes to integers.
 
-        spectra : pandas.DataFrame
-            Original PGAA spectra, if and only if, `return_spectra=True`, otherwise this is not returned.
+        spectra : tuple(pandas.DataFrame, pandas.DataFrame or None)
+            Original PGAA spectra, if and only if, `return_spectra=True`. This is provided as a tuple of (X_train, X_test) or (X_train, None) if `test_size=0`.
 
     Notes
     -----
@@ -248,9 +248,6 @@ def make_pgaa_images(
     X = X_orig.values
     y = y_orig.values
 
-    spectra = X_orig.copy()
-    spectra['class'] = y_orig
-
     # Exclude any classes desired
     if hasattr(exclude_classes, "__iter__"):
         mask = np.array([False] * X.shape[0])
@@ -280,9 +277,13 @@ def make_pgaa_images(
             shuffle=False if random_state is None else True,
             stratify=y,
         )
+
+        spectra = (pd.DataFrame(data=X_train, columns=X_orig.columns[valid_range[0] : valid_range[1]]), pd.DataFrame(data=X_test, columns=X_orig.columns[valid_range[0] : valid_range[1]]))
     else:
         X_train, X_test = X, None
         y_train, y_test = y, None
+
+        spectra = (pd.DataFrame(data=X_train, columns=X_orig.columns[valid_range[0] : valid_range[1]]), None)
 
     # Encode y as integers
     encoder = LabelEncoder()

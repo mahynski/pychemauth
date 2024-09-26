@@ -630,7 +630,13 @@ class CAM2D(CAMBaseExplainer):
             Figure showing the score and probabilities.
 
         fig2 : matplotlib.pyplot.figure
-            Figure showing the colored heatmaps.
+            Figure showing the colored image.
+
+        fig3 : matplotlib.pyplot.figure
+            Figure showing the class activation map.
+
+        fig4 : matplotlib.pyplot.figure
+            Figure showing the explained image where the alpha value (transparency) reflects the importance.  
         """
         (
             _,
@@ -704,96 +710,89 @@ class CAM2D(CAMBaseExplainer):
         )
         ax[1].set_ylabel("Softmax Probability")
 
-        # 2. Plot explanation
-        width_ratios = (2, 7, 0.4, 7, 0.4, 7, 0.4)
-        height_ratios = (2, 7)
-        width = 16
-        height = width * sum(height_ratios) / sum(width_ratios)
-        fig2 = plt.figure(figsize=(width, height))
-        gs = fig2.add_gridspec(
-            2,
-            7,
-            width_ratios=width_ratios,
-            height_ratios=height_ratios,
-            left=0.1,
-            right=0.9,
-            bottom=0.1,
-            top=0.9,
-            wspace=0.01,
-            hspace=0.01,
-        )
+        def build_fig(colorize=False):
+            width_ratios = (2, 7, 0.4)
+            height_ratios = (2, 7)
+            width = 5
+            height = width * sum(height_ratios) / sum(width_ratios)
+            fig = plt.figure(figsize=(width, height))
+            gs = fig.add_gridspec(
+                2,
+                3,
+                width_ratios=width_ratios,
+                height_ratios=height_ratios,
+                left=0.1,
+                right=0.9,
+                bottom=0.1,
+                top=0.9,
+                wspace=0.01,
+                hspace=0.01,
+            )
 
-        if (y is not None) and (x is not None):
-            ax_left = fig2.add_subplot(gs[1, 0])
-            ax_left.plot(y, x)
-            ax_left.set_ylim([x.min(), x.max()])
-            ax_left.set_xlim([y.min(), y.max()])
-            plt.setp(ax_left.spines.values(), color="white")
-            ax_left.set_xticks([])
-            ax_left.set_yticks([])
-            ax_left.invert_xaxis()
+            if (y is not None) and (x is not None):
+                ax_left = fig.add_subplot(gs[1, 0])
+                ax_left.plot(y, x, color='k')
+                ax_left.set_ylim([x.min(), x.max()])
+                ax_left.set_xlim([y.min(), y.max()])
+                plt.setp(ax_left.spines.values(), color="white")
+                ax_left.set_xticks([])
+                ax_left.set_yticks([])
+                ax_left.invert_xaxis()
 
-            if origin == "upper":
-                ax_left.invert_yaxis()
+                if origin == "upper":
+                    ax_left.invert_yaxis()
 
-            ax_top1 = fig2.add_subplot(gs[0, 1])
-            ax_top1.plot(x, y)
-            ax_top2 = fig2.add_subplot(gs[0, 3])
-            ax_top2.add_collection(lc)
-            ax_top3 = fig2.add_subplot(gs[0, 5])
-            ax_top3.plot(x, y)
-            for ax in (ax_top1, ax_top2, ax_top3):
-                ax.set_xlim([x.min(), x.max()])
-                ax.set_ylim([y.min(), y.max()])
-                ax.set_xticks([])
-                ax.set_yticks([])
-                plt.setp(ax.spines.values(), color="white")
+                ax_top = fig.add_subplot(gs[0, 1])
+                if colorize:
+                    ax_top.add_collection(lc) # Plot series colored by importance on top
+                    cbar = fig.colorbar(lc, cax=fig.add_subplot(gs[0, 2]))
+                else:
+                    ax_top.plot(x, y, color='k') # Just plot the series on top
 
-        # Plot the image
+                ax_top.set_xlim([x.min(), x.max()])
+                ax_top.set_ylim([y.min(), y.max()])
+                ax_top.set_xticks([])
+                ax_top.set_yticks([])
+                plt.setp(ax_top.spines.values(), color="white")
+
+            return fig, gs
+        
+        # Build image
+        fig2, gs = build_fig(colorize=False)
         ax_gaf = fig2.add_subplot(gs[1, 1])
-        im1 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin=origin)
+        im2 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin=origin)
         ax_gaf.set_xticks([])
         ax_gaf.set_yticks([])
         ax_gaf.set_title("Image", y=-0.09)
+        cbar = fig2.colorbar(im2, cax=fig2.add_subplot(gs[1, 2]), pad=-1)
+        # cbar.set_ticks([])
 
-        # Plot class activations
-        ax_cam = fig2.add_subplot(gs[1, 3])
-        im2 = ax_cam.imshow(cmap_heatmap, cmap=image_cmap, origin=origin)
+        # Build CAM
+        fig3, gs = build_fig(colorize=True)
+        ax_cam = fig3.add_subplot(gs[1, 1])
+        im3 = ax_cam.imshow(cmap_heatmap, cmap=image_cmap, origin=origin)
         ax_cam.set_xticks([])
         ax_cam.set_yticks([])
         if self.style == "grad":
             ax_cam.set_title("GradCAM", y=-0.09)
         else:
             ax_cam.set_title("HiResCAM", y=-0.09)
+        cbar = fig3.colorbar(im3, cax=fig3.add_subplot(gs[1, 2]))
+        # cbar.set_ticks([])
 
-        # Plot the image with alpha to indicate relevance / explanation
-        ax_expl = fig2.add_subplot(gs[1, 5])
-        im3 = ax_expl.imshow(
+        # Build the image with alpha to indicate relevance / explanation
+        fig4, gs = build_fig(colorize=False)
+        ax_expl = fig4.add_subplot(gs[1, 1])
+        im4 = ax_expl.imshow(
             image[:, :, 0], cmap=image_cmap, origin=origin, alpha=importances
         )
         ax_expl.set_xticks([])
         ax_expl.set_yticks([])
         ax_expl.set_title("Explained Image", y=-0.09)
+        cbar = fig4.colorbar(im4, cax=fig4.add_subplot(gs[1, 2]))
+        # cbar.set_ticks([])
 
-        # Add colorbars
-        cbar = fig2.colorbar(im1, cax=fig2.add_subplot(gs[1, 2]), pad=-1)
-        cbar.set_ticks([])
-        # cbar.ax.text(
-        #     0.5, 1.1, str('%.1f'%np.max(image)), ha="center", va="center"
-        # )  # Imaged spectra bounded b/w [0,1]
-        # cbar.ax.text(0.5, -1.1, str('%.1f'%np.min(image)), ha="center", va="center")
-
-        cbar = fig2.colorbar(im2, cax=fig2.add_subplot(gs[1, 4]))
-        cbar.set_ticks([])
-        # cbar.ax.text(
-        #     0.5, 255 + 25.5 / 2.0, str('%.1f'%np.max(cmap_heatmap)), ha="center", va="center"
-        # )  # Heatmap normalized from [0,1] then x255 to make image
-        # cbar.ax.text(0.5, 0 - 25.5 / 2.0, str('%.1f'%np.min(cmap_heatmap)), ha="center", va="center")
-
-        cbar = fig2.colorbar(im3, cax=fig2.add_subplot(gs[1, 6]))
-        cbar.set_ticks([])
-
-        return fig1, fig2
+        return fig1, fig2, fig3, fig4
 
     def _explain_2d(self, image, model, cmap, symmetrize):
         """
