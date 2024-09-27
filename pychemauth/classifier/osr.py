@@ -283,7 +283,7 @@ class DeepOOD:
                 ax.axvline(
                     self.threshold,
                     color="red",
-                    label=f'Threshold ({"%.2f"%(100.0*self.alpha)}%)',
+                    label='Threshold ('+r'$\alpha$ '+f'= {"%.4f"%(self.alpha)})', #{"%.2f"%(100.0*self.alpha)}%)',
                 )
 
             if X_test is not None:
@@ -981,7 +981,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 ) = utils.NNTools._summarize_batches(X)
                 self.n_features_in_ = X_batch.shape[1:]
                 self._check_category_type(unique_targets.keys())
-                assert self.unknown_class not in set(
+                assert self.unknown_class not in set( # Closed-set clf will not know about these
                     unique_targets.keys()
                 ), "unknown_class value is already taken."
                 y_check_ = np.array(list(unique_targets.keys()))
@@ -990,7 +990,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 assert X.shape[0] == y.shape[0]
                 self.n_features_in_ = X.shape[1:]
                 self._check_category_type(y.ravel())
-                assert self.unknown_class not in set(
+                assert self.unknown_class not in set( # Closed-set clf will not know about these
                     y
                 ), "unknown_class value is already taken."
                 y_check_ = y
@@ -1032,7 +1032,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         # Train outlier detection first, since this how it will work at prediction
         # time.  This needs to remember the data that the classifier will use for
-        # training and flag anything different (covariate shift).  Thus, this needs
+        # training and flag anything different (covariate/semantic shift).  Thus, this needs
         # to train on the knowns_ only.
         if self.outlier_model is not None:
             try:

@@ -111,7 +111,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
 Classification and authentication of materials using prompt gamma ray activation analysis. J \
 Radioanal Nucl Chem 332, 3259–3271 (2023). https://doi.org/10.1007/s10967-023-09024-x . \
 See this publication for a full description. Briefly, rows of X are PGAA spectra for different \
-materials. They have been normalized to sum to 1. The peaks have be binned into histograms whose \
+materials. They have been normalized to sum to 1. The peaks have been binned into histograms whose \
 centers (energy in keV) are given as the feature_names. y contains the name of each material.",
         )
         return bunch
