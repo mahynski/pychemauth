@@ -129,7 +129,7 @@ def make_pgaa_images(
     random_state=42,
     batch_size=10,
     shuffle=True,
-    return_spectra=False
+    return_spectra=False,
 ):
     """
     Create iteratable dataset of 2D single-channel "images" from the included example dataset of 1D PGAA spectra.
@@ -278,12 +278,27 @@ def make_pgaa_images(
             stratify=y,
         )
 
-        spectra = (pd.DataFrame(data=X_train, columns=X_orig.columns[valid_range[0] : valid_range[1]]), pd.DataFrame(data=X_test, columns=X_orig.columns[valid_range[0] : valid_range[1]]))
+        spectra = (
+            pd.DataFrame(
+                data=X_train,
+                columns=X_orig.columns[valid_range[0] : valid_range[1]],
+            ),
+            pd.DataFrame(
+                data=X_test,
+                columns=X_orig.columns[valid_range[0] : valid_range[1]],
+            ),
+        )
     else:
         X_train, X_test = X, None
         y_train, y_test = y, None
 
-        spectra = (pd.DataFrame(data=X_train, columns=X_orig.columns[valid_range[0] : valid_range[1]]), None)
+        spectra = (
+            pd.DataFrame(
+                data=X_train,
+                columns=X_orig.columns[valid_range[0] : valid_range[1]],
+            ),
+            None,
+        )
 
     # Encode y as integers
     encoder = LabelEncoder()
@@ -304,7 +319,15 @@ def make_pgaa_images(
         )
 
         if return_spectra:
-            return X_train, X_test, y_train, y_test, transformer, encoder, spectra
+            return (
+                X_train,
+                X_test,
+                y_train,
+                y_test,
+                transformer,
+                encoder,
+                spectra,
+            )
         else:
             return X_train, X_test, y_train, y_test, transformer, encoder
     else:  # Save these images to disk and return an interator to the dataset

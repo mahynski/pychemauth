@@ -60,7 +60,7 @@ class DeepOOD:
                 Index of highest probability for each row in `probabilities`.
             """
             return np.argmax(np.asarray(probabilities), axis=1)
-        
+
         def predict(self, X_feature):
             """
             Make a prediction given a featurized input.
@@ -118,24 +118,24 @@ class DeepOOD:
                 Index of highest probability for each row in `X_feature`.
             """
             return self.convert(self.model(X_feature))
-        
+
     class DIMEFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.DIME` is the outlier model chosen."""
 
         def __init__(self, model_loader, input_layer=0, output_layer=-1):
             """
             To make this object picklable (e.g., for use in GridSearchCV) we load the model only when it is needed using a function which is picklable.
-            
+
             Parameters
             ----------
             model_loader : callable
                 HuggingFace name of model repo.  Should be picklable if combined with GridSearchCV, etc.
-                
+
             input_layer : int, optional(default=0)
                 Index of the `model.layers` whose input is the featurized data. If no featurization is used, the default of 0 is the correct value.
-                
+
             output_layer : int, optional(default=-1)
-                Index of the `model.layers` whose output is the class probabilities. 
+                Index of the `model.layers` whose output is the class probabilities.
 
             Example
             -------
@@ -145,15 +145,17 @@ class DeepOOD:
             self.input_layer = input_layer
             self.output_layer = output_layer
             self.model_ = None
-            
+
         @property
         def model(self):
-            """This overloads the `.model` property so that it is not loaded until it is needed."""
+            """Overload the `.model` property so that it is not loaded until it is needed."""
             if self.model_ is None:
                 m_ = self.model_loader()
                 self.model_ = keras.Model(
-                    inputs=m_.layers[self.input_layer].input, # Featurization goes up to this layer
-                    outputs=m_.layers[self.output_layer].output 
+                    inputs=m_.layers[
+                        self.input_layer
+                    ].input,  # Featurization goes up to this layer
+                    outputs=m_.layers[self.output_layer].output,
                 )
             return self.model_
 
@@ -185,7 +187,9 @@ class DeepOOD:
                 Array of booleans where inliers are considered `True`.
             """
             check_is_fitted(self, "is_fitted_")
-            return self.score_samples(X) >= self.threshold # When numerical precision is an issue, ">=" helps ensure points that should be accepted are vs. just ">"
+            return (
+                self.score_samples(X) >= self.threshold
+            )  # When numerical precision is an issue, ">=" helps ensure points that should be accepted are vs. just ">"
 
         def score_samples(self, X, featurized=False):
             """Score the samples."""
@@ -216,8 +220,9 @@ class DeepOOD:
                 X, featurized=True if self.model is None else False
             )
             self.threshold = np.percentile(  # Score below this will be outlier
-                self._X_train_scores, self.alpha * 100.0,
-                method='lower' # When numerical precision is an issue, this helps ensure the boundary is less than the score for points that should be accepted
+                self._X_train_scores,
+                self.alpha * 100.0,
+                method="lower",  # When numerical precision is an issue, this helps ensure the boundary is less than the score for points that should be accepted
             )
 
             self.is_fitted_ = True
@@ -283,7 +288,9 @@ class DeepOOD:
                 ax.axvline(
                     self.threshold,
                     color="red",
-                    label='Threshold ('+r'$\alpha$ '+f'= {"%.4f"%(self.alpha)})', #{"%.2f"%(100.0*self.alpha)}%)',
+                    label="Threshold ("
+                    + r"$\alpha$ "
+                    + f'= {"%.4f"%(self.alpha)})',  # {"%.2f"%(100.0*self.alpha)}%)',
                 )
 
             if X_test is not None:
@@ -466,7 +473,7 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 scores = []
                 for X_batch_, _ in X:
-                    if X_batch_.size > 0: # Check if batch is empty
+                    if X_batch_.size > 0:  # Check if batch is empty
                         scores.append(_scores(X_batch_))
                 return np.concatenate(scores)
             else:
@@ -477,7 +484,7 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 X_feature = []
                 for X_batch_, _ in X:
-                    if X_batch_.size > 0: # Check if batch is empty
+                    if X_batch_.size > 0:  # Check if batch is empty
                         X_feature.append(self.model.predict(X_batch_))
                 return np.concatenate(X_feature)
             else:
@@ -647,7 +654,7 @@ class DeepOOD:
                     if utils.NNTools._is_data_iter(X):
                         scores = []
                         for X_batch_, _ in X:
-                            if X_batch_.size > 0: # Check if batch is empty
+                            if X_batch_.size > 0:  # Check if batch is empty
                                 scores.append(
                                     negative_energy(
                                         X_batch_
@@ -775,7 +782,7 @@ class DeepOOD:
             if utils.NNTools._is_data_iter(X):
                 scores = []
                 for X_batch_, _ in X:
-                    if X_batch_.size > 0: # Check if batch is empty
+                    if X_batch_.size > 0:  # Check if batch is empty
                         scores.append(
                             softmax_confidence(
                                 X_batch_
@@ -950,7 +957,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             Fitted model.
         """
         self.deep_ = False
-        if isinstance(self.clf_model, keras.Model) or isinstance(self.clf_model, DeepOOD.ProbaFeatureClf):
+        if isinstance(self.clf_model, keras.Model) or isinstance(
+            self.clf_model, DeepOOD.ProbaFeatureClf
+        ):
             self.deep_ = True
 
         self.knowns_ = None
@@ -981,8 +990,11 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 ) = utils.NNTools._summarize_batches(X)
                 self.n_features_in_ = X_batch.shape[1:]
                 self._check_category_type(unique_targets.keys())
-                assert self.unknown_class not in set( # Closed-set clf will not know about these
-                    unique_targets.keys()
+                assert (
+                    self.unknown_class
+                    not in set(  # Closed-set clf will not know about these
+                        unique_targets.keys()
+                    )
                 ), "unknown_class value is already taken."
                 y_check_ = np.array(list(unique_targets.keys()))
             else:
@@ -990,9 +1002,11 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 assert X.shape[0] == y.shape[0]
                 self.n_features_in_ = X.shape[1:]
                 self._check_category_type(y.ravel())
-                assert self.unknown_class not in set( # Closed-set clf will not know about these
+                assert self.unknown_class not in set(
                     y
-                ), "unknown_class value is already taken."
+                ), (  # Closed-set clf will not know about these
+                    "unknown_class value is already taken."
+                )
                 y_check_ = y
 
         if not (self.clf_style in ["soft", "hard"]):
@@ -1200,7 +1214,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         if utils.NNTools._is_data_iter(X):
             y = []
             for _, y_batch_ in X:
-                if y_batch_.size > 0: # Check if batch is empty
+                if y_batch_.size > 0:  # Check if batch is empty
                     y.append(y_batch_)
             y = np.concatenate(y)
         else:

@@ -636,7 +636,7 @@ class CAM2D(CAMBaseExplainer):
             Figure showing the class activation map.
 
         fig4 : matplotlib.pyplot.figure
-            Figure showing the explained image where the alpha value (transparency) reflects the importance.  
+            Figure showing the explained image where the alpha value (transparency) reflects the importance.
         """
         (
             _,
@@ -731,7 +731,7 @@ class CAM2D(CAMBaseExplainer):
 
             if (y is not None) and (x is not None):
                 ax_left = fig.add_subplot(gs[1, 0])
-                ax_left.plot(y, x, color='k')
+                ax_left.plot(y, x, color="k")
                 ax_left.set_ylim([x.min(), x.max()])
                 ax_left.set_xlim([y.min(), y.max()])
                 plt.setp(ax_left.spines.values(), color="white")
@@ -744,10 +744,12 @@ class CAM2D(CAMBaseExplainer):
 
                 ax_top = fig.add_subplot(gs[0, 1])
                 if colorize:
-                    ax_top.add_collection(lc) # Plot series colored by importance on top
+                    ax_top.add_collection(
+                        lc
+                    )  # Plot series colored by importance on top
                     cbar = fig.colorbar(lc, cax=fig.add_subplot(gs[0, 2]))
                 else:
-                    ax_top.plot(x, y, color='k') # Just plot the series on top
+                    ax_top.plot(x, y, color="k")  # Just plot the series on top
 
                 ax_top.set_xlim([x.min(), x.max()])
                 ax_top.set_ylim([y.min(), y.max()])
@@ -756,7 +758,7 @@ class CAM2D(CAMBaseExplainer):
                 plt.setp(ax_top.spines.values(), color="white")
 
             return fig, gs
-        
+
         # Build image
         fig2, gs = build_fig(colorize=False)
         ax_gaf = fig2.add_subplot(gs[1, 1])

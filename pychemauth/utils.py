@@ -1221,7 +1221,7 @@ class NNTools:
         """
         if len(data) < 1:
             raise Exception("data iterator appears to be empty")
-        
+
         N_data, N_batches = 0, 0
         X_, y_ = data[N_batches]
         X_batch, y_batch = copy.copy(X_), copy.copy(
