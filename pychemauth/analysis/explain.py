@@ -27,6 +27,7 @@ from numpy.typing import NDArray
 
 class CAMBaseExplainer:
     """Base class for explaining classifications of 1D or 2D (imaged) series with class activation map (CAM) methods."""
+
     style: ClassVar[str]
 
     def __init__(self, style: str = "hires") -> None:
@@ -476,7 +477,7 @@ class CAM2D(CAMBaseExplainer):
 
         if dim == 1:
             # This condenses CAM then linearly interpolates to full size spectra
-            return lc.get_array().data # type: ignore[union-attr]
+            return lc.get_array().data  # type: ignore[union-attr]
         elif dim == 2:
             # (bi)Linearly interpolate CAM to larger image size
             return importances
@@ -606,7 +607,7 @@ class CAM2D(CAMBaseExplainer):
             else:
                 # Explaining an "imaged" series such as a spectra
                 lc = _color_1d(
-                    x=x, # type: ignore[arg-type]
+                    x=x,  # type: ignore[arg-type]
                     y=y,
                     importances=self._condense(
                         series_summary=series_summary,
@@ -618,7 +619,7 @@ class CAM2D(CAMBaseExplainer):
         else:
             raise ValueError("Unexpected shape of image")
 
-        return ( # type: ignore[return-value]
+        return (  # type: ignore[return-value]
             asymm_class_act_map,
             symm_class_act_map,
             cmap_heatmap,
@@ -909,7 +910,12 @@ class CAM2D(CAMBaseExplainer):
         cmap: Union[str, matplotlib.colors.LinearSegmentedColormap],
         symmetrize: bool,
     ) -> tuple[
-        NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], int, str
+        NDArray[np.floating],
+        NDArray[np.floating],
+        NDArray[np.floating],
+        NDArray[np.floating],
+        int,
+        str,
     ]:
         """
         Explain a 2D image.
@@ -969,7 +975,9 @@ class CAM2D(CAMBaseExplainer):
             255 * class_act_map
         )  # Create a scaled heatmap in a range 0-255 (CAM is in range [0, 1] already)
         if not isinstance(cmap, matplotlib.colors.LinearSegmentedColormap):
-            cmap = matplotlib.colormaps(cmap) # cmap is a string, so get the map from the name
+            cmap = matplotlib.colormaps(
+                cmap
+            )  # cmap is a string, so get the map from the name
         cmap_colors = cmap(np.arange(256))[:, :3]
         cmap_heatmap = cmap_colors[heatmap]
 
@@ -1308,7 +1316,9 @@ def _make_cam(
     conv_layer_name: Union[str, None] = None,
     mode: str = "output",
     pred_index: Union[int, None] = None,
-) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], int, str]:
+) -> tuple[
+    NDArray[np.floating], NDArray[np.floating], NDArray[np.floating], int, str
+]:
     """
     Compute activation map for a given 1D or 2D input.
 
@@ -1462,7 +1472,7 @@ def _make_cam(
                 asymm_class_act_map.numpy(),
                 symm_class_act_map.numpy(),
                 preds[0].numpy(),
-                pred_index.numpy(), # type: ignore[union-attr]
+                pred_index.numpy(),  # type: ignore[union-attr]
                 conv_layer_name,
             )
         else:

@@ -15,6 +15,7 @@ from typing import Any, ClassVar
 
 class CNNFactory:
     """Factory function to create 2D CNNs for classification."""
+
     name: ClassVar[str]
     input_size: ClassVar[tuple[int, int, int]]
     pixel_range: ClassVar[tuple[float, float]]
