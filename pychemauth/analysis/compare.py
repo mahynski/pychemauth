@@ -5,8 +5,11 @@ author: nam
 """
 import math
 import warnings
+import sklearn
+import sklearn.model_selection
+import imblearn
 
-import matplotlib as mpl
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
@@ -19,6 +22,9 @@ from sklearn.model_selection import (
     RepeatedStratifiedKFold,
     StratifiedKFold,
 )
+
+from typing import Iterable, Union, Sequence, Any
+from numpy.typing import NDArray
 
 
 class BiasedNestedCV:
@@ -75,12 +81,14 @@ class BiasedNestedCV:
     Learning 52, 239-281 (2003).
     """
 
-    def __init__(self, k_inner=10, k_outer=10):
+    def __init__(self, k_inner: int = 10, k_outer: int = 10) -> None:
         """Instantiate the class."""
         self.__k_inner = k_inner
         self.__k_outer = k_outer
 
-    def _get_test_scores(self, gs):
+    def _get_test_scores(
+        self, gs: sklearn.model_selection.GridSeachCV
+    ) -> NDArray[np.float64]:
         """Extract test scores from the GridSearch object."""
         # From the grid, extract the results from the hyperparameter set with
         # the best mean test score (lowest rank = best)
@@ -101,9 +109,15 @@ class BiasedNestedCV:
             )
         return np.array(scores)
 
-    def _outer_loop(self, pipeline, X, y, cv):
+    def _outer_loop(
+        self,
+        pipeline: Union[sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline],
+        X: NDArray[Any],
+        y: NDArray[Any],
+        cv: sklearn.model_selection.BaseCrossValidator,
+    ) -> NDArray[np.floating]:
         """Perform outer loop."""
-        scores = []
+        scores = np.array([])
         for train_index, test_index in cv.split(X, y):
             X_train, _ = X[train_index], X[test_index]
             y_train, _ = y[train_index], y[test_index]
@@ -121,25 +135,25 @@ class BiasedNestedCV:
 
         return scores
 
-    def random_search(self, *args, **kwargs):
+    def random_search(self, *args: Any, **kwargs: Any) -> NotImplementedError:
         """Perform nested random search CV."""
         raise NotImplementedError
 
     def grid_search(
         self,
-        pipeline,
-        param_grid,
-        X,
-        y,
-        classification=True,
-        error_score=np.nan,
-    ):
+        pipeline: Union[sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline],
+        param_grid: list[dict[str, Any]],
+        X: NDArray[np.floating],
+        y: Union[NDArray[np.floating], NDArray[np.integer], NDArray[np.str_]],
+        classification: bool = True,
+        error_score: Union[float, int] = np.nan,
+    ) -> NDArray[np.floating]:
         """
         Perform nested grid search CV.
 
         Parameters
         ----------
-        pipeline : sklearn.pipeline or imblearn.pipeline
+        pipeline : sklearn.pipeline.Pipeline or imblearn.pipeline.Pipeline
             Pipeline to evaluate.
 
         param_grid : list(dict)
@@ -148,13 +162,13 @@ class BiasedNestedCV:
         X : ndarray(float, ndim=2)
             Dense 2D array of observations (rows) of features (columns).
 
-        y : ndarray(float, ndim=1)
+        y : ndarray(float, int, or str, ndim=1)
             Array of targets.
 
         classification : scalar(bool), optional(default=True)
             Is this a classification task (otherwise assumed to be regression)?
 
-        error_score : scalar(int, float, np.nan), optional(default=np.nan)
+        error_score : scalar(float, int, np.nan), optional(default=np.nan)
             Value to return as the score if a failure occurs during fitting.
 
         Returns
@@ -196,20 +210,24 @@ class BiasedNestedCV:
 class Compare:
     """Compare the performances of different ML pipelines or algorithms."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the class."""
         pass
 
     @staticmethod
     def visualize(
-        results, n_repeats, alpha=0.05, ignore=np.nan, cmap="viridis"
-    ):
+        results: dict[str, list[float]],
+        n_repeats: int,
+        alpha: float = 0.05,
+        ignore: Union[float, int, None] = np.nan,
+        cmap: Union[str, matplotlib.colors.LinearSegmentedColormap] = "viridis",
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot a radial graph of performances for different pipelines.
 
         Parameters
         ----------
-        results : dict(list(float))
+        results : dict(str, list(float))
             Dictionary of results for different pipelines evaluated on the same
             folds of data.  For example {"pipe1":[0.7, 0.5, 0.8], "pipe2":[0.5,
             0.6, 0.35]}.
@@ -221,14 +239,14 @@ class Compare:
         alpha : scalar(float), optional(default=0.05)
             Significance level.
 
-        ignore : scalar(int, float, str), optional(default=np.nan)
+        ignore : scalar(float or int, or None), optional(default=np.nan)
             If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
             default here, but a numeric value of 0 is also commonly used. A
             warning is raised if any scores are ignored.
 
-        cmap : str, optional(default='viridis')
+        cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default='viridis')
             Name of matplotlib colormap to use when coloring the dial.
             See https://matplotlib.org/stable/users/explain/colors/colormaps.html.
 
@@ -288,7 +306,9 @@ class Compare:
         chart = plt.subplot(projection="polar")
         for i, p in enumerate(performances):
             if not p[-1]:  # REJECT H0, so pipeline 1 DOES outperform this one
-                color = mpl.colormaps[cmap]((1.0 + i) / len(performances))
+                color = matplotlib.colormaps[cmap](
+                    (1.0 + i) / len(performances)
+                )
                 hue = 1.0
             else:
                 color = "gray"
@@ -314,28 +334,35 @@ class Compare:
 
     @staticmethod
     def repeated_kfold(
-        estimators,
-        X,
-        y,
-        n_repeats=5,
-        k=2,
-        random_state=0,
-        stratify=True,
-        estimators_mask=None,
-    ):
+        estimators: Sequence[
+            Union[
+                sklearn.pipeline.Pipeline,
+                imblearn.pipeline.Pipeline,
+                sklearn.base.BaseEstimator,
+            ]
+        ],
+        X: NDArray[np.floating],
+        y: Union[NDArray[np.floating], NDArray[np.integer], NDArray[np.str_]],
+        n_repeats: int = 5,
+        k: int = 2,
+        random_state: Union[int, np.random.RandomState] = 0,
+        stratify: bool = True,
+        estimators_mask: Union[
+            Sequence[Sequence[bool]], Sequence[NDArray[np.bool_]], None
+        ] = None,
+    ) -> NDArray[np.floating]:
         """
         Perform repeated (stratified) k-fold cross validation to get scores for multiple estimators.
 
         Parameters
         ----------
-        estimators : array_like(sklearn.pipeline.Pipeline or sklearn.base.BaseEstimator, ndim=1)
-            A list of pipelines or estimators that implements the fit() and score()
-            methods. These can also be a GridSearchCV object.
+        estimators : array_like(sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline or sklearn.base.BaseEstimator, ndim=1)
+            A list of pipelines or estimators that implements the fit() and score() methods. These can also be a GridSearchCV object.
 
         X : array_like(float, ndim=2)
             Matrix of features.
 
-        y : array_like(float, ndim=1)
+        y : array_like(float, int, or str, ndim=1)
             Array of outputs to predict.
 
         n_repeats : scalar(int), optional(default=5)
@@ -420,7 +447,12 @@ class Compare:
         return np.array(scores, dtype=np.float64).T
 
     @staticmethod
-    def corrected_t(scores1, scores2, n_repeats, ignore=np.nan):
+    def corrected_t(
+        scores1: Union[NDArray[np.floating], Sequence[float]],
+        scores2: Union[NDArray[np.floating], Sequence[float]],
+        n_repeats: int,
+        ignore: Union[float, int, None] = np.nan,
+    ) -> float:
         """
         Perform corrected 1-sided t-test to compare two pipelines.
 
@@ -435,7 +467,7 @@ class Compare:
         n_repeats : scalar(int)
             Number of times k-fold was repeated (i.e., k_outer in BiasedNestedCV).
 
-        ignore : scalar(int, float, str), optional(default=np.nan)
+        ignore : scalar(float or int, or None), optional(default=np.nan)
             If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
@@ -494,7 +526,11 @@ class Compare:
         )  # 1-sided test
 
     @staticmethod
-    def _check_scores(scores1, scores2, ignore):
+    def _check_scores(
+        scores1: Union[NDArray[np.floating], Sequence[float]],
+        scores2: Union[NDArray[np.floating], Sequence[float]],
+        ignore: Union[float, int, None],
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.bool_]]:
         """Perform simple sanity checks for scores."""
         scores1 = np.asarray(scores1).flatten()
         scores2 = np.asarray(scores2).flatten()
@@ -513,7 +549,7 @@ class Compare:
                 mask2 = scores2 != ignore
             mask = mask1 & mask2
         else:
-            mask = np.array([True] * n, dtype=bool)
+            mask = np.array([True] * len(scores1), dtype=bool)
 
         if np.sum(mask) < len(scores1):
             warnings.warn(
@@ -526,8 +562,13 @@ class Compare:
 
     @staticmethod
     def bayesian_comparison(
-        scores1, scores2, n_repeats, alpha, rope=0.0, ignore=np.nan
-    ):
+        scores1: Union[NDArray[np.floating], Sequence[float]],
+        scores2: Union[NDArray[np.floating], Sequence[float]],
+        n_repeats: int,
+        alpha: float,
+        rope: float = 0.0,
+        ignore: Union[float, int, None] = np.nan,
+    ) -> tuple[NDArray[np.bool_], NDArray[np.floating]]:
         """
         Bayesian comparison between pipelines to assess relative performance.
 
@@ -548,7 +589,7 @@ class Compare:
         rope : scalar(float), optional(default=0.0)
             The width of the region of practical equivalence.
 
-        ignore : scalar(int, float, str), optional(default=np.nan)
+        ignore : scalar(int or float, or None), optional(default=np.nan)
             If any score is equal to this value (in either list of scores) their
             comparison is ignored.  This is to exclude scores from failed fits.
             sklearn's default `error_score` is `np.nan` so this is set as the
@@ -557,8 +598,11 @@ class Compare:
 
         Returns
         -------
-        probs : tuple(float, float , float)
-            Tuple of (prob_1, p_equiv, prob_2).
+        is_better : ndarray(bool, ndim=1)
+            Boolean array which, if True, indicates there is a significant difference.
+
+        probs : ndarray(float, ndim=1)
+            Array of (prob_1, p_equiv, prob_2).
 
         Note
         ----

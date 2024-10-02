@@ -4,6 +4,7 @@ Tools to explain predictions.
 Author: nam
 """
 import PIL
+import matplotlib.figure
 import scipy
 import keras
 import matplotlib
@@ -20,11 +21,14 @@ from bokeh.plotting import figure, show
 
 from matplotlib.collections import LineCollection
 
+from typing import Mapping, Union, Sequence, Any
+from numpy.typing import NDArray
+
 
 class CAMBaseExplainer:
     """Base class for explaining classifications of 1D or 2D (imaged) series with class activation map (CAM) methods."""
 
-    def __init__(self, style="hires"):
+    def __init__(self, style: str = "hires") -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -32,28 +36,28 @@ class CAMBaseExplainer:
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "CAMBaseExplainer":
         """Set parameters."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
 
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, any]:
         """Get parameters."""
         return {
             "style": self.style,
         }
 
-    def importances(self, *args, **kwargs):
+    def importances(self, *args: Any, **kwargs: Any) -> NotImplementedError:
         """Compute the feature importances for a single input."""
         raise NotImplementedError
 
-    def explain_(self, *args, **kwargs):
+    def explain_(self, *args: Any, **kwargs: Any) -> NotImplementedError:
         """Compute an explanation."""
         raise NotImplementedError
 
-    def visualize(self, *args, **kwargs):
+    def visualize(self, *args: Any, **kwargs: Any) -> NotImplementedError:
         """Visualize the explanation."""
         raise NotImplementedError
 
@@ -77,7 +81,7 @@ class CAM1D(CAMBaseExplainer):
     This only supports Keras models at the moment.
     """
 
-    def __init__(self, style="hires"):
+    def __init__(self, style: str = "hires") -> None:
         """
         Instantiate the class.
 
@@ -93,7 +97,13 @@ class CAM1D(CAMBaseExplainer):
         """
         super().__init__(style=style)
 
-    def importances(self, y, x, model, interp=True):
+    def importances(
+        self,
+        y: NDArray[float],
+        x: NDArray[float],
+        model: keras.Model,
+        interp: bool = True,
+    ) -> NDArray[float]:
         """
         Compute the feature importances for a single series, such as a spectra.
 
@@ -132,12 +142,18 @@ class CAM1D(CAMBaseExplainer):
 
     def explain_(
         self,
-        y,
-        x,
-        model,
-        cmap="Reds",
-        interp=True,
-    ):
+        y: NDArray[float],
+        x: NDArray[float],
+        model: keras.Model,
+        cmap: Union[str, matplotlib.colors.LinearSegmentedColormap] = "Reds",
+        interp: bool = True,
+    ) -> tuple[
+        NDArray[float],
+        matplotlib.collections.LineCollection,
+        NDArray[float],
+        int,
+        str,
+    ]:
         """
         Compute a detailed explanation for a single series, such as a spectra.
 
@@ -152,7 +168,7 @@ class CAM1D(CAMBaseExplainer):
         model : keras.Model
             Model being used.
 
-        cmap : matplotlib.colormaps, optional(default="Reds")
+        cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="Reds")
             Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
 
         interp : bool, optional(default=True)
@@ -221,16 +237,29 @@ class CAM1D(CAMBaseExplainer):
 
     def visualize(
         self,
-        y,
-        x,
-        model,
-        cmap="Reds",
-        interp=True,
-        enc=None,
-        figsize=None,
-        fontsize=None,
-        show_lines=False,
-    ):
+        y: NDArray[float],
+        x: NDArray[float],
+        model: keras.Model,
+        cmap: Union[str, matplotlib.colors.LinearSegmentedColormap] = "Reds",
+        interp: bool = True,
+        enc: Union[
+            sklearn.preprocessing.OrdinalEncoder,
+            sklearn.preprocessing.LabelEncoder,
+            None,
+        ] = None,
+        figsize: Union[tuple[int, int], None] = None,
+        fontsize: Union[int, None] = None,
+        show_lines: bool = False,
+    ) -> tuple[
+        matplotlib.pyplot.Axes,
+        tuple[
+            NDArray[float],
+            matplotlib.collections.LineCollection,
+            NDArray[float],
+            int,
+            str,
+        ],
+    ]:
         """
         Visualize the predictions and class activation map for a series, such as a spectra.
 
@@ -245,14 +274,14 @@ class CAM1D(CAMBaseExplainer):
         model : keras.Model
             Model being used.
 
-        cmap : matplotlib.colormaps, optional(default="Reds")
+        cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="Reds")
             Matplotlib colormap to use for the class activation map. Best if perceptually uniform.
 
         interp : bool, optional(default=True)
             Whether or not to interpolate the class activation map during upsampling
             to produce the feature importances reflected in the LineCollection returned (`lc`).  If False, the importances are reported as the value in the CAM they are closest to (nearest neighbor).
 
-        enc : sklearn.preprocessing.OrdinalEncoder, optional(default=None)
+        enc : sklearn.preprocessing.OrdinalEncoder or sklearn.preprocessing.LabelEncoder, optional(default=None)
             Encoder used to translate class names into integers. If None labels are reported
             as integers.
 
@@ -303,11 +332,16 @@ class CAM1D(CAMBaseExplainer):
         )
         class_act_map, lc, preds, pred_index, _ = explanation
 
-        if enc is not None:
-            classes_ = enc.inverse_transform(
-                [[i] for i in range(len(enc.categories_[0]))]
+        if isinstance(encoder, sklearn.preprocessing.OrdinalEncoder):
+            classes_ = encoder.inverse_transform(
+                [[i] for i in range(len(encoder.categories_[0]))]
             ).ravel()
             pred_ = enc.inverse_transform([[pred_index]])[0][0]
+        elif isinstance(encoder, sklearn.preprocessing.LabelEncoder):
+            classes_ = encoder.inverse_transform(
+                [i for i in range(len(encoder.classes_))]
+            )
+            pred_ = enc.inverse_transform([pred_index])[0]
         else:
             classes_ = [str(c_) for c_ in range(len(preds))]
             pred_ = pred_index
@@ -372,7 +406,7 @@ class CAM2D(CAMBaseExplainer):
     This only supports Keras models at the moment.
     """
 
-    def __init__(self, style="hires"):
+    def __init__(self, style: str = "hires") -> None:
         """
         Instantiate the class.
 
@@ -389,8 +423,13 @@ class CAM2D(CAMBaseExplainer):
         super().__init__(style=style)
 
     def importances(
-        self, image, model, symmetrize=True, dim=2, series_summary="mean"
-    ):
+        self,
+        image: NDArray[float],
+        model: keras.Model,
+        symmetrize: bool = True,
+        dim: int = 2,
+        series_summary: str = "mean",
+    ) -> NDArray[float]:
         """
         Compute the feature importances for a single series, such as a spectra.
 
@@ -445,15 +484,28 @@ class CAM2D(CAMBaseExplainer):
 
     def explain_(
         self,
-        image,
-        model,
-        symmetrize=True,
-        y=None,
-        x=None,
-        image_cmap=matplotlib.colormaps["jet"],
-        series_summary="mean",
-        series_cmap="Reds",
-    ):
+        image: NDArray[float],
+        model: keras.Model,
+        symmetrize: bool = True,
+        y: Union[NDArray[float], None] = None,
+        x: Union[NDArray[float], None] = None,
+        image_cmap: Union[
+            str, matplotlib.colors.LinearSegmentedColormap
+        ] = matplotlib.colormaps["jet"],
+        series_summary: str = "mean",
+        series_cmap: Union[
+            str, matplotlib.colors.LinearSegmentedColormap
+        ] = "Reds",
+    ) -> tuple[
+        NDArray[float],
+        NDArray[float],
+        NDArray[float],
+        matplotlib.collections.LineCollection,
+        NDArray[float],
+        int,
+        str,
+        NDArray[float],
+    ]:
         """
         Produce a CAM explanation for a 2D, single-channel image.
 
@@ -474,13 +526,13 @@ class CAM2D(CAMBaseExplainer):
         x : ndarray(float, ndim=1), optional(default=None)
             Locations series were measured at in an (N,) array. If provided, it is assumed the `image` is a transformation of the series this corresponds to.
 
-        image_cmap : matplotlib.colormaps, optional(default=matplotlib.colormaps["jet"])
+        image_cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default=matplotlib.colormaps["jet"])
             Matplotlib colormap to use for the 2D image and CAM explanation.
 
         series_summary : str, optional(default='mean')
             Method to summarize the 2D explanation on a 1D series.  The default, 'mean', takes the average across the rows (equivalently, columns) of the symmetrized image.  Must be in {'mean', 'max'}.
 
-        series_cmap : matplotlib.colormaps, optional(default="Reds")
+        series_cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="Reds")
             Matplotlib colormap to use on the condensed 2D CAM explanation for the series. Best if perceptually uniform.
 
         Returns
@@ -578,17 +630,31 @@ class CAM2D(CAMBaseExplainer):
 
     def visualize(
         self,
-        image,
-        model,
-        symmetrize=True,
-        y=None,
-        x=None,
-        image_cmap=matplotlib.colormaps["jet"],
-        series_cmap="Reds",
-        encoder=None,
-        correct_label=None,
-        origin="upper",
-    ):
+        image: NDArray[float],
+        model: keras.Model,
+        symmetrize: bool = True,
+        y: Union[NDArray[float], None] = None,
+        x: Union[NDArray[float], None] = None,
+        image_cmap: Union[
+            str, matplotlib.colors.LinearSegmentedColormap
+        ] = matplotlib.colormaps["jet"],
+        series_cmap: Union[
+            str, matplotlib.colors.LinearSegmentedColormap
+        ] = "Reds",
+        encoder: Union[
+            sklearn.preprocessing.OrdinalEncoder,
+            sklearn.preprocessing.LabelEncoder,
+            None,
+        ] = None,
+        correct_label: Union[str, None] = None,
+        origin: str = "upper",
+        fontsize: int = 12,
+    ) -> tuple[
+        matplotlib.figure.Figure,
+        matplotlib.figure.Figure,
+        matplotlib.figure.Figure,
+        matplotlib.figure.Figure,
+    ]:
         """
         Visualize the CAM explaination of a 2D, single-channel image.
 
@@ -609,13 +675,13 @@ class CAM2D(CAMBaseExplainer):
         x : ndarray(float, ndim=1), optional(default=None)
             Locations series were measured at in an (N,) array. If provided, it is assumed the `image` is a transformation of the series this corresponds to.
 
-        image_cmap : matplotlib.colormaps, optional(default=matplotlib.colormaps["jet"])
+        image_cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default=matplotlib.colormaps["jet"])
             Matplotlib colormap to use for the 2D image and CAM explanation.
 
-        series_cmap : matplotlib.colormaps, optional(default="Reds")
+        series_cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="Reds")
             Matplotlib colormap to use on the condensed 2D CAM explanation for the series. Best if perceptually uniform.
 
-        encoder :  sklearn.preprocessing.OrdinalEncoder or sklearn.preprocessing.LabelEncoder, optional(default=None)
+        encoder : sklearn.preprocessing.OrdinalEncoder or sklearn.preprocessing.LabelEncoder, optional(default=None)
             Encodes classes (strings) as integers.
 
         correct_label : str, optional(default=None)
@@ -623,6 +689,9 @@ class CAM2D(CAMBaseExplainer):
 
         origin : str, optional(default='upper')
             Origin convention for 2D images; see https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.imshow.html.
+
+        fontsize : int, optional(default=12)
+            Font size for titles; font sizes for labels and axes are scaled accordingly.
 
         Returns
         -------
@@ -657,6 +726,10 @@ class CAM2D(CAMBaseExplainer):
             symmetrize=symmetrize,
         )
 
+        # Set fontsizes
+        title_fontsize = fontsize
+        label_fontsize = title_fontsize - 2
+
         # 1. Plot raw score output
         fig1, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 2))
 
@@ -668,8 +741,9 @@ class CAM2D(CAMBaseExplainer):
                 raise ValueError("Encoder has the wrong number of classes")
             ax[0].set_title(
                 "Prediction = {}".format(
-                    encoder.inverse_transform([[pred_index]])[0][0]
-                )
+                    encoder.inverse_transform([[pred_index]])[0][0],
+                ),
+                fontsize=title_fontsize,
             )
         elif isinstance(encoder, sklearn.preprocessing.LabelEncoder):
             classes_ = encoder.inverse_transform(
@@ -679,18 +753,25 @@ class CAM2D(CAMBaseExplainer):
                 raise ValueError("Encoder has the wrong number of classes")
             ax[0].set_title(
                 "Prediction = {}".format(
-                    encoder.inverse_transform([pred_index])[0]
-                )
+                    encoder.inverse_transform([pred_index])[0],
+                ),
+                fontsize=title_fontsize,
             )
         else:
             classes_ = ["Class {}".format(i) for i in np.arange(len(preds))]
-            ax[0].set_title("Prediction = Class {}".format(pred_index))
+            ax[0].set_title(
+                "Prediction = Class {}".format(pred_index),
+                fontsize=title_fontsize,
+            )
 
         ax[0].bar(classes_, preds, color="black", width=0.9)
         ax[0].set_xticks(
-            ticks=np.arange(len(classes_)), labels=classes_, rotation=90
+            ticks=np.arange(len(classes_)),
+            labels=classes_,
+            rotation=90,
+            fontsize=label_fontsize,
         )
-        ax[0].set_ylabel("Raw Scores")
+        ax[0].set_ylabel("Raw Scores", fontsize=label_fontsize)
 
         clipped = np.clip(preds, a_min=-250, a_max=250)
         ax[1].bar(
@@ -700,15 +781,19 @@ class CAM2D(CAMBaseExplainer):
             width=0.9,
         )
         ax[1].set_xticks(
-            ticks=np.arange(len(classes_)), labels=classes_, rotation=90
+            ticks=np.arange(len(classes_)),
+            labels=classes_,
+            rotation=90,
+            fontsize=label_fontsize,
         )
         ax[1].set_yscale("log")
         ax[1].set_title(
             "Actual = {}".format(correct_label)
             if correct_label is not None
-            else ""
+            else "",
+            fontsize=title_fontsize,
         )
-        ax[1].set_ylabel("Softmax Probability")
+        ax[1].set_ylabel("Softmax Probability", fontsize=label_fontsize)
 
         def build_fig(colorize=False):
             width_ratios = (2, 7, 0.4)
@@ -748,6 +833,7 @@ class CAM2D(CAMBaseExplainer):
                         lc
                     )  # Plot series colored by importance on top
                     cbar = fig.colorbar(lc, cax=fig.add_subplot(gs[0, 2]))
+                    cbar.ax.tick_params(labelsize=label_fontsize)
                 else:
                     ax_top.plot(x, y, color="k")  # Just plot the series on top
 
@@ -765,8 +851,13 @@ class CAM2D(CAMBaseExplainer):
         im2 = ax_gaf.imshow(image[:, :, 0], cmap=image_cmap, origin=origin)
         ax_gaf.set_xticks([])
         ax_gaf.set_yticks([])
-        ax_gaf.set_title("Image", y=-0.09)
+        ax_gaf.set_title(
+            "Image",
+            y=-0.09 - (title_fontsize - 12) * 0.005,
+            fontsize=title_fontsize,
+        )
         cbar = fig2.colorbar(im2, cax=fig2.add_subplot(gs[1, 2]), pad=-1)
+        cbar.ax.tick_params(labelsize=label_fontsize)
         # cbar.set_ticks([])
 
         # Build CAM
@@ -776,10 +867,19 @@ class CAM2D(CAMBaseExplainer):
         ax_cam.set_xticks([])
         ax_cam.set_yticks([])
         if self.style == "grad":
-            ax_cam.set_title("GradCAM", y=-0.09)
+            ax_cam.set_title(
+                "GradCAM",
+                y=-0.09 - (title_fontsize - 12) * 0.005,
+                fontsize=title_fontsize,
+            )
         else:
-            ax_cam.set_title("HiResCAM", y=-0.09)
+            ax_cam.set_title(
+                "HiResCAM",
+                y=-0.09 - (title_fontsize - 12) * 0.005,
+                fontsize=title_fontsize,
+            )
         cbar = fig3.colorbar(im3, cax=fig3.add_subplot(gs[1, 2]))
+        cbar.ax.tick_params(labelsize=label_fontsize)
         # cbar.set_ticks([])
 
         # Build the image with alpha to indicate relevance / explanation
@@ -790,13 +890,26 @@ class CAM2D(CAMBaseExplainer):
         )
         ax_expl.set_xticks([])
         ax_expl.set_yticks([])
-        ax_expl.set_title("Explained Image", y=-0.09)
+        ax_expl.set_title(
+            "Explained Image",
+            y=-0.09 - (title_fontsize - 12) * 0.005,
+            fontsize=title_fontsize,
+        )
         cbar = fig4.colorbar(im4, cax=fig4.add_subplot(gs[1, 2]))
+        cbar.ax.tick_params(labelsize=label_fontsize)
         # cbar.set_ticks([])
 
         return fig1, fig2, fig3, fig4
 
-    def _explain_2d(self, image, model, cmap, symmetrize):
+    def _explain_2d(
+        self,
+        image: NDArray[float],
+        model: keras.Model,
+        cmap: Union[str, matplotlib.colors.LinearSegmentedColormap],
+        symmetrize: bool,
+    ) -> tuple[
+        NDArray[float], NDArray[float], NDArray[float], NDArray[float], int, str
+    ]:
         """
         Explain a 2D image.
 
@@ -808,7 +921,7 @@ class CAM2D(CAMBaseExplainer):
         model : keras.Model
             Model being used to classify the image.
 
-        cmap : matplotlib.colormaps
+        cmap : str or matplotlib.colors.LinearSegmentedColormap
             Matplotlib colormap to use for the 2D heatmap.
 
         symmetrize : bool
@@ -871,7 +984,12 @@ class CAM2D(CAMBaseExplainer):
             conv_layer_name,
         )
 
-    def _resize(self, image_shape, image, rescale=False):
+    def _resize(
+        self,
+        image_shape: tuple[int, int],
+        image: NDArray[float],
+        rescale: bool = False,
+    ) -> NDArray[Union[float, int]]:
         """
         Compute colored heatmap and rescale to size of input image using (bi)linear interpolation.
 
@@ -910,7 +1028,9 @@ class CAM2D(CAMBaseExplainer):
             # Convert to uint8 for image convention
             return np.uint8(image)
 
-    def _condense(self, series_summary, symm_map):
+    def _condense(
+        self, series_summary: str, symm_map: NDArray[float]
+    ) -> NDArray[float]:
         """
         Condense a 2D symmetric CAM to a 1D version.
 
@@ -943,7 +1063,12 @@ class CAM2D(CAMBaseExplainer):
         return condensed
 
 
-def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
+def check_cam_model_architecture(
+    model: keras.Model,
+    style: str,
+    conv_layer_name: Union[str, None] = None,
+    mode: Union[str, None] = None,
+) -> tuple[bool, int, int, str, str]:
     """
     Check if a Keras model has a valid architecture for CAM explanation.
 
@@ -1174,8 +1299,13 @@ def check_cam_model_architecture(model, style, conv_layer_name=None, mode=None):
 
 
 def _make_cam(
-    style, input, model, conv_layer_name=None, mode="output", pred_index=None
-):
+    style: str,
+    input: NDArray[float],
+    model: keras.Model,
+    conv_layer_name: Union[str, None] = None,
+    mode: str = "output",
+    pred_index: Union[int, None] = None,
+) -> tuple[NDArray[float], NDArray[float], NDArray[float], int, str]:
     """
     Compute activation map for a given 1D or 2D input.
 
@@ -1338,7 +1468,14 @@ def _make_cam(
             )
 
 
-def _color_1d(x, y, importances, cmap="Reds", interp=True, bounds=None):
+def _color_1d(
+    x: NDArray[float],
+    y: NDArray[float],
+    importances: NDArray[float],
+    cmap: Union[str, matplotlib.colors.LinearSegmentedColormap] = "Reds",
+    interp: bool = True,
+    bounds: Union[tuple[float, float], None] = None,
+) -> tuple[matplotlib.collections.LineCollection]:
     """
     Explain 1D series by coloring it according to a heatmap using upsampling.
 
@@ -1353,7 +1490,7 @@ def _color_1d(x, y, importances, cmap="Reds", interp=True, bounds=None):
     importances : ndarray(float, ndim=1)
         1D vector to color based on, e.g., the class activation map.
 
-    cmap : matplotlib.colormaps, optional(default="Reds")
+    cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="Reds")
         Matplotlib colormap to use for the `importances`. Best if perceptually uniform.
 
     interp : bool, optional(default=True)
@@ -1402,14 +1539,14 @@ def _color_1d(x, y, importances, cmap="Reds", interp=True, bounds=None):
 
 
 def color_series(
-    y,
-    x,
-    importance_values,
-    cmap="coolwarm",
-    figsize=None,
-    bounds=None,
-    background=True,
-):
+    y: Sequence[float],
+    x: Sequence[float],
+    importance_values: Sequence[float],
+    cmap: Union[str, matplotlib.colors.LinearSegmentedColormap] = "coolwarm",
+    figsize: Union[tuple[int, int], None] = None,
+    bounds: Union[tuple[float, float], None] = None,
+    background: bool = True,
+) -> matplotlib.pyplot.Axes:
     """
     Color a 1D series based on feature importance values.
 
@@ -1424,7 +1561,7 @@ def color_series(
     importance_values : array_like(float, ndim=1)
         Importance value assigned. Should have the same length as `x` and `y`.
 
-    cmap : str, optional(default="coolwarm")
+    cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="coolwarm")
         Name of matplotlib colormap to use.
 
     figsize : tuple(int, int), optional(default=None)
@@ -1433,12 +1570,12 @@ def color_series(
     bounds : tuple(float, float), optional(default=None)
         Bounds to color based on; if unspecified uses min/max of importance_values.
 
-    background : scalar(bool), optional(default=True)
+    background : bool, optional(default=True)
         Whether or not to plot the uncolored (gray) spectrum behind the colored points.
 
     Returns
     -------
-    axes : matplotlib.pyplot.axes
+    axes : matplotlib.pyplot.Axes
         Axes the result is plotted on.
 
     Raises
@@ -1477,8 +1614,12 @@ def color_series(
 
 
 def bokeh_color_spectrum(
-    y, x, importance_values, palette=Spectral10, y_axis_type=None
-):
+    y: Sequence[float],
+    x: Sequence[float],
+    importance_values: Sequence[float],
+    palette=Spectral10,
+    y_axis_type: Union[str, None] = None,
+) -> None:
     """
     Color a 1D spectrum based on feature importance values using Bokeh.
 

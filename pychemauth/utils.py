@@ -134,7 +134,7 @@ def _sort_xdata(directory):
     sorted_x = [
         pathlib.Path(os.path.join(path, f)).absolute()
         for f in sorted(
-            [f for f in os.listdir(path) if f.startswith("x_")],
+            [f_ for f_ in os.listdir(path) if f_.startswith("x_")],
             key=lambda x: int(x.split("_")[1].split(".")[0]),
         )
     ]

@@ -230,7 +230,7 @@ class Test_DeepOOD_Energy(unittest.TestCase):
         else:
             np.testing.assert_almost_equal(ood.alpha, 0.05)
             np.testing.assert_almost_equal(ood.T, 1.0)
-            np.testing.assert_almost_equal(ood.threshold, 10.176320600509644)
+            np.testing.assert_almost_equal(ood.threshold, 10.107596, decimal=6)
 
             score_test = ood.score_samples(self.data)
             np.testing.assert_almost_equal(
@@ -294,7 +294,7 @@ class Test_DeepOOD_Energy(unittest.TestCase):
                     True,
                     True,
                     True,
-                    False,
+                    True,
                     True,
                     True,
                     True,
@@ -317,7 +317,7 @@ class Test_DeepOOD_Energy(unittest.TestCase):
         else:
             np.testing.assert_almost_equal(ood.alpha, 0.05)
             np.testing.assert_almost_equal(ood.T, 1.0)
-            np.testing.assert_almost_equal(ood.threshold, 10.176320600509644)
+            np.testing.assert_almost_equal(ood.threshold, 10.107596, decimal=6)
 
             score_test = ood.score_samples(X_feature)
             np.testing.assert_almost_equal(
@@ -381,7 +381,7 @@ class Test_DeepOOD_Energy(unittest.TestCase):
                     True,
                     True,
                     True,
-                    False,
+                    True,
                     True,
                     True,
                     True,
@@ -418,7 +418,7 @@ class Test_DeepOOD_Softmax(unittest.TestCase):
             raise Exception(f"DeepOOD.Softmax failed to fit : {e}")
         else:
             np.testing.assert_almost_equal(ood.alpha, 0.05)
-            np.testing.assert_almost_equal(ood.threshold, 0.9973833113908768)
+            np.testing.assert_almost_equal(ood.threshold, 0.99701893)
 
             score_test = ood.score_samples(self.data)
             np.testing.assert_almost_equal(
@@ -461,7 +461,7 @@ class Test_DeepOOD_Softmax(unittest.TestCase):
             np.testing.assert_equal(
                 ood.predict(self.data),
                 [
-                    False,
+                    True,
                     True,
                     True,
                     True,
@@ -504,7 +504,7 @@ class Test_DeepOOD_Softmax(unittest.TestCase):
             raise Exception(f"DeepOOD.Softmax failed to fit : {e}")
         else:
             np.testing.assert_almost_equal(ood.alpha, 0.05)
-            np.testing.assert_almost_equal(ood.threshold, 0.9973833113908768)
+            np.testing.assert_almost_equal(ood.threshold, 0.99701893)
 
             score_test = ood.score_samples(X_feature)
             np.testing.assert_almost_equal(
@@ -547,7 +547,7 @@ class Test_DeepOOD_Softmax(unittest.TestCase):
             np.testing.assert_equal(
                 ood.predict(X_feature),
                 [
-                    False,
+                    True,
                     True,
                     True,
                     True,

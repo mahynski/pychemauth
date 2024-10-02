@@ -22,6 +22,9 @@ from sklearn.preprocessing import LabelEncoder
 from pychemauth.utils import _multi_cm_metrics, _occ_cm_metrics
 from pychemauth import utils
 
+from typing import Union, Sequence, Callable
+from numpy.typing import NDArray
+
 
 class DeepOOD:
     """Deep neural network out-of-distribution (OOD) tools and models."""
@@ -34,7 +37,7 @@ class DeepOOD:
         Deep classification models end in a softmax layer predicting a floating point probability for each class when model.predict is called, akin to model.predict_proba in sklearn. To make these have the same behaviors, this class is needed.
         """
 
-        def __init__(self, model=None):
+        def __init__(self, model: Union[any, None] = None) -> None:
             """
             Instantiate the class.
 
@@ -45,7 +48,7 @@ class DeepOOD:
             """
             self.model = model
 
-        def convert(self, probabilities):
+        def convert(self, probabilities: NDArray[float]) -> NDArray[int]:
             """
             Convert an array of probabilities to a single prediction.
 
@@ -61,7 +64,7 @@ class DeepOOD:
             """
             return np.argmax(np.asarray(probabilities), axis=1)
 
-        def predict(self, X_feature):
+        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
             """
             Make a prediction given a featurized input.
 
@@ -80,7 +83,7 @@ class DeepOOD:
     class SoftmaxFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen."""
 
-        def predict(self, X_feature):
+        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
             """
             Make a prediction given a featurized input.
 
@@ -99,11 +102,11 @@ class DeepOOD:
     class EnergyFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Energy` is the outlier model chosen."""
 
-        def __init__(self):
+        def __init__(self) -> None:
             """Instantiate the class."""
             self.model = keras.layers.Softmax()
 
-        def predict(self, X_feature):
+        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
             """
             Make a prediction given a featurized input.
 
@@ -122,14 +125,19 @@ class DeepOOD:
     class DIMEFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.DIME` is the outlier model chosen."""
 
-        def __init__(self, model_loader, input_layer=0, output_layer=-1):
+        def __init__(
+            self,
+            model_loader: Callable[[], keras.Model],
+            input_layer: int = 0,
+            output_layer: int = -1,
+        ) -> None:
             """
             To make this object picklable (e.g., for use in GridSearchCV) we load the model only when it is needed using a function which is picklable.
 
             Parameters
             ----------
             model_loader : callable
-                HuggingFace name of model repo.  Should be picklable if combined with GridSearchCV, etc.
+                Function that instantiates a new keras.Model when called (with no inputs).  Should be picklable if combined with GridSearchCV, etc.
 
             input_layer : int, optional(default=0)
                 Index of the `model.layers` whose input is the featurized data. If no featurization is used, the default of 0 is the correct value.
@@ -147,7 +155,7 @@ class DeepOOD:
             self.model_ = None
 
         @property
-        def model(self):
+        def model(self) -> keras.Model:
             """Overload the `.model` property so that it is not loaded until it is needed."""
             if self.model_ is None:
                 m_ = self.model_loader()
@@ -162,23 +170,23 @@ class DeepOOD:
     class _ODBase:
         """Base model for out-of-distribution detectors for deep neural networks."""
 
-        def set_params(self, **parameters):
+        def set_params(self, **parameters: Any) -> "_ODBase":
             """Set parameters; for consistency with scikit-learn's estimator API."""
             for parameter, value in parameters.items():
                 setattr(self, parameter, value)
             return self
 
-        def get_params(self, deep=False):
+        def get_params(self, deep: bool = False) -> NotImplementedError:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             raise NotImplementedError
 
-        def predict(self, X):
+        def predict(self, X: Union[NDArray[float], "XLoader"]) -> NDArray[bool]:
             """
             Predict if samples belong to the known distribution.
 
             Parameters
             ----------
-            X : ndarray(float) or iterator
+            X : ndarray(float) or data iterator
                 Data the `model` can accept as input.
 
             Returns
@@ -191,17 +199,19 @@ class DeepOOD:
                 self.score_samples(X) >= self.threshold
             )  # When numerical precision is an issue, ">=" helps ensure points that should be accepted are vs. just ">"
 
-        def score_samples(self, X, featurized=False):
+        def score_samples(
+            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
+        ) -> NotImplementedError:
             """Score the samples."""
             raise NotImplementedError
 
-        def fit(self, X):
+        def fit(self, X: Union[NDArray[float], "XLoader"]) -> "_ODBase":
             """
             Fit the detector.
 
             Parameters
             ----------
-            X : ndarray(float) or iterator
+            X : ndarray(float) or data iterator
                 Training data the model can accept as input.
 
             Returns
@@ -231,14 +241,14 @@ class DeepOOD:
 
         def visualize(
             self,
-            bins=25,
-            ax=None,
-            X_test=None,
-            test_label=None,
-            no_train=False,
-            no_threshold=False,
-            density=True,
-        ):
+            bins: Union[int, Sequence[any]] = 25,
+            ax: Union[matplotlib.pyplot.Axes, None] = None,
+            X_test: Union[NDArray[float], "XLoader", None] = None,
+            test_label: str = None,
+            no_train: bool = False,
+            no_threshold: bool = False,
+            density: bool = True,
+        ) -> matplotlib.pyplot.Axes:
             """
             Visualize the distribution of training scores, and others if desired.
 
@@ -250,7 +260,7 @@ class DeepOOD:
             ax : matplotlib.pyplot.Axes, optional(default=None)
                 Axes to plot the results on. This is created if not provided.
 
-            X_test : ndarray(float) or iterator, optional(default=None)
+            X_test : ndarray(float) or data iterator, optional(default=None)
                 Alternate data the model can accept as input. If `X_test=None` just plot the training data.
 
             test_label : str, optional(default=None)
@@ -310,7 +320,9 @@ class DeepOOD:
 
             return ax
 
-    def _check_end(model, disable=False):
+    def _check_end(
+        model: keras.Model, disable: bool = False
+    ) -> tuple[bool, function]:
         """
         Check a Keras model ends with a softmax or logistic function.
 
@@ -328,7 +340,7 @@ class DeepOOD:
         valid : bool
             If the model architecture is valid.
 
-        original_activation : keras.activations
+        original_activation : function
             Activation function used in the original model.
         """
         valid_activations = [
@@ -405,7 +417,9 @@ class DeepOOD:
         >>> ax = ood.visualize(X_test=featurizer.predict(X_test))
         """
 
-        def __init__(self, model, k, alpha=0.05):
+        def __init__(
+            self, model: Union[keras.Model, None], k: int, alpha: float = 0.05
+        ) -> None:
             """
             Instantiate the class.
 
@@ -428,7 +442,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "k": k, "alpha": alpha})
 
-        def get_params(self, deep=False):
+        def get_params(self, deep: bool = False) -> dict[str, any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -438,13 +452,15 @@ class DeepOOD:
                 "alpha": self.alpha,
             }
 
-        def score_samples(self, X, featurized=False):
+        def score_samples(
+            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
+        ) -> NDArray[float]:
             """
             Compute the (negative) distance to the modeled embedding for each observation.
 
             Parameters
             ----------
-            X : ndarray(float) or iterator
+            X : ndarray(float) or data iterator
                 Training data the `model` can accept as input.  If `model=None` assume that `X` is
                 already featurized.  It can be advantageous to pre-featurize the data by running it through
                 this model before optimizing a DIME OOD detector since it can dramatically increase the speed
@@ -479,7 +495,9 @@ class DeepOOD:
             else:
                 return _scores(X)
 
-        def _featurize(self, X):
+        def _featurize(
+            self, X: Union[NDArray[float], "XLoader"]
+        ) -> NDArray[any]:
             """Featurize the data."""
             if utils.NNTools._is_data_iter(X):
                 X_feature = []
@@ -490,13 +508,13 @@ class DeepOOD:
             else:
                 return self.model.predict(X)
 
-        def fit(self, X):
+        def fit(self, X: Union[NDArray[float], "XLoader"]) -> "DIME":
             """
             Fit the detector.
 
             Parameters
             ----------
-            X : ndarray(float) or iterator
+            X : ndarray(float) or data iterator
                 Training data the `model` can accept as input.  If `model=None` assume that `X` is
                 already featurized.  It can be advantageous to pre-featurize the data by running it through
                 this model before optimizing a DIME OOD detector since it can dramatically increase the speed
@@ -577,7 +595,9 @@ class DeepOOD:
         >>> ax = ood.visualize(X_test=featurizer.predict(X_test))
         """
 
-        def __init__(self, model, alpha=0.05, T=1.0):
+        def __init__(
+            self, model: keras.Model, alpha: float = 0.05, T: float = 1.0
+        ) -> None:
             """
             Instantiate the class.
 
@@ -600,7 +620,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "alpha": alpha, "T": T})
 
-        def get_params(self, deep=False):
+        def get_params(self, deep: bool = False) -> dict[str, any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -610,13 +630,15 @@ class DeepOOD:
                 "T": self.T,
             }
 
-        def score_samples(self, X, featurized=False):
+        def score_samples(
+            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
+        ) -> NDArray[float]:
             """
             Compute the energy score for each observation.
 
             Parameters
             ----------
-            X : ndarray(float) or iterator
+            X : ndarray(float) or data iterator
                 Data the model can accept as input.
 
             featurized : bool, optional(default=False)
@@ -723,7 +745,7 @@ class DeepOOD:
         >>> ax = ood.visualize(X_test=model.predict(X_test))
         """
 
-        def __init__(self, model, alpha=0.05):
+        def __init__(self, model: keras.Model, alpha: float = 0.05) -> None:
             """
             Instantiate the class.
 
@@ -744,7 +766,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "alpha": alpha})
 
-        def get_params(self, deep=False):
+        def get_params(self, deep: bool = False) -> dict[str, any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -753,7 +775,9 @@ class DeepOOD:
                 "alpha": self.alpha,
             }
 
-        def score_samples(self, X, featurized=False):
+        def score_samples(
+            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
+        ) -> NDArray[float]:
             """
             Compute the softmax score for each observation.
 
@@ -830,7 +854,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         all unique values of `y` are used; otherwise, `y` is filtered to only include these
         instances when training the classifier, if training is performed.
 
-    inlier_value : scalar, optional(default=1)
+    inlier_value : scalar(float, int, or str), optional(default=1)
         The value `outlier_model.predict()` returns for inlier class(es).  Many sklearn routines
         return +1 for inlier vs. -1 for outlier; other routines sometimes use 0 for outlier.
         As a result, we simply check for the inlier value (+1 by default) for greater flexibility.
@@ -871,18 +895,18 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
     def __init__(
         self,
-        clf_model=None,
-        outlier_model=None,
-        clf_prefit=False,
-        clf_kwargs={},
-        outlier_kwargs={},
-        known_classes=None,
-        inlier_value=1,
-        unknown_class="Unknown",
-        score_metric="TEFF",
-        clf_style="hard",
-        score_using="all",
-    ):
+        clf_model: Union[object, None] = None,
+        outlier_model: Union[object, None] = None,
+        clf_prefit: bool = False,
+        clf_kwargs: dict[str, any] = {},
+        outlier_kwargs: dict[str, any] = {},
+        known_classes: Union[Sequence[int], Sequence[str]] = None,
+        inlier_value: Union[float, int, str] = 1,
+        unknown_class: Union[int, str] = "Unknown",
+        score_metric: str = "TEFF",
+        clf_style: str = "hard",
+        score_using: Union[int, str] = "all",
+    ) -> None:
         """Initialize the class."""
         self.set_params(
             **{

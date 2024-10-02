@@ -11,20 +11,22 @@ import tensorflow as tf
 
 from tensorflow.keras import backend as K
 
+from typing import Any
+
 
 class CNNFactory:
     """Factory function to create 2D CNNs for classification."""
 
     def __init__(
         self,
-        name,
-        input_size,
-        pixel_range,
-        n_classes,
-        cam=True,
-        dropout=0.0,
-        kwargs={},
-    ):
+        name: str,
+        input_size: tuple[int, int, int],
+        pixel_range: tuple[float, float],
+        n_classes: int,
+        cam: bool = True,
+        dropout: float = 0.0,
+        kwargs: dict[str, any] = {},
+    ) -> None:
         """
         Instantiate the factory.
 
@@ -37,12 +39,12 @@ class CNNFactory:
             Size of the image being classified.  Should be in channel-last format; e.g., (N, N, 1) or (N, N, 3).
 
         pixel_range : tuple(float, float)
-            Tuple of (min, max) values inclusive that will be encountered in the images.  For 2D "imaged" signals this might be (-1, 1) or (0, 1), whereas for conventional images this is usually (0, 255). All base models expect data in the [0, 255] range so inputs are scaled to match this; these are subsequently preprocessed in different ways by different base models, but all start from this input so range so we automatically scale this to match.
+            Tuple of (min, max) values inclusive that will be encountered in the images.  For 2D "imaged" signals this might be (-1.0, 1.0) or (0.0, 1.0), whereas for conventional images this is usually (0, 255). All base models expect data in the [0, 255] range so inputs are scaled to match this; these are subsequently preprocessed in different ways by different base models, but all start from this input so range so we automatically scale this to match.
 
         n_classes : int
             Number of classes to learn.
 
-        cam : bool, optional(default=2)
+        cam : bool, optional(default=True)
             Whether to use a "CAM" architecture or not.
             CAM refers to BASE -> [GAP -> Dropout (optional) -> Dense].  Otherwise BASE -> [Flatten -> Dropout (optional) -> Dense] is used.
             CAM architectures can be explained using HiResCAM or GradCAM, while the latter requires HiResCAM.
@@ -71,13 +73,13 @@ class CNNFactory:
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "CNNFactory":
         """Set the parameters."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, any]:
         """Get the parameters."""
         return {
             "name": self.name,
@@ -89,7 +91,7 @@ class CNNFactory:
             "kwargs": self.kwargs,
         }
 
-    def _validate_inputs(self):
+    def _validate_inputs(self) -> None:
         """Check the input has the right size and format, etc."""
         self.input_size = np.uint(self.input_size)
         if len(self.input_size) != 3:
@@ -112,7 +114,7 @@ class CNNFactory:
         if len(self.pixel_range) != 2:
             raise ValueError("pixel_range should be a tuple of length 2")
 
-    def _model_lookup(self, name):
+    def _model_lookup(self, name: str) -> tuple[any, any]:
         """Lookup a model and its preprocessor in keras.applications."""
         name = name.lower()
 
@@ -478,7 +480,7 @@ class CNNFactory:
 
         return base_model, preprocessor
 
-    def build(self):
+    def build(self) -> keras.Model:
         """
         Build the model using weights learned from ImageNet.
 
