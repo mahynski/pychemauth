@@ -23,7 +23,7 @@ from sklearn.model_selection import (
     StratifiedKFold,
 )
 
-from typing import Iterable, Union, Sequence, Any
+from typing import Union, Sequence, Any
 from numpy.typing import NDArray
 
 
@@ -135,7 +135,7 @@ class BiasedNestedCV:
 
         return scores
 
-    def random_search(self, *args: Any, **kwargs: Any) -> NotImplementedError:
+    def random_search(self, *args: Any, **kwargs: Any) -> NDArray[np.floating]:
         """Perform nested random search CV."""
         raise NotImplementedError
 

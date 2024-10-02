@@ -8,6 +8,7 @@ import copy
 import keras
 import scipy
 import torch
+import matplotlib
 
 import numpy as np
 import pandas as pd
@@ -22,9 +23,11 @@ from sklearn.preprocessing import LabelEncoder
 from pychemauth.utils import _multi_cm_metrics, _occ_cm_metrics
 from pychemauth import utils
 
-from typing import Union, Sequence, Callable
+from typing import Union, Sequence, Callable, Any, ClassVar, TYPE_CHECKING
 from numpy.typing import NDArray
 
+if TYPE_CHECKING:
+    from pychemauth.utils.NNTools import XLoader
 
 class DeepOOD:
     """Deep neural network out-of-distribution (OOD) tools and models."""
@@ -37,7 +40,7 @@ class DeepOOD:
         Deep classification models end in a softmax layer predicting a floating point probability for each class when model.predict is called, akin to model.predict_proba in sklearn. To make these have the same behaviors, this class is needed.
         """
 
-        def __init__(self, model: Union[any, None] = None) -> None:
+        def __init__(self, model=None) -> None:
             """
             Instantiate the class.
 
@@ -48,7 +51,7 @@ class DeepOOD:
             """
             self.model = model
 
-        def convert(self, probabilities: NDArray[float]) -> NDArray[int]:
+        def convert(self, probabilities: NDArray[np.floating]) -> NDArray[np.integer]:
             """
             Convert an array of probabilities to a single prediction.
 
@@ -64,7 +67,7 @@ class DeepOOD:
             """
             return np.argmax(np.asarray(probabilities), axis=1)
 
-        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
+        def predict(self, X_feature: NDArray[Any]) -> NDArray[np.integer]:
             """
             Make a prediction given a featurized input.
 
@@ -83,7 +86,7 @@ class DeepOOD:
     class SoftmaxFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.Softmax` is the outlier model chosen."""
 
-        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
+        def predict(self, X_feature: NDArray[Any]) -> NDArray[np.integer]:
             """
             Make a prediction given a featurized input.
 
@@ -106,7 +109,7 @@ class DeepOOD:
             """Instantiate the class."""
             self.model = keras.layers.Softmax()
 
-        def predict(self, X_feature: NDArray[any]) -> NDArray[int]:
+        def predict(self, X_feature: NDArray[Any]) -> NDArray[np.integer]:
             """
             Make a prediction given a featurized input.
 
@@ -124,7 +127,7 @@ class DeepOOD:
 
     class DIMEFeatureClf(ProbaFeatureClf):
         """Classification model for featurized data to use with `OpenSetClassifier` when the classifier is a prefit, deep model and `DeepOOD.DIME` is the outlier model chosen."""
-
+        
         def __init__(
             self,
             model_loader: Callable[[], keras.Model],
@@ -169,18 +172,23 @@ class DeepOOD:
 
     class _ODBase:
         """Base model for out-of-distribution detectors for deep neural networks."""
+        model: ClassVar[Union[keras.Model, None]]
+        threshold: ClassVar[float]
+        alpha: ClassVar[float]
+        is_fitted_: bool
+        _X_train_scores: ClassVar[NDArray[np.floating]]
 
-        def set_params(self, **parameters: Any) -> "_ODBase":
+        def set_params(self, **parameters: Any) -> DeepOOD._ODBase:
             """Set parameters; for consistency with scikit-learn's estimator API."""
             for parameter, value in parameters.items():
                 setattr(self, parameter, value)
             return self
 
-        def get_params(self, deep: bool = False) -> NotImplementedError:
+        def get_params(self, deep: bool = False) -> dict[str, Any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             raise NotImplementedError
 
-        def predict(self, X: Union[NDArray[float], "XLoader"]) -> NDArray[bool]:
+        def predict(self, X: Union[NDArray[np.floating], "XLoader"]) -> NDArray[np.bool_]:
             """
             Predict if samples belong to the known distribution.
 
@@ -200,12 +208,12 @@ class DeepOOD:
             )  # When numerical precision is an issue, ">=" helps ensure points that should be accepted are vs. just ">"
 
         def score_samples(
-            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
-        ) -> NotImplementedError:
+            self, X: Union[NDArray[np.floating], "XLoader"], featurized: bool = False
+        ) -> NDArray[np.floating]:
             """Score the samples."""
             raise NotImplementedError
 
-        def fit(self, X: Union[NDArray[float], "XLoader"]) -> "_ODBase":
+        def fit(self, X: Union[NDArray[np.floating], "XLoader"]) -> DeepOOD._ODBase:
             """
             Fit the detector.
 
@@ -226,25 +234,26 @@ class DeepOOD:
                 _ = DeepOOD._check_end(self.model, disable=False)
 
             # 2. Compute threshold cutoff.
-            self._X_train_scores = self.score_samples(
-                X, featurized=True if self.model is None else False
-            )
-            self.threshold = np.percentile(  # Score below this will be outlier
-                self._X_train_scores,
-                self.alpha * 100.0,
-                method="lower",  # When numerical precision is an issue, this helps ensure the boundary is less than the score for points that should be accepted
-            )
+            self.set_params(**{
+                '_X_train_scores': self.score_samples(X, featurized=True if self.model is None else False),
+            })
 
-            self.is_fitted_ = True
+            self.set_params(**{'threshold': np.percentile(  # Score below this will be outlier
+                    self._X_train_scores,
+                    self.alpha * 100.0,
+                    method="lower",  # When numerical precision is an issue, this helps ensure the boundary is less than the score for points that should be accepted
+                ),
+                'is_fitted_': True
+            })
 
             return self
 
         def visualize(
             self,
-            bins: Union[int, Sequence[any]] = 25,
+            bins: Union[int, Sequence[Any]] = 25,
             ax: Union[matplotlib.pyplot.Axes, None] = None,
-            X_test: Union[NDArray[float], "XLoader", None] = None,
-            test_label: str = None,
+            X_test: Union[NDArray[np.floating], "XLoader", None] = None,
+            test_label: Union[str, None] = None,
             no_train: bool = False,
             no_threshold: bool = False,
             density: bool = True,
@@ -416,6 +425,7 @@ class DeepOOD:
         ... )
         >>> ax = ood.visualize(X_test=featurizer.predict(X_test))
         """
+        k: ClassVar[int] 
 
         def __init__(
             self, model: Union[keras.Model, None], k: int, alpha: float = 0.05
@@ -442,7 +452,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "k": k, "alpha": alpha})
 
-        def get_params(self, deep: bool = False) -> dict[str, any]:
+        def get_params(self, deep: bool = False) -> dict[str, Any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -453,8 +463,8 @@ class DeepOOD:
             }
 
         def score_samples(
-            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
-        ) -> NDArray[float]:
+            self, X: Union[NDArray[np.floating], "XLoader"], featurized: bool = False
+        ) -> NDArray[np.floating]:
             """
             Compute the (negative) distance to the modeled embedding for each observation.
 
@@ -496,19 +506,19 @@ class DeepOOD:
                 return _scores(X)
 
         def _featurize(
-            self, X: Union[NDArray[float], "XLoader"]
-        ) -> NDArray[any]:
+            self, X: Union[NDArray[np.floating], "XLoader"]
+        ) -> NDArray[Any]:
             """Featurize the data."""
             if utils.NNTools._is_data_iter(X):
                 X_feature = []
                 for X_batch_, _ in X:
                     if X_batch_.size > 0:  # Check if batch is empty
-                        X_feature.append(self.model.predict(X_batch_))
+                        X_feature.append(self.model.predict(X_batch_)) # type: ignore[union-attr]
                 return np.concatenate(X_feature)
             else:
-                return self.model.predict(X)
+                return self.model.predict(X) # type: ignore[union-attr]
 
-        def fit(self, X: Union[NDArray[float], "XLoader"]) -> "DIME":
+        def fit(self, X: Union[NDArray[np.floating], "XLoader"]) -> "DIME":
             """
             Fit the detector.
 
@@ -541,15 +551,16 @@ class DeepOOD:
                 torch.tensor(X_feature),
                 calibrate_against_trainingset=True,
             )
-            self._X_train_scores = self.score_samples(
-                X_feature, featurized=True
-            )
 
-            self.threshold = np.percentile(  # Score below this will be outlier
-                self._X_train_scores, self.alpha * 100.0
-            )
+            self.set_params(**{
+                '_X_train_scores': self.score_samples(X_feature, featurized=True),
+            })
 
-            self.is_fitted_ = True
+            self.set_params(**{'threshold': np.percentile(  # Score below this will be outlier
+                    self._X_train_scores, self.alpha * 100.0
+                ),
+                'is_fitted_': True
+            })
 
             return self
 
@@ -620,7 +631,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "alpha": alpha, "T": T})
 
-        def get_params(self, deep: bool = False) -> dict[str, any]:
+        def get_params(self, deep: bool = False) -> dict[str, Any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -631,8 +642,8 @@ class DeepOOD:
             }
 
         def score_samples(
-            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
-        ) -> NDArray[float]:
+            self, X: Union[NDArray[np.floating], "XLoader"], featurized: bool = False
+        ) -> NDArray[np.floating]:
             """
             Compute the energy score for each observation.
 
@@ -667,24 +678,24 @@ class DeepOOD:
 
             if valid:
 
-                def negative_energy(logits):
+                def negative_energy(logits) -> NDArray[np.floating]:
                     return self.T * scipy.special.logsumexp(
                         np.asarray(logits) / self.T, axis=1
                     )
 
                 try:
                     if utils.NNTools._is_data_iter(X):
-                        scores = []
+                        scores_ = []
                         for X_batch_, _ in X:
                             if X_batch_.size > 0:  # Check if batch is empty
-                                scores.append(
+                                scores_.append(
                                     negative_energy(
                                         X_batch_
                                         if featurized
                                         else self.model.predict(X_batch_)
                                     )
                                 )
-                        scores = np.concatenate(scores)
+                        scores = np.concatenate(scores_)
                     else:
                         scores = negative_energy(
                             X if featurized else self.model.predict(X)
@@ -766,7 +777,7 @@ class DeepOOD:
             """
             self.set_params(**{"model": model, "alpha": alpha})
 
-        def get_params(self, deep: bool = False) -> dict[str, any]:
+        def get_params(self, deep: bool = False) -> dict[str, Any]:
             """Get parameters; for consistency with scikit-learn's estimator API."""
             if deep:
                 raise NotImplementedError
@@ -776,8 +787,8 @@ class DeepOOD:
             }
 
         def score_samples(
-            self, X: Union[NDArray[float], "XLoader"], featurized: bool = False
-        ) -> NDArray[float]:
+            self, X: Union[NDArray[np.floating], "XLoader"], featurized: bool = False
+        ) -> NDArray[np.floating]:
             """
             Compute the softmax score for each observation.
 
@@ -811,13 +822,13 @@ class DeepOOD:
                             softmax_confidence(
                                 X_batch_
                                 if featurized
-                                else self.model.predict(X_batch_)
+                                else self.model.predict(X_batch_) # type: ignore[union-attr]
                             )
                         )
                 return np.concatenate(scores)
             else:
                 return softmax_confidence(
-                    X if featurized else self.model.predict(X)
+                    X if featurized else self.model.predict(X) # type: ignore[union-attr]
                 )
 
 
@@ -898,9 +909,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         clf_model: Union[object, None] = None,
         outlier_model: Union[object, None] = None,
         clf_prefit: bool = False,
-        clf_kwargs: dict[str, any] = {},
-        outlier_kwargs: dict[str, any] = {},
-        known_classes: Union[Sequence[int], Sequence[str]] = None,
+        clf_kwargs: dict[str, Any] = {},
+        outlier_kwargs: dict[str, Any] = {},
+        known_classes: Union[Sequence[int], Sequence[str], None] = None,
         inlier_value: Union[float, int, str] = 1,
         unknown_class: Union[int, str] = "Unknown",
         score_metric: str = "TEFF",

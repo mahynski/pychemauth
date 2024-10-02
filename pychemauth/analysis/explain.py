@@ -21,12 +21,13 @@ from bokeh.plotting import figure, show
 
 from matplotlib.collections import LineCollection
 
-from typing import Mapping, Union, Sequence, Any
+from typing import Union, Sequence, Any, ClassVar
 from numpy.typing import NDArray
 
 
 class CAMBaseExplainer:
     """Base class for explaining classifications of 1D or 2D (imaged) series with class activation map (CAM) methods."""
+    style: ClassVar[str]
 
     def __init__(self, style: str = "hires") -> None:
         """Instantiate the class."""
@@ -46,7 +47,7 @@ class CAMBaseExplainer:
     def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters."""
         return {
-            "style": self.style, # type: ignore[attr-defined]
+            "style": self.style,
         }
 
     def importances(self, *args, **kwargs):
@@ -217,7 +218,7 @@ class CAM1D(CAMBaseExplainer):
                 pred_index,
                 conv_layer_name,
             ) = _make_cam(
-                style=self.style, # type: ignore[attr-defined]
+                style=self.style,
                 input=np.expand_dims(y, axis=0),
                 model=model,
                 conv_layer_name=None,  # Auto-detect
@@ -866,7 +867,7 @@ class CAM2D(CAMBaseExplainer):
         im3 = ax_cam.imshow(cmap_heatmap, cmap=image_cmap, origin=origin)
         ax_cam.set_xticks([])
         ax_cam.set_yticks([])
-        if self.style == "grad": # type: ignore[attr-defined]
+        if self.style == "grad":
             ax_cam.set_title(
                 "GradCAM",
                 y=-0.09 - (title_fontsize - 12) * 0.005,
@@ -955,7 +956,7 @@ class CAM2D(CAMBaseExplainer):
             pred_index,
             conv_layer_name,
         ) = _make_cam(
-            style=self.style, # type: ignore[attr-defined]
+            style=self.style,
             input=image,
             model=model,
             conv_layer_name=None,  # Auto-detect

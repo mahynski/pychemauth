@@ -6,16 +6,22 @@ Author: nam
 import keras
 import copy
 
-import numpy as np
 import tensorflow as tf
 
 from tensorflow.keras import backend as K
 
-from typing import Any
+from typing import Any, ClassVar
 
 
 class CNNFactory:
     """Factory function to create 2D CNNs for classification."""
+    name: ClassVar[str]
+    input_size: ClassVar[tuple[int, int, int]]
+    pixel_range: ClassVar[tuple[float, float]]
+    n_classes: ClassVar[int]
+    cam: ClassVar[bool]
+    dropout: ClassVar[float]
+    kwargs: ClassVar[dict[str, Any]]
 
     def __init__(
         self,
@@ -25,7 +31,7 @@ class CNNFactory:
         n_classes: int,
         cam: bool = True,
         dropout: float = 0.0,
-        kwargs: dict[str, any] = {},
+        kwargs: dict[str, Any] = {},
     ) -> None:
         """
         Instantiate the factory.
@@ -79,7 +85,7 @@ class CNNFactory:
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep: bool = True) -> dict[str, any]:
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get the parameters."""
         return {
             "name": self.name,
@@ -93,7 +99,6 @@ class CNNFactory:
 
     def _validate_inputs(self) -> None:
         """Check the input has the right size and format, etc."""
-        self.input_size = np.uint(self.input_size)
         if len(self.input_size) != 3:
             raise ValueError(
                 "input should be a 3 dimensional, channels-last tensor"
@@ -104,7 +109,6 @@ class CNNFactory:
         if self.input_size[0] <= 0:
             raise ValueError("Invalid input size")
 
-        self.n_classes = np.uint(self.n_classes)
         if self.n_classes < 2:
             raise ValueError("n_classes should be at least 2")
 
@@ -114,7 +118,7 @@ class CNNFactory:
         if len(self.pixel_range) != 2:
             raise ValueError("pixel_range should be a tuple of length 2")
 
-    def _model_lookup(self, name: str) -> tuple[any, any]:
+    def _model_lookup(self, name: str) -> tuple[Any, Any]:
         """Lookup a model and its preprocessor in keras.applications."""
         name = name.lower()
 

@@ -1769,8 +1769,8 @@ class HuggingFace:
                 _ = _create_repo(exist_ok=True)
                 _new_repo = False
 
-            with TemporaryDirectory() as tmpdir:
-                tmpdir = Path(tmpdir)
+            with TemporaryDirectory() as tmpdir_:
+                tmpdir = Path(tmpdir_)
 
                 # Serialize the model
                 with open(os.path.join(tmpdir, "model.pkl"), mode="bw") as f:
