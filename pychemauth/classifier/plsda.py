@@ -25,7 +25,7 @@ from pychemauth.utils import (
     _multi_cm_metrics,
 )
 
-from typing import Any, ClassVar, Union, Sequence, Union
+from typing import Any, ClassVar, Union, Sequence
 from numpy.typing import NDArray
 
 
