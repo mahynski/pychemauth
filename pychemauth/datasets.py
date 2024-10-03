@@ -24,11 +24,11 @@ def load_pgaa(return_X_y=False, as_frame=False):
 
     Parameters
     ----------
-    return_X_y : scalar(bool), optional(default=False)
+    return_X_y : bool, optional(default=False)
         If True, returns (data, target) instead of a Bunch object.
         See below for more information about the data and target object.
 
-    as_frame : scalar(bool), optional(default=False)
+    as_frame : bool, optional(default=False)
         If True, the data is a pandas DataFrame including columns with appropriate dtypes
         (numeric). The target is a pandas DataFrame or Series depending on the number of
         target columns. If return_X_y is True, then (data, target) will be pandas
@@ -382,11 +382,11 @@ def load_stamp2010(return_X_y=False, as_frame=False):
 
     Parameters
     ----------
-    return_X_y : scalar(bool), optional(default=False)
+    return_X_y : bool, optional(default=False)
         If True, returns (data, target) instead of a Bunch object.
         See below for more information about the data and target object.
 
-    as_frame : scalar(bool), optional(default=False)
+    as_frame : bool, optional(default=False)
         If True, the data is a pandas DataFrame including columns with appropriate dtypes
         (numeric). The target is a pandas DataFrame or Series depending on the number of
         target columns. If return_X_y is True, then (data, target) will be pandas

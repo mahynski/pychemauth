@@ -2075,7 +2075,7 @@ class OneDimLimits(ControlBoundary):
             Dictionary of formatting arguments for the rectangle_kwargs.
             See https://matplotlib.org/stable/api/_as_gen/matplotlib.patches.Rectangle.html.
 
-        vertical : scalar(bool), optional(default=True)
+        vertical : bool, optional(default=True)
             Whether or not to plot the boundary vertically (True) or horizontally (False).
 
         Returns
@@ -2120,7 +2120,7 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
     u_vals : array_like(float, ndim=1)
         Observation values.
 
-    robust : scalar(bool), optional(default=True)
+    robust : bool, optional(default=True)
         Whether to use a statistically robust approach or not.
 
     initial_guess : scalar(float or None), optional(default=None)
