@@ -182,7 +182,7 @@ class DeepOOD:
         is_fitted_: bool
         _X_train_scores: ClassVar[NDArray[np.floating]]
 
-        def set_params(self, **parameters: Any) -> 'DeepOOD._ODBase':
+        def set_params(self, **parameters: Any) -> "DeepOOD._ODBase":
             """Set parameters; for consistency with scikit-learn's estimator API."""
             for parameter, value in parameters.items():
                 setattr(self, parameter, value)
@@ -223,7 +223,7 @@ class DeepOOD:
 
         def fit(
             self, X: Union[NDArray[np.floating], "XLoader"]
-        ) -> 'DeepOOD._ODBase':
+        ) -> "DeepOOD._ODBase":
             """
             Fit the detector.
 
@@ -966,7 +966,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters: Any) -> 'OpenSetClassifier':
+    def set_params(self, **parameters: Any) -> "OpenSetClassifier":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
@@ -1005,7 +1005,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 )
             )
 
-    def fit(self, X: Union[NDArray[np.floating], "XLoader"], y=None) -> 'OpenSetClassifier':
+    def fit(
+        self, X: Union[NDArray[np.floating], "XLoader"], y=None
+    ) -> "OpenSetClassifier":
         """
         Fit the composite model.
 
@@ -1039,7 +1041,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
             X, y = check_X_y(X, y, accept_sparse=False)
             self.n_features_in_ = X.shape[1:]
-            self._check_category_type(y.ravel()) # type: ignore[union-attr]
+            self._check_category_type(y.ravel())  # type: ignore[union-attr]
             assert self.unknown_class not in set(
                 y
             ), "unknown_class value is already taken."
@@ -1089,7 +1091,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         if utils.NNTools._is_data_iter(X):
             # Create a new iterator which is filtered by the known classes
             X = copy.deepcopy(X)
-            X.set_include(self.knowns_) # type: ignore[union-attr]
+            X.set_include(self.knowns_)  # type: ignore[union-attr]
         else:
             known_mask = np.array(
                 [y_ in self.knowns_ for y_ in y_check_], dtype=bool
@@ -1154,7 +1156,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                 )
 
             try:
-                self.clf_ = self.clf_model(**self.clf_kwargs) # type: ignore[operator]
+                self.clf_ = self.clf_model(**self.clf_kwargs)  # type: ignore[operator]
                 self.clf_.fit(X[composite_mask, :], y[composite_mask])
             except:
                 raise Exception(
@@ -1177,7 +1179,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = True
         return self
 
-    def predict(self, X: Union[NDArray[np.floating], "XLoader"]) -> Union[Sequence[Any], NDArray[Any]]:
+    def predict(
+        self, X: Union[NDArray[np.floating], "XLoader"]
+    ) -> Union[Sequence[Any], NDArray[Any]]:
         """
         Make a prediction.
 
@@ -1215,11 +1219,11 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
                     pred = self.clf_.predict(X[inlier_mask, :])
             else:
                 predictions = [[]] * (
-                    (len(X) - 1) * X.batch_size + len(X[len(X) - 1][0]) # type: ignore[union-attr]
+                    (len(X) - 1) * X.batch_size + len(X[len(X) - 1][0])  # type: ignore[union-attr]
                 )
 
                 X = copy.deepcopy(X)
-                X._set_filter(inlier_mask) # type: ignore[union-attr]
+                X._set_filter(inlier_mask)  # type: ignore[union-attr]
 
                 if np.sum(inlier_mask) > 0:
                     pred = self.clf_.predict(X)
@@ -1238,7 +1242,9 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         return predictions
 
-    def fit_predict(self, X: Union[NDArray[np.floating], "XLoader"], y=None) -> Union[Sequence[Any], NDArray[Any]]:
+    def fit_predict(
+        self, X: Union[NDArray[np.floating], "XLoader"], y=None
+    ) -> Union[Sequence[Any], NDArray[Any]]:
         """
         Fit then predict.
 
@@ -1309,7 +1315,11 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.od_)
 
-    def figures_of_merit(self, predictions: Union[Sequence[Any], NDArray[Any]], actual: Union[Sequence[Any], NDArray[Any]]) -> dict[str, Any]:
+    def figures_of_merit(
+        self,
+        predictions: Union[Sequence[Any], NDArray[Any]],
+        actual: Union[Sequence[Any], NDArray[Any]],
+    ) -> dict[str, Any]:
         """
         Compute figures of merit.
 
@@ -1381,7 +1391,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         ), "unknown_class value is already taken"
 
         all_classes = [self.unknown_class] + np.unique(
-            np.concatenate((np.unique(actual), self.knowns_)) # type: ignore[arg-type]
+            np.concatenate((np.unique(actual), self.knowns_))  # type: ignore[arg-type]
         ).tolist()
         encoder = LabelEncoder()
         encoder.fit(all_classes)
