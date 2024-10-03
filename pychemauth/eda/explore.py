@@ -16,7 +16,7 @@ import tqdm
 from bokeh.io import output_notebook, show
 from bokeh.layouts import column
 from bokeh.models import ColumnDataSource
-from bokeh.models import Slider # type: ignore[attr-defined]
+from bokeh.models import Slider  # type: ignore[attr-defined]
 from bokeh.plotting import figure
 from bokeh.sampledata.periodic_table import elements
 from bokeh.transform import dodge, factor_cmap
@@ -24,6 +24,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from typing import Any, Callable, Union, Sequence
 from numpy.typing import NDArray
+
 
 class InspectData:
     """Class containing tools used to inspect raw data."""
@@ -33,7 +34,10 @@ class InspectData:
         pass
 
     @staticmethod
-    def cluster_elbow(X: Union[NDArray[np.floating], Sequence[Sequence[float]]], clusters: Sequence[int] = range(1, 11)) -> matplotlib.pyplot.Axes:
+    def cluster_elbow(
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        clusters: Sequence[int] = range(1, 11),
+    ) -> matplotlib.pyplot.Axes:
         """
         Compute cluster elbow metric.
 
@@ -84,7 +88,10 @@ class InspectData:
         return plt.gca()
 
     @staticmethod
-    def cluster_silhouette(X: Union[NDArray[np.floating], Sequence[Sequence[float]]], clustering: Any) -> matplotlib.pyplot.Axes:
+    def cluster_silhouette(
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        clustering: Any,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot silhouette curves.
 
@@ -165,7 +172,10 @@ class InspectData:
 
     @staticmethod
     def cluster_periodic_table(
-        X: pd.DataFrame, step: float = 0.1, hover: bool = False, notebook_url: str = "http://localhost:8888"
+        X: pd.DataFrame,
+        step: float = 0.1,
+        hover: bool = False,
+        notebook_url: str = "http://localhost:8888",
     ) -> None:
         """
         Interactively cluster elements in the periodic table.
@@ -770,7 +780,9 @@ class InspectData:
         return [converted[k] for k in sorted(converted.keys())]
 
     @staticmethod
-    def pairplot(df: pd.DataFrame, figname: Union[str, None] = None, **kwargs: Any) -> 'sns.PairGrid':
+    def pairplot(
+        df: pd.DataFrame, figname: Union[str, None] = None, **kwargs: Any
+    ) -> "sns.PairGrid":
         """
         Plot pairs of features against each other to look for trends.
 
