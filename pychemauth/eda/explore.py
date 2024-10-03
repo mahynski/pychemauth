@@ -572,7 +572,6 @@ class InspectData:
 
     @staticmethod
     def minimize_cluster_label_entropy(
-        self,
         cluster_id_to_feature_ids: dict[int, list],
         lookup: Callable[[Union[int, str]], Union[int, str]],
         X: pd.DataFrame,
