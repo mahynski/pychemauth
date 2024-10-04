@@ -4,6 +4,7 @@ Non-linear manifold-based dimensionality reduction methods classified with an el
 author: nam
 """
 import copy
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,11 +21,16 @@ from pychemauth.utils import (
     _occ_metrics,
 )
 
+from typing import Any, Callable, Union, Sequence, ClassVar
+from numpy.typing import NDArray
+
 
 class _PassthroughDR(TransformerMixin, BaseEstimator):
     """Allow data to pass through without modification."""
 
-    def __init__(self, n_components=0):
+    n_components: ClassVar[int]
+
+    def __init__(self, n_components: int = 0) -> None:
         """Initialize the class."""
         self.set_params(
             **{
@@ -32,19 +38,21 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "_PassthroughDR":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
         }
 
-    def fit(self, X, y=None):
+    def fit(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]], y=None
+    ) -> "_PassthroughDR":
         """Fit the model."""
         if y is not None:  # Just so this passes sklearn api checks
             X_, y_ = check_X_y(
@@ -72,7 +80,9 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
         self.is_fitted_ = True
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> Union[Sequence[Sequence[float]], NDArray[np.floating]]:
         """Transform the data."""
         check_is_fitted(self, "is_fitted_")
         X_ = check_array(
@@ -89,7 +99,9 @@ class _PassthroughDR(TransformerMixin, BaseEstimator):
 
         return X  # Just return original object
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]], y=None
+    ) -> Union[Sequence[Sequence[float]], NDArray[np.floating]]:
         """Fit and transform."""
         return self.fit(X).transform(X)
 
@@ -128,93 +140,69 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         Type I error rate (signficance level).
 
     dr_model : object, optional(default=`_PassthroughDR`)
-        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`,
-        and `get_params()` which must return a parameter indicating the dimensionality of
-        the space after transformation; typically this is "n_components".  By default, a
-        simple passthrough class is provided which leaves the data unchanged and performs
-        no dimensionality reduction.
+        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`, and `get_params()` which must return a parameter indicating the dimensionality of the space after transformation; typically this is "n_components".  By default, a simple passthrough class is provided which leaves the data unchanged and performs no dimensionality reduction.
 
     kwargs : dict, optional(default={})
         Keyword arguments to instantiate dr_model(**kwargs).
 
     ndims : str, optional(default="n_components")
-        Keyword in that corresponds to the dimensionality of the final space.
-        The `dr_model.get_params()` dictionary should contain this keyword.
+        Keyword in that corresponds to the dimensionality of the final space. The `dr_model.get_params()` dictionary should contain this keyword.
 
-    robust : scalar(bool), optional(default=True)
-        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
-        Mahalanobis distances.
+    robust : bool, optional(default=True)
+        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the Mahalanobis distances.
 
     center : str, optional(default="score")
-        If "score", center the ellipse in the score space; otherwise go from transformation
-        of the mean in the original data space.
+        If "score", center the ellipse in the score space; otherwise go from transformation of the mean in the original data space.
 
-    target_class : scalar(str or int), optional(default=None)
+    target_class : scalar(int or str), optional(default=None)
         The class used to fit the model; the rest are used to test specificity.
 
     use : str, optional(default="rigorous")
-        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc")
-        (default="rigorous"). See Ref. [1] for more details. "acc" refers to accuracy,
-        though it is not as conventional to use this for such a model.
+        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc") (default="rigorous"). See Ref. [1] for more details. "acc" refers to accuracy, though it is not as conventional to use this for such a model.
 
     Note
     ----
-    Essentially, an EllipticManifold model is trained for one target class. The target is
-    set when this class is instantiated and must be one of (but doesn't need
-    to be the only) class found in the training set (this is checked
-    automatically).  During testing (.score()), points are broken up by
-    class and based on the method, may be used to see how well the target class
-    can be distinguished from each alternative.  This allows you to pass points
-    that belong to other classes during training - they are just ignored.  This
-    is important for integration with other scikit-learn, etc. workflows.
+    Essentially, an EllipticManifold model is trained for one target class. The target is set when this class is instantiated and must be one of (but doesn't need to be the only) class found in the training set (this is checked automatically).  During testing (.score()), points are broken up by class and based on the method, may be used to see how well the target class can be distinguished from each alternative.  This allows you to pass points that belong to other classes during training - they are just ignored.  This is important for integration with other scikit-learn, etc. workflows.
 
-    Note that when you are optimizing the model using TEFF, TSPS is
-    computed by using the alternative classes.  In that case, the model choice
-    is influenced by these alternatives.  This is a "compliant" approach,
-    however, if you use TSNS instead of TEFF the model only uses information
-    about the target class itself.  This is a "rigorous" approach which can
-    be important to consider to avoid bias in the model.
+    Note that when you are optimizing the model using TEFF, TSPS is computed by using the alternative classes.  In that case, the model choice is influenced by these alternatives.  This is a "compliant" approach, however, if you use TSNS instead of TEFF the model only uses information about the target class itself.  This is a "rigorous" approach which can be important to consider to avoid bias in the model.
 
-    When TEFF is used to choose a model, this is a "compliant" approach,
-    whereas when TSNS is used instead, this is a "rigorous" approach.
-    In rigorous models, alpha should be fixed as other hyperparameters are adjusted
-    to match this target; in compliant approaches this can be allowed to vary
-    and the model with the best efficiency is selected. [1]
+    When TEFF is used to choose a model, this is a "compliant" approach, whereas when TSNS is used instead, this is a "rigorous" approach. In rigorous models, alpha should be fixed as other hyperparameters are adjusted to match this target; in compliant approaches this can be allowed to vary and the model with the best efficiency is selected. [1]
 
-    This resembles an "unequal class model" (UNEQ), but fits the elliptical
-    boundary after a (possibly non-linear) dimensionality reduction (DR) has taken
-    place. If no DR is used, then this is just an UNEQ model. [4] If PCA is used
-    this resembles SIMCA, but uses the score distance only to determine class
-    membership (some variants of SIMCA use only the error or "outer distance",
-    while others like DD-SIMCA use both the outer distance and score distance).
+    This resembles an "unequal class model" (UNEQ), but fits the elliptical boundary after a (possibly non-linear) dimensionality reduction (DR) has taken place. If no DR is used, then this is just an UNEQ model. [4] If PCA is used this resembles SIMCA, but uses the score distance only to determine class membership (some variants of SIMCA use only the error or "outer distance", while others like DD-SIMCA use both the outer distance and score distance).
 
     References
     ----------
-    [1] "Rigorous and compliant approaches to one-class classification,"
-    Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
-    Lab. Sys. (2016) 89-96.
+    [1] "Rigorous and compliant approaches to one-class classification," Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell. Lab. Sys. (2016) 89-96.
 
-    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
 
-    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [4] "Multivariate class modeling for the verification of food-authenticity
-    claims," Oliveri, P., and Downey, G., TrAC Trends in Anal. Chem. 35 (2012) 74-86.
+    [4] of Chemometrics 28 (2014) 429-438.
+
+    [4] "Multivariate class modeling for the verification of food-authenticity claims," Oliveri, P., and Downey, G., TrAC Trends in Anal. Chem. 35 (2012) 74-86.
     """
+
+    alpha: ClassVar[float]
+    dr_model: ClassVar[Any]
+    kwargs: ClassVar[dict]
+    ndims: ClassVar[str]
+    robust: ClassVar[bool]
+    center: ClassVar[str]
+    target_class: ClassVar[Union[int, str, None]]
+    use: ClassVar[str]
 
     def __init__(
         self,
-        alpha=0.05,
-        dr_model=_PassthroughDR,
-        kwargs={},
-        ndims="n_components",
-        robust=True,
-        center="score",
-        target_class=None,
-        use="rigorous",
-    ):
+        alpha: float = 0.05,
+        dr_model: Any = _PassthroughDR,
+        kwargs: dict = {},
+        ndims: str = "n_components",
+        robust: bool = True,
+        center: str = "score",
+        target_class: Union[int, str, None] = None,
+        use: str = "rigorous",
+    ) -> None:
         """Instantiate the classifier."""
         self.set_params(
             **{
@@ -229,13 +217,13 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "EllipticManifold_Authenticator":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         params = {
             "alpha": self.alpha,
@@ -249,7 +237,13 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         }
         return params
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "EllipticManifold_Authenticator":
         """
         Fit the EllipticManifold authenticator model.
 
@@ -258,24 +252,19 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
-            Class labels or indices. Should include some examples of
-            "target_class".
+        y : array_like(int or str, ndim=1)
+            Class labels or indices. Should include some examples of "target_class".
 
         Returns
         -------
-        self : EllipticManifold_Authenticator
+        self : `EllipticManifold_Authenticator`
             Fitted model.
 
         Note
         ----
-        Only data of the target class will be used for fitting, though more
-        can be provided. This is important in pipelines, for example, when
-        SMOTE is used to up-sampled minority classes; in that case, those
-        must be part of the pipeline for those steps to work automatically.
-        However, a user may manually provide only the data of interest.
+        Only data of the target class will be used for fitting, though more can be provided. This is important in pipelines, for example, when SMOTE is used to up-sampled minority classes; in that case, those must be part of the pipeline for those steps to work automatically. However, a user may manually provide only the data of interest.
         """
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -284,7 +273,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        self.n_features_in_ = X.shape[1]
+        self.n_features_in_ = X_.shape[1]
         self.classes_ = [True, False]  # For sklearn
 
         # Fit model to target data
@@ -297,14 +286,18 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             center=self.center,
         )
 
-        if self.target_class not in np.unique(y):
+        if self.target_class not in np.unique(y_):
             raise Exception("target_class not in training set")
-        self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
+        self.__model_.fit(
+            X_[y_ == self.target_class], y_[y_ == self.target_class]
+        )
         self.is_fitted_ = True
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Transform into the `dr_model` subspace.
 
@@ -323,20 +316,26 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         This is necessary for scikit-learn compatibility.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
             ensure_2d=True,
             force_all_finite=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        return self.__model_.transform(X)
+        return self.__model_.transform(X_)
 
-    def fit_transform(self, X, y):
+    def fit_transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> NDArray[np.floating]:
         """
         Fit then transform.
 
@@ -345,9 +344,8 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
-            Class labels or indices. Should include some examples of
-            "target_class".
+        y : array_like(int or str, ndim=1)
+            Class labels or indices. Should include some examples of "target_class".
 
         Returns
         -------
@@ -360,7 +358,9 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         """
         return self.fit(X, y).transform(X)
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.bool_]:
         """
         Make a prediction.
 
@@ -375,20 +375,22 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             Whether or not each point is an inlier.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
             ensure_2d=True,
             force_all_finite=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        return self.__model_.predict(X)
+        return self.__model_.predict(X_)
 
-    def predict_proba(self, X):
+    def predict_proba(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
@@ -400,37 +402,42 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            Probability that each point is an inlier.  First column
-            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
+            Probability that each point is an inlier.  First column is NOT inlier, 1-p(x), second column is inlier probability, p(x).
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
             ensure_2d=True,
             force_all_finite=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        return self.__model_.predict_proba(X)
+        return self.__model_.predict_proba(X_)
 
     @property
-    def model(self):
+    def model(self) -> "EllipticManifold_Authenticator":
         """
         Return the trained undelying EllipticManifold_Model.
 
         Returns
         -------
         model : EllipticManifold_Model
-            The trained EllipticManifold_Model being used.
+            The trained `EllipticManifold_Model` being used.
         """
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__model_)
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> float:
         r"""
         Score the model.
 
@@ -439,25 +446,20 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array_like(int or str, ndim=1)
             Class labels or indices.
 
         Returns
         -------
         score : scalar(float)
-            The model's score. For rigorous models this is the negative
-            squared deviation of TSNS from (1-:math:`\alpha`); for compliant
-            models this is the TEFF.
+            The model's score. For rigorous models this is the negative squared deviation of TSNS from (1-:math:`\alpha`); for compliant models this is the TEFF.
 
         Note
         ----
-        The "rigorous" approach uses only the target class to score
-        the model and returns -(TSNS - (1-:math:`\alpha`))^2; the "compliant"
-        approach returns TEFF. In both cases, a larger output is a
-        "better" model.
+        The "rigorous" approach uses only the target class to score the model and returns -(TSNS - (1-:math:`\alpha`))^2; the "compliant" approach returns TEFF. In both cases, a larger output is a "better" model.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -466,37 +468,43 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         if self.use.lower() == "rigorous":
             # Make sure we have the target class to test on
-            assert self.target_class in set(np.unique(y))
+            assert self.target_class in set(np.unique(y_))
 
-            m = self.metrics(X, y)
+            m = self.metrics(X_, y_)
             return -((m["TSNS"] - (1 - self.alpha)) ** 2)
         elif self.use.lower() == "compliant":
             # Make sure we have alternatives to test on
-            a = set(np.unique(y))
+            a = set(np.unique(y_))
             a.discard(self.target_class)
             assert len(a) > 0
 
             # Make sure we have the target class to test on
-            assert self.target_class in set(np.unique(y))
+            assert self.target_class in set(np.unique(y_))
 
-            m = self.metrics(X, y)
+            m = self.metrics(X_, y_)
             return m["TEFF"]
         elif self.use.lower() == "acc":
             # Technically we do not need the target class to be present to
             # compute accuracy.
-            m = self.metrics(X, y)
+            m = self.metrics(X_, y_)
             return m["ACC"]
         else:
             raise ValueError("Unrecognized setting use=" + str(self.use))
 
-    def metrics(self, X, y):
+    def metrics(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> dict[str, float]:
         """
         Compute figures of merit for the model.
 
@@ -505,23 +513,20 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         X : array_like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array_like(int or str, ndim=1)
             Class labels or indices.
 
         Returns
         -------
-        metrics : dict(str:float)
+        metrics : dict(str, float)
             Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS", "ACC"}.
 
         Note
         ----
-        If using a set with only the target class present, then
-        TSPS = np.nan and TEFF = TSNS.  If only alternatives present,
-        sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF
-        as a geometric mean of TSNS and TSPS.
+        If using a set with only the target class present, then TSPS = np.nan and TEFF = TSNS.  If only alternatives present, sets TSNS = np.nan and TEFF = TSPS. Otherwise returns TEFF as a geometric mean of TSNS and TSPS.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -530,14 +535,14 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         metrics, self.__alternatives_ = _occ_metrics(
-            X=X,
-            y=y,
+            X=X_,
+            y=y_,
             target_class=self.target_class,
             predict_function=self.predict,
         )
@@ -581,115 +586,75 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         Type I error rate (signficance level).
 
     dr_model : object, optional(default=`_PassthroughDR`)
-        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`,
-        and `get_params()` which must return a parameter indicating the dimensionality of
-        the space after transformation; typically this is "n_components".  By default, a
-        simple passthrough class is provided which leaves the data unchanged and performs
-        no dimensionality reduction.
+        Dimensionality reduction model, such as PCA; must support `fit()`, `transform()`, and `get_params()` which must return a parameter indicating the dimensionality of the space after transformation; typically this is "n_components".  By default, a simple passthrough class is provided which leaves the data unchanged and performs no dimensionality reduction.
 
     kwargs : dict, optional(default={})
         Keyword arguments to instantiate dr_model(**kwargs).
 
     ndims : str, optional(default="n_components")
-        Keyword in that corresponds to the dimensionality of the final space.
-        The `dr_model.get_params()` dictionary should contain this keyword.
+        Keyword in that corresponds to the dimensionality of the final space. The `dr_model.get_params()` dictionary should contain this keyword.
 
-    robust : scalar(bool), optional(default=True)
-        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the
-        Mahalanobis distances.
+    robust : bool, optional(default=True)
+        Whether or not use a robust estimate of the covariance matrix [2,3] to compute the Mahalanobis distances.
 
     center : str, optional(default="score")
-        If "score", center the ellipse in the score space; otherwise go from transformation
-        of the mean in the original data space.
+        If "score", center the ellipse in the score space; otherwise go from transformation of the mean in the original data space.
 
     Note
     ----
     This process can be summarized as follows.  For each individual class:
 
-    Step 0: Outlier removal.  In principle, it may be optimal to remove outliers before any analysis
-    so that they do not impact the development of the manifold / dimensionality reduction.  For high
-    dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction
-    step is robust against outliers (e.g., ROBPCA) then this might be not be necessary; however, in
-    general, consider adding this to the pipeline before training since this is not handled
-    internally by this model.
+    Step 0: Outlier removal.  In principle, it may be optimal to remove outliers before any analysis so that they do not impact the development of the manifold / dimensionality reduction.  For high dimensional data, an isolation forest is often very efficient.  If the dimensionality reduction step is robust against outliers (e.g., ROBPCA) then this might be not be necessary; however, in general, consider adding this to the pipeline before training since this is not handled internally by this model.
 
-    Step 1: Perform a dimensionality reduction (DR) step using some model to obtain
-    a projection ("scores" or "embedding").
+    Step 1: Perform a dimensionality reduction (DR) step using some model to obtain a projection ("scores" or "embedding").
 
-    Step 2: Following [1], assume each class forms a normally distributed subset
-    with the known means (*see Note below) in the score/embedding space.  The covariance matrix is used to
-    compute the `Mahalanobis distance <https://en.wikipedia.org/wiki/Mahalanobis_distance>`_.
-    to its class center.
+    Step 2: Following [1], assume each class forms a normally distributed subset with the known means (*see Note below) in the score/embedding space.  The covariance matrix is used to compute the `Mahalanobis distance <https://en.wikipedia.org/wiki/Mahalanobis_distance>`_. to its class center.
 
-    Step 3: Assuming that these distances follow the :math:`\Chi{^2}` distribution, a
-    soft discrimination rule can be constructed: sample i belongs to class k if the
-    Mahalanobis distance is less than a threshold:
+    Step 3: Assuming that these distances follow the :math:`\Chi{^2}` distribution, a soft discrimination rule can be constructed: sample `i` belongs to class `k` if the Mahalanobis distance is less than a threshold:
 
     :math:`$c_{crit} = \Chi^{-2}(1 - \alpha; d)$`
 
-    where d is the dimensionality of the score space.
+    where `d` is the dimensionality of the score space.
 
-    This is similar to using scikit-learn's EllipticEnvelope (EE) after some dimensionality
-    reduction step; EE essentially learns an ellipse around a known class, with
-    some predefined amount of the observations set to be "included."  The basic
-    difference is that a statistical confidence limit (:math:`\alpha`) can be directly
-    specified here. EE's "contamination" is approximately :math:`\alpha` (type I error
-    rate); however, this seems to lack some rigor. Here the :math:`\Chi{^2}`
-    distribution has some degrees of freedom associated with based on the
-    dimensionality of the space, whereas EE just takes the fraction as a hyperparameter
-    with no context. As a result, many of the class members and functions follow a
-    similar API.
+    This is similar to using scikit-learn's EllipticEnvelope (EE) after some dimensionality reduction step; EE essentially learns an ellipse around a known class, with some predefined amount of the observations set to be "included."  The basic difference is that a statistical confidence limit (:math:`\alpha`) can be directly specified here. EE's "contamination" is approximately :math:`\alpha` (type I error rate); however, this seems to lack some rigor. Here the :math:`\Chi{^2}` distribution has some degrees of freedom associated with based on the dimensionality of the space, whereas EE just takes the fraction as a hyperparameter with no context. As a result, many of the class members and functions follow a similar API.
 
-    However, Mahalanobis distances are known to suffer from "masking" (multiple
-    outliers skew the training so no individual seems "too bad"). EE uses the
-    robust algorithm from [2,3] which aims to prevent this.
+    However, Mahalanobis distances are known to suffer from "masking" (multiple outliers skew the training so no individual seems "too bad"). EE uses the robust algorithm from [2,3] which aims to prevent this.
 
-    scikit-learn has an excellent demonstration of this here:
-    https://scikit-learn.org/stable/auto_examples/covariance/plot_mahalanobis_\
-    distances.html?highlight=outlier%20detection
+    scikit-learn has an excellent demonstration of this here: https://scikit-learn.org/stable/auto_examples/covariance/plot_mahalanobis_distances.html?highlight=outlier%20detection
 
-    As a result, you can select either the conventional empirical method or the
-    robust method to compute the Mahalanobis distances.
+    As a result, you can select either the conventional empirical method or the robust method to compute the Mahalanobis distances.
 
-    The class center can be computed in 2 ways.  First, the mean of the
-    X (and y) data can be taken and projected.  This is common in other approaches such
-    as in [1] where there is justification to enforce that the class SHOULD have
-    a mean at a fixed location (i.e., in a projection of a one-hot-encoding).
-    Alternatively, the empirical mean in the score space/embedding can be
-    taken.  We perform the latter by default; this operates more closely to a
-    standard scikit-learn pipeline where a DR step occurs, then an EE boundary is
-    fit to the embedding, but contrasts with some other published approaches.
+    The class center can be computed in 2 ways.  First, the mean of the `X` (and `y`) data can be taken and projected.  This is common in other approaches such as in [1] where there is justification to enforce that the class SHOULD have a mean at a fixed location (i.e., in a projection of a one-hot-encoding). Alternatively, the empirical mean in the score space/embedding can be taken.  We perform the latter by default; this operates more closely to a standard scikit-learn pipeline where a DR step occurs, then an EE boundary is fit to the embedding, but contrasts with some other published approaches.
 
-    Data standardization/autoscaling is generally recommended since manifolds
-    are determined based on distances (metrics may vary) between points in the
-    training data, so this should be meaningful or at least "fair."
+    Data standardization/autoscaling is generally recommended since manifolds are determined based on distances (metrics may vary) between points in the training data, so this should be meaningful or at least "fair."
 
     References
     ----------
-    [1] "Multiclass partial least squares discriminant analysis: Taking the
-    right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
-    Chemometrics (2018). https://doi.org/10.1002/cem.3030.
+    [1] "Multiclass partial least squares discriminant analysis: Taking the right way - A critical tutorial," Pomerantsev and Rodionova, Journal of Chemometrics (2018). https://doi.org/10.1002/cem.3030.
 
-    [2] "A fast algorithm for the minimum covariance determinant estimator,"
-    Rousseeuw, Peter J., and Katrien Van Driessen, Technometrics 41 (1999)
-    212-223. https://www.tandfonline.com/doi/abs/10.1080/00401706.1999.10485670
+    [2] "A fast algorithm for the minimum covariance determinant estimator," Rousseeuw, Peter J., and Katrien Van Driessen, Technometrics 41 (1999) 212-223. https://www.tandfonline.com/doi/abs/10.1080/00401706.1999.10485670
 
-    [3] "Least median of squares regression," P. J. Rousseeuw., J. Am Stat Ass.,
-    79 (1984).
+    [3] "Least median of squares regression," P. J. Rousseeuw., J. Am Stat Ass., 79 (1984).
 
-    [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [4] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
+
+    alpha: ClassVar[float]
+    dr_model: ClassVar[Any]
+    kwargs: ClassVar[dict]
+    ndims: ClassVar[str]
+    robust: ClassVar[bool]
+    center: ClassVar[str]
 
     def __init__(
         self,
-        alpha,
-        dr_model=_PassthroughDR,
-        kwargs={},
-        ndims="n_components",
-        robust=True,
-        center="score",
-    ):
+        alpha: float,
+        dr_model: Any = _PassthroughDR,
+        kwargs: dict = {},
+        ndims: str = "n_components",
+        robust: bool = True,
+        center: str = "score",
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -702,13 +667,13 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "EllipticManifold_Model":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         params = {
             "alpha": self.alpha,
@@ -720,10 +685,15 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         }
         return params
 
-    def _sanity(self, X, y, init=False):
+    def _sanity(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[Any], NDArray[Any], None],
+        init: bool = False,
+    ) -> tuple[NDArray[np.floating], Union[NDArray[Any], None]]:
         """Check data format and sanity."""
         if y is None:
-            X = check_array(
+            X_ = check_array(
                 X,
                 accept_sparse=False,
                 dtype=np.float64,
@@ -731,8 +701,9 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
                 force_all_finite=True,
                 copy=False,
             )
+            y_ = None
         else:
-            X, y = check_X_y(
+            X_, y_ = check_X_y(
                 X,
                 y,
                 accept_sparse=False,
@@ -744,33 +715,40 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             )
 
         if init:
-            self.n_features_in_ = X.shape[1]
+            self.n_features_in_ = X_.shape[1]
         else:
-            if X.shape[1] != self.n_features_in_:
+            if X_.shape[1] != self.n_features_in_:
                 raise ValueError(
                     "The number of features in predict is different from the number of features in fit."
                 )
 
-        return X, y
+        return X_, y_
 
-    def fit(self, X, y=None):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> "EllipticManifold_Model":
         """
         Fit the dimensionality reduction model.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         y : array_like(int or str, ndim=1), optional(default=None)
-            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
-            If passed, it is checked that they are all identical and this
-            label is used; otherwise the name "Training Class" is assigned.
+            Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods). If passed, it is checked that they are all identical and this label is used; otherwise the name "Training Class" is assigned.
 
         Returns
         -------
-        self : EllipticManifold_Model
+        self : `EllipticManifold_Model`
             Fitted model.
 
         Note
@@ -846,35 +824,45 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Perform dimensionality reduction on X into the score space.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
         scores : ndarray(float, ndim=2)
-            Coordinates of X in lower dimensional space.
+            Coordinates of `X` in lower dimensional space.
         """
         check_is_fitted(self, "is_fitted_")
         X, _ = self._sanity(X, y=None)
 
         return self.model_.transform(X)
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> NDArray[np.floating]:
         """
         Fit the dimensionality reduction model and reduce X into the score space.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         y : array_like(float, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
@@ -888,15 +876,16 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return self.transform(X)
 
-    def mahalanobis(self, X):
+    def mahalanobis(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Compute the Mahalanobis distance for each sample.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
@@ -921,15 +910,16 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return np.sqrt(distances2)
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.bool_]:
         """
         Predict if points are inliers or not.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
@@ -947,17 +937,26 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return results
 
-    def fit_predict(self, X, y=None):
+    def fit_predict(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> NDArray[np.bool_]:
         """
         Fit the dimensionality reduction model and then predict inliers.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array_like(int or str, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
@@ -969,15 +968,16 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return self.predict(X)
 
-    def score_samples(self, X):
+    def score_samples(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Score observations.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
@@ -986,21 +986,21 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         Note
         ----
-        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
-        distance.
+        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis distance.
         """
         check_is_fitted(self, "is_fitted_")
         return -self.mahalanobis(X)
 
-    def decision_function(self, X):
+    def decision_function(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
@@ -1009,9 +1009,7 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         Note
         ----
-        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis
-        distance shifted by the cutoff distance, so f < 0 implies an outlier
-        while f > 0 implies an inlier.
+        Following scikit-learn's EllipticEnvelope, this returns the negative Mahalanobis distance shifted by the cutoff distance, so f < 0 implies an outlier while f > 0 implies an inlier.
 
         References
         ----------
@@ -1020,35 +1018,29 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         check_is_fitted(self, "is_fitted_")
         return self.score_samples(X) - (-np.sqrt(self.__d_crit_))
 
-    def predict_proba(self, X):
+    def predict_proba(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
         -------
         probability : ndarray(float, ndim=2)
-            2D array as logistic function of the decision_function(). First column
-            is NOT inlier, 1-p(x), second column is inlier probability, p(x).
+            2D array as logistic function of the decision_function(). First column is NOT inlier, 1-p(x), second column is inlier probability, p(x).
 
         Note
         ----
-        Computes the logistic(decision_function(X, y)) as the
-        transformation of the decision function.  This function is > 0
-        for inliers so predict_proba(X, y) > 0.5 means inlier, < 0.5 means
-        outlier.
+        Computes the logistic(decision_function(`X`, `y`)) as the transformation of the decision function.  This function is > 0 for inliers so predict_proba(`X`, `y`) > 0.5 means inlier, < 0.5 means outlier.
 
         References
         ----------
-        See SHAP documentation for a discussion on the utility and impact
-        of "squashing functions": https://shap.readthedocs.io/en/latest/\
-        example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html\
-        #Probability-space-explaination
+        See SHAP documentation for a discussion on the utility and impact of "squashing functions": https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/model_agnostic/Squashing%20Effect.html#Probability-space-explaination
 
         See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
         """
@@ -1056,15 +1048,19 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return _logistic_proba(self.decision_function(X))
 
-    def loss(self, X, y, eps=1.0e-15):
+    def loss(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[int], NDArray[np.integer]],
+        eps: float = 1.0e-15,
+    ) -> float:
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         y : array_like(int, ndim=1)
             Correct labels; +1 for inlier, 0 otherwise.
@@ -1099,15 +1095,18 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Return the accuracy of the model.
 
         Parameters
         ----------
         X : array_like(float, ndim=2)
-            Columns of features; observations are rows - will be converted to
-            numpy array automatically.
+            Columns of features; observations are rows - will be converted to numpy array automatically.
 
         y : array_like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
@@ -1120,7 +1119,11 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         check_is_fitted(self, "is_fitted_")
         return self.accuracy(X, y)
 
-    def accuracy(self, X, y):
+    def accuracy(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Get the fraction of correct predictions.
 
@@ -1139,14 +1142,19 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             Accuracy of predictions.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = self._sanity(X, y, init=False)
-        if not isinstance(y[0], (np.bool_, bool)):
+        X_, y_ = self._sanity(X, y, init=False)
+        if y_.dtype != "bool":  # type: ignore[union-attr]
             raise ValueError("y must be provided as a Boolean array")
-        X_pred = self.predict(X)
+        X_pred = self.predict(X_)
 
-        return np.sum(X_pred == y) / X_pred.shape[0]
+        return np.sum(X_pred == y_) / X_pred.shape[0]
 
-    def extremes_plot(self, X, upper_frac=0.25, ax=None):
+    def extremes_plot(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        upper_frac: float = 0.25,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot an "extremes plot" [4] to evaluate the quality of the model.
 
@@ -1156,25 +1164,21 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
             Data to evaluate the number of outliers (not inliers) in.
 
         upper_frac : scalar(float), optional(default=0.25)
-            Count the number of outliers (not inliers) for alpha values corresponding
-            to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
+            Count the number of outliers (not inliers) for alpha values corresponding to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted.
 
         Note
         ----
-        This modifies the alpha value (type I error rate), keeping all other parameters
-        fixed, and computes the number of expected non-inliers (:math:`n_{\rm exp}`) vs. the number
-        observed (:math:`n_{\rm obs}`).  Theoretically, :math:`n_{\rm exp} = \alpha*N_{\rm tot}`.
+        This modifies the alpha value (type I error rate), keeping all other parameters fixed, and computes the number of expected non-inliers (:math:`n_{\rm exp}`) vs. the number observed (:math:`n_{\rm obs}`).  Theoretically, :math:`n_{\rm exp} = \alpha*N_{\rm tot}`.
 
-        The 95% tolerance limit is given in black.  Points which fall outside these
-        bounds are highlighted.
+        The 95% tolerance limit is given in black.  Points which fall outside these bounds are highlighted.
         """
         check_is_fitted(self, "is_fitted_")
         X_, _ = self._sanity(X, y=None, init=False)
@@ -1182,14 +1186,14 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
-        n_observed = []
+        n_observed_ = []
         for a in alpha_values:
             params = self.get_params()
             params["alpha"] = a
             model_ = EllipticManifold_Model(**params)
             model_.fit(X)
-            n_observed.append(N_tot - np.sum(model_.predict(X)))
-        n_observed = np.array(n_observed)
+            n_observed_.append(N_tot - np.sum(model_.predict(X)))
+        n_observed = np.array(n_observed_)
 
         if ax is None:
             fig = plt.figure()
@@ -1213,7 +1217,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return ax
 
-    def visualize(self, X_mats, labels, ax=None):
+    def visualize(
+        self,
+        X_mats: list,
+        labels: list[str],
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot the results automatically in 1 or 2 dimensions.
 
@@ -1225,12 +1234,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         labels : list(str)
             Labels for each feature matrix.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
-            Axes to plot results on.  If None, a new figure is created.
+        ax : matplotlib.pyplot.Axes, optional(default=None)
+            Axes to plot results on.  If `None`, a new figure is created.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1242,7 +1251,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         else:
             raise Exception("Cannot visualize {} dimensions".format(n))
 
-    def _visualize_2d(self, X_mats, labels, axes=None):
+    def _visualize_2d(
+        self,
+        X_mats: list,
+        labels: list[str],
+        axes: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot 2D results.
 
@@ -1254,12 +1268,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         labels : list(str)
             Labels for each feature matrix.
 
-        axes : matplotlib.pyplot.axes, optional(default=None)
-            Axes to plot results on.  If None, a new figure is created.
+        axes : matplotlib.pyplot.Axes, optional(default=None)
+            Axes to plot results on.  If `None`, a new figure is created.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1303,7 +1317,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
 
         return ax
 
-    def _visualize_1d(self, X_mats, labels, axes=None):
+    def _visualize_1d(
+        self,
+        X_mats: list,
+        labels: list[str],
+        axes: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot 1D results.
 
@@ -1315,12 +1334,12 @@ class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
         labels : list(str)
             Labels for each feature matrix.
 
-        axes : matplotlib.pyplot.axes, optional(default=None)
-            Axes to plot results on.  If None, a new figure is created.
+        axes : matplotlib.pyplot.Axes, optional(default=None)
+            Axes to plot results on.  If `None`, a new figure is created.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
