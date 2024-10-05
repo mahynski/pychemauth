@@ -4,7 +4,7 @@ Load datasets.
 author: nam
 """
 import io
-import requests
+import requests  # type: ignore[import-untyped]
 import shutil
 import tqdm
 import os
@@ -17,22 +17,22 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from pychemauth.utils import NNTools, write_dataset
 
+from typing import Union, Any
 
-def load_pgaa(return_X_y=False, as_frame=False):
+
+def load_pgaa(
+    return_X_y: bool = False, as_frame: bool = False
+) -> Union[dict, tuple]:
     """
     Load prompt gamma ray activation analysis dataset.
 
     Parameters
     ----------
     return_X_y : bool, optional(default=False)
-        If True, returns (data, target) instead of a Bunch object.
-        See below for more information about the data and target object.
+        If True, returns (data, target) instead of a Bunch object. See below for more information about the data and target object.
 
     as_frame : bool, optional(default=False)
-        If True, the data is a pandas DataFrame including columns with appropriate dtypes
-        (numeric). The target is a pandas DataFrame or Series depending on the number of
-        target columns. If return_X_y is True, then (data, target) will be pandas
-        DataFrames or Series as described below.
+        If True, the data is a pandas DataFrame including columns with appropriate dtypes (numeric). The target is a pandas DataFrame or Series depending on the number of target columns. If `return_X_y` is True, then (data, target) will be pandas DataFrames or Series as described below.
 
     Returns
     -------
@@ -40,10 +40,10 @@ def load_pgaa(return_X_y=False, as_frame=False):
         Dictionary-like object, with the following attributes.
 
         data : {ndarray, DataFrame}
-            The data matrix. If as_frame=True, data will be a pandas DataFrame.
+            The data matrix. If `as_frame=True`, data will be a pandas DataFrame.
 
         target : {ndarray, Series}
-            The classification target. If as_frame=True, target will be a pandas Series.
+            The classification target. If `as_frame=True`, target will be a pandas Series.
 
         feature_names : list
             The names of the dataset columns.
@@ -52,15 +52,13 @@ def load_pgaa(return_X_y=False, as_frame=False):
             The names of target classes.
 
         frame : DataFrame
-            Only present when as_frame=True. DataFrame with data and target.
+            Only present when `as_frame=True`. DataFrame with data and target.
 
         DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
-        A tuple of two ndarrays by default. The first contains a 2D array
-        with each row representing one sample and each column representing the features.
-        The second array contains the target samples.
+        A tuple of two ndarrays by default. The first contains a 2D array with each row representing one sample and each column representing the features. The second array contains the target samples.
 
     Notes
     -----
@@ -70,9 +68,7 @@ def load_pgaa(return_X_y=False, as_frame=False):
 
     References
     ----------
-    [1] Mahynski, N.A., Monroe, J.I., Sheen, D.A. et al. Classification and authentication of
-    materials using prompt gamma ray activation analysis. J Radioanal Nucl Chem 332, 3259–3271
-    (2023). https://doi.org/10.1007/s10967-023-09024-x
+    [1] Mahynski, N.A., Monroe, J.I., Sheen, D.A. et al. Classification and authentication of materials using prompt gamma ray activation analysis. J Radioanal Nucl Chem 332, 3259–3271 (2023). https://doi.org/10.1007/s10967-023-09024-x
     """
     # Load data directly from the web so this will reflect any future changes.
     url = "https://raw.githubusercontent.com/mahynski/pgaa-material-authentication/master/data/raw/centers.csv"
@@ -118,19 +114,19 @@ centers (energy in keV) are given as the feature_names. y contains the name of e
 
 
 def make_pgaa_images(
-    transformer,
-    exclude_classes=None,
-    directory=None,
-    overwrite=False,
-    fmt="npy",
-    valid_range=(0, 4056),
-    renormalize=True,
-    test_size=0.0,
-    random_state=42,
-    batch_size=10,
-    shuffle=True,
-    return_spectra=False,
-):
+    transformer: Any,
+    exclude_classes: Union[list, None] = None,
+    directory: Union[str, None] = None,
+    overwrite: bool = False,
+    fmt: str = "npy",
+    valid_range: tuple[int, int] = (0, 4056),
+    renormalize: bool = True,
+    test_size: float = 0.0,
+    random_state: int = 42,
+    batch_size: int = 10,
+    shuffle: bool = True,
+    return_spectra: bool = False,
+) -> tuple:
     """
     Create iteratable dataset of 2D single-channel "images" from the included example dataset of 1D PGAA spectra.
 
@@ -142,7 +138,7 @@ def make_pgaa_images(
         A transformer which follows sklearn's estimator API. The `.fit_transform` method will be called to fit the transformer to the training data.
 
     exclude_classes : array-like, optional(default=None)
-        Iterable containing classes to exlude as strings.  See `pychemauth.datasets.load_pgaa` for classes in this dataset.
+        List containing classes to exlude as strings.  See `pychemauth.datasets.load_pgaa` for classes in this dataset.
 
     directory : str, optional(default=None)
         Directory to save transformed images to. If `None` the images are returned as a numpy array in memory; otherwise an `XLoader` is returned.  Within `directory` both "train" and "test" subdirectories are created with the data split accordingly.
@@ -172,7 +168,7 @@ def make_pgaa_images(
         If `directory` is specified, whether the data loader which is returned should shuffle the data after each epoch.
 
     return_spectra : bool, optional(default=False)
-        If True, this will also return the 1D PGAA spectra in the same order as the 2D "imaged" data in a pandas.DataFrame.  This can be convenient for comparison or plotting purposes.
+        If True, this will also return the 1D PGAA spectra in the same order as the 2D "imaged" data in a pandas DataFrame.  This can be convenient for comparison or plotting purposes.
 
     Returns
     -------
@@ -196,7 +192,7 @@ def make_pgaa_images(
             Encoder that transforms y from string classes to integers.
 
         spectra : tuple(pandas.DataFrame, pandas.DataFrame or None)
-            Original PGAA spectra, if and only if, `return_spectra=True`. This is provided as a tuple of (X_train, X_test) or (X_train, None) if `test_size=0`.
+            Original PGAA spectra, if and only if, `return_spectra=True`. This is provided as a tuple of (`X_train`, `X_test`) or (`X_train`, `None`) if `test_size=0`.
 
     If `directory` is provided, then the data is transformed and saved to disk so loaders are returned as:
         train_loader : utils.NNTools.XLoader
@@ -206,7 +202,7 @@ def make_pgaa_images(
             Dataset loader for the test set.
 
         encoder : sklearn.preprocessing.LabelEncoder
-            Encoder that transforms y from string classes to integers.
+            Encoder that transforms `y` from string classes to integers.
 
         spectra : tuple(pandas.DataFrame, pandas.DataFrame or None)
             Original PGAA spectra, if and only if, `return_spectra=True`. This is provided as a tuple of (X_train, X_test) or (X_train, None) if `test_size=0`.
@@ -217,7 +213,7 @@ def make_pgaa_images(
 
     Classes are encoded as integers.
 
-    If `directory` is provided so that data is transformed and written to disk, the `transformer` is fit repeatedly on each individual data point so it does not reflect any average over all X_train.
+    If `directory` is provided so that data is transformed and written to disk, the `transformer` is fit repeatedly on each individual data point so it does not reflect any average over all `X_train`.
 
     Raises
     ------
@@ -251,7 +247,7 @@ def make_pgaa_images(
     # Exclude any classes desired
     if hasattr(exclude_classes, "__iter__"):
         mask = np.array([False] * X.shape[0])
-        for class_ in exclude_classes:
+        for class_ in exclude_classes:  # type: ignore[union-attr]
             mask = mask | (y == class_)
         X = X[~mask]
         y = y[~mask]
@@ -334,7 +330,7 @@ def make_pgaa_images(
         if overwrite and os.path.isdir(directory):
             shutil.rmtree(directory)  # Completely wipe old directory
 
-        loaders = {"train": None, "test": None}
+        loaders = {}
         for dset_, y_, subdir_ in [
             (X_train, y_train, "train"),
             (X_test, y_test, "test"),
@@ -376,21 +372,19 @@ def make_pgaa_images(
             return loaders["train"], loaders["test"], encoder
 
 
-def load_stamp2010(return_X_y=False, as_frame=False):
+def load_stamp2010(
+    return_X_y: bool = False, as_frame: bool = False
+) -> Union[dict, tuple]:
     """
     Load seabird tissue archival and monitoring project (STAMP) 1999-2010 dataset.
 
     Parameters
     ----------
     return_X_y : bool, optional(default=False)
-        If True, returns (data, target) instead of a Bunch object.
-        See below for more information about the data and target object.
+        If True, returns (data, target) instead of a Bunch object. See below for more information about the data and target object.
 
     as_frame : bool, optional(default=False)
-        If True, the data is a pandas DataFrame including columns with appropriate dtypes
-        (numeric). The target is a pandas DataFrame or Series depending on the number of
-        target columns. If return_X_y is True, then (data, target) will be pandas
-        DataFrames or Series as described below.
+        If True, the data is a pandas DataFrame including columns with appropriate dtypes (numeric). The target is a pandas DataFrame or Series depending on the number of target columns. If return_X_y is True, then (data, target) will be pandas DataFrames or Series as described below.
 
     Returns
     -------
@@ -398,10 +392,10 @@ def load_stamp2010(return_X_y=False, as_frame=False):
         Dictionary-like object, with the following attributes.
 
         data : {ndarray, DataFrame}
-            The data matrix. If as_frame=True, data will be a pandas DataFrame.
+            The data matrix. If `as_frame=True`, data will be a pandas DataFrame.
 
         target : {ndarray, DataFrame}
-            The classification target. If as_frame=True, target will be a pandas DataFrame.
+            The classification target. If `as_frame=True`, target will be a pandas DataFrame.
 
         feature_names : list
             The names of the dataset columns.
@@ -410,15 +404,13 @@ def load_stamp2010(return_X_y=False, as_frame=False):
             The names of target classes.
 
         frame : DataFrame
-            Only present when as_frame=True. DataFrame with data and target.
+            Only present when `as_frame=True`. DataFrame with data and target.
 
         DESCR : str
             The full description of the dataset.
 
     (data, target) : tuple if return_X_y is True
-        A tuple of two ndarrays by default. The first contains a 2D array
-        with each row representing one sample and each column representing the features.
-        The second array contains the target samples.
+        A tuple of two ndarrays by default. The first contains a 2D array with each row representing one sample and each column representing the features. The second array contains the target samples.
 
     Notes
     -----
@@ -426,17 +418,11 @@ def load_stamp2010(return_X_y=False, as_frame=False):
 
     References
     ----------
-    [1] Schuur, Stacy S., Ragland, Jared M., Mahynski, Nathan A. (2021), Data Supporting
-    "Seabird Tissue Archival and Monitoring Project (STAMP) Data from 1999-2010" ,
-    National Institute of Standards and Technology, https://doi.org/10.18434/mds2-2431
+    [1] Schuur, Stacy S., Ragland, Jared M., Mahynski, Nathan A. (2021), Data Supporting "Seabird Tissue Archival and Monitoring Project (STAMP) Data from 1999-2010" , National Institute of Standards and Technology, https://doi.org/10.18434/mds2-2431
 
-    [2] Mahynski, Nathan A., et al. "Seabird Tissue Archival and Monitoring Project (STAMP)
-    Data from 1999-2010." Journal of Research of the National Institute of Standards and
-    Technology 126 (2021): 1-7.
+    [2] Mahynski, Nathan A., et al. "Seabird Tissue Archival and Monitoring Project (STAMP) Data from 1999-2010." Journal of Research of the National Institute of Standards and Technology 126 (2021): 1-7.
 
-    [3] Mahynski, Nathan A., et al. "Building Interpretable Machine Learning Models to
-    Identify Chemometric Trends in Seabirds of the North Pacific Ocean." Environmental
-    Science & Technology 56.20 (2022): 14361-14374.
+    [3] Mahynski, Nathan A., et al. "Building Interpretable Machine Learning Models to Identify Chemometric Trends in Seabirds of the North Pacific Ocean." Environmental Science & Technology 56.20 (2022): 14361-14374.
     """
     # Load data directly from the web so this will reflect any future changes.
     url = "https://raw.githubusercontent.com/mahynski/stamp-dataset-1999-2010/master/X.csv"

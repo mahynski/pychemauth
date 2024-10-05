@@ -2301,12 +2301,9 @@ def pls_vip(pls: PLSRegression, mode="weights"):
 
     References
     ----------
-    [1] Wold, S., Sjoestroem, M., & Eriksson, L. (2001). PLS-regression: a basic tool of
-    chemometrics. Chemometrics and intelligent laboratory systems, 58(2), 109-130.
+    [1] Wold, S., Sjoestroem, M., & Eriksson, L. (2001). PLS-regression: a basic tool of chemometrics. Chemometrics and Intelligent Laboratory Systems, 58(2), 109-130.
 
-    [2] Chong, I.-G., Jun, C.-H. (2005). Performance of some variable selection methods
-    when multicollinearity is present. Chemometrics and intelligent laboratory systems,
-    78(1), 103-112.
+    [2] Chong, I.-G., Jun, C.-H. (2005). Performance of some variable selection methods when multicollinearity is present. Chemometrics and Intelligent Laboratory Systems, 78(1), 103-112.
     """
     t = pls.x_scores_
     q = pls.y_loadings_
@@ -2327,9 +2324,7 @@ def _logistic_proba(x):
     """
     Compute the logistic function of a given input.
 
-    This is designed to work on margin space "distances" from classifiers
-    or authenticators to predict probabilities. See scikit-learn convention:
-    https://scikit-learn.org/stable/glossary.html#term-predict_proba
+    This is designed to work on margin space "distances" from classifiers or authenticators to predict probabilities. See scikit-learn convention: https://scikit-learn.org/stable/glossary.html#term-predict_proba
 
     Parameters
     ----------
@@ -2339,8 +2334,7 @@ def _logistic_proba(x):
     Returns
     -------
     probabilities : ndarray(float, ndim=2)
-        2D array as logistic function of the the input, x. First column
-        is NOT inlier, 1-p(x), second column is inlier probability, p(x).
+        2D array as logistic function of the the input, x. First column is NOT inlier, 1-p(x), second column is inlier probability, p(x).
     """
     p_inlier = p_inlier = 1.0 / (
         1.0 + np.exp(-np.clip(x, a_max=None, a_min=-500))
@@ -2416,15 +2410,11 @@ def _multi_cm_metrics(
 
     Note
     ----
-    When making predictions about extraneous classes (not in training set)
-    class efficiency (CEFF) is given as simply class specificity (CSPS)
-    since class sensitivity (CSNS) cannot be calculated.
+    When making predictions about extraneous classes (not in training set) class efficiency (CEFF) is given as simply class specificity (CSPS) since class sensitivity (CSNS) cannot be calculated.
 
     References
     ----------
-    [1] "Multiclass partial least squares discriminant analysis: Taking the
-    right way - A critical tutorial," Pomerantsev and Rodionova, Journal of
-    Chemometrics (2018). https://doi.org/10.1002/cem.3030.
+    [1] "Multiclass partial least squares discriminant analysis: Taking the right way - A critical tutorial," Pomerantsev and Rodionova, Journal of Chemometrics (2018). https://doi.org/10.1002/cem.3030.
     """
     correct_ = 0.0
     for class_ in df.index:  # All input classes
@@ -2530,8 +2520,7 @@ def _occ_cm_metrics(
     """
     Compute one-class classifier (OCC) metrics from the confusion matrix.
 
-    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
-    and only one class since they are mutually exclusive.
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier") and only one class since they are mutually exclusive.
 
     Parameters
     ----------
@@ -2641,8 +2630,7 @@ def _occ_metrics(X, y, target_class, predict_function):
     """
     Compute one-class classifier (OCC) metrics directly from data.
 
-    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier")
-    and only one class since they are mutually exclusive.
+    OCCs are "hard" by definition and assign a point to one class ("inlier" vs. "outlier") and only one class since they are mutually exclusive.
 
     Parameters
     ----------
