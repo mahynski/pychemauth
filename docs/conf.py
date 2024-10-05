@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath("../pychemauth/"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "PyChemAuth"
-copyright = "2023, Nathan A. Mahynski"
+copyright = "2024, Nathan A. Mahynski"
 author = "Nathan A. Mahynski"
 
 # -- General configuration ---------------------------------------------------
