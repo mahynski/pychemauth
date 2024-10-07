@@ -34,89 +34,41 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
 
     gamma : scalar(float), optional(default=None)
-        Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        Typically, `gamma=0.01` for many applications.  If `None` then no outlier detection is
-        performed on the training data; this also disables the `sft` option
-        which only makes sense if you specify a `gamma` value.
+        Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment. Typically, `gamma=0.01` for many applications.  If `None` then no outlier detection is performed on the training data; this also disables the `sft` option which only makes sense if you specify a `gamma` value.
 
     target_class : scalar(str or int), optional(default=None)
-        The class used to fit the SIMCA model; the rest are used
-        to test specificity.
+        The class used to fit the SIMCA model; the rest are used to test specificity.
 
     style : str, optional(default="dd-simca")
         Type of SIMCA to use ("simca" or "dd-simca")
 
     use : str, optional(default="rigorous")
-        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc")
-        (default="rigorous"). See Ref. [1] for more details.  The "acc" option
-        uses accuracy instead of TSNS or TEFF metrics; this enables more straightforward
-        comparison to discriminative classifiers, but is not conventional.
+        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc") (default="rigorous"). See Ref. [1] for more details.  The "acc" option uses accuracy instead of TSNS or TEFF metrics; this enables more straightforward comparison to discriminative classifiers, but is not conventional.
 
     scale_x : bool, optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+        Whether or not to scale `X` by its sample standard deviation or not. This depends on the meaning of `X` and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that `X` is always centered.
 
     robust : str, optional(default="semi")
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        This is only used with DD-SIMCA. "full" is not implemented yet, but
-        involves robust PCA and robust degrees of freedom estimation; "semi"
-        (default) is described in [3] and uses classical PCA but robust DoF
-        estimation; all other values revert to classical PCA and classical DoF
-        estimation. If the dataset is clean (no outliers) it is best practice
-        to use a classical method [3], however, to initially test for and
-        potentially remove these points, a robust variant is recommended. This
-        is why "semi: is the default value. If `sft`=True then this value is
-        ignored and a robust method is applied to iteratively clean the dataset,
-        while the final fitting uses the classical approach.
+        Whether or not to apply robust methods to estimate degrees of freedom. This is only used with DD-SIMCA. "full" is not implemented yet, but involves robust PCA and robust degrees of freedom estimation; "semi" (default) is described in [3] and uses classical PCA but robust DoF estimation; all other values revert to classical PCA and classical DoF estimation. If the dataset is clean (no outliers) it is best practice to use a classical method [3], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why "semi: is the default value. If `sft`=True then this value is ignored and a robust method is applied to iteratively clean the dataset, while the final fitting uses the classical approach.
 
     sft : bool, optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in Ref. [2], called "sequential focused trimming."  This is only used
-        with DD-SIMCA. If not used (default) robust estimates of parameters may
-        be attempted; if the iterative approach is used, these robust estimates
-        are only computed during the outlier removal loop(s) while the final
-        "clean" data uses classical estimates.  This option may throw away data
-        it is originally provided for training; it keeps only "regular" samples
-        (inliers and extremes) to train the model.  If a `gamma` value is not
-        specified then this option is not available.
+        Whether or not to use the iterative outlier removal scheme described in Ref. [2], called "sequential focused trimming."  This is only used with DD-SIMCA. If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.  If a `gamma` value is not specified then this option is not available.
 
     Note
     ----
-    Essentially, a SIMCA model is trained for one target class. The target is
-    set when this class is instantiated and must be one of (but doesn't need
-    to be the only) class found in the training set (this is checked
-    automatically).  During testing (.score()), points are broken up by
-    class and based on the method, may be used to see how well the target class
-    can be distinguished from each alternative.  This allows you to pass points
-    that belong to other classes during training - they are just ignored.  This
-    is important for integration with other scikit-learn, etc. workflows.
+    Essentially, a SIMCA model is trained for one target class. The target is set when this class is instantiated and must be one of (but doesn't need to be the only) class found in the training set (this is checked automatically).  During testing (.score()), points are broken up by class and based on the method, may be used to see how well the target class can be distinguished from each alternative.  This allows you to pass points that belong to other classes during training - they are just ignored.  This is important for integration with other scikit-learn, etc. workflows.
 
-    Note that when you are optimizing the model using TEFF, TSPS is
-    computed by using the alternative classes.  In that case, the model choice
-    is influenced by these alternatives.  This is a "compliant" approach,
-    however, if you use TSNS instead of TEFF the model only uses information
-    about the target class itself.  This is a "rigorous" approach which can
-    be important to consider to avoid bias in the model.
+    Note that when you are optimizing the model using TEFF, TSPS is computed by using the alternative classes.  In that case, the model choice is influenced by these alternatives.  This is a "compliant" approach, however, if you use TSNS instead of TEFF the model only uses information about the target class itself.  This is a "rigorous" approach which can be important to consider to avoid bias in the model.
 
-    When TEFF is used to choose a model, this is a "compliant" approach,
-    whereas when TSNS is used instead, this is a "rigorous" approach.
-    In rigorous models, alpha should be fixed as other hyperparameters are adjusted
-    to match this target; in compliant approaches this can be allowed to vary
-    and the model with the best efficiency is selected. [1]
+    When TEFF is used to choose a model, this is a "compliant" approach, whereas when TSNS is used instead, this is a "rigorous" approach. In rigorous models, alpha should be fixed as other hyperparameters are adjusted to match this target; in compliant approaches this can be allowed to vary and the model with the best efficiency is selected. [1]
 
     References
     ----------
-    [1] "Rigorous and compliant approaches to one-class classification,"
-    Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
-    Lab. Sys. (2016) 89-96.
+    [1] "Rigorous and compliant approaches to one-class classification," Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell. Lab. Sys. (2016) 89-96.
 
-    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
 
-    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
     n_components: ClassVar[int]
@@ -296,8 +248,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             Input feature matrix.
 
         y : array_like(str or int, ndim=1)
-            Class labels or indices. Should include some examples of
-            "target_class".
+            Class labels or indices. Should include some examples of "target_class".
 
         Returns
         -------
@@ -518,7 +469,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         as a geometric mean of TSNS and TSPS.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -527,15 +478,15 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
+        if X_.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         metrics, self.__alternatives_ = _occ_metrics(
-            X=X,
-            y=y,
-            target_class=self.target_class,
+            X=X_,
+            y=y_,
+            target_class=self.target_class,  # type: ignore[arg-type]
             predict_function=self.predict,
         )
 
@@ -581,36 +532,19 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         Significance level.
 
     scale_x : bool, optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+        Whether or not to scale `X` by its sample standard deviation or not. This depends on the meaning of `X` and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that `X` is always centered.
 
-    In general, you need a separate SIMCA object for each class in the dataset
-    you wish to characterize. This code is based on implementation described in
-    [1].  An F-test is performed based on the squared orthogonal distance (OD);
-    if it is in excess of some critical value a point is not assigned to a
-    class, otherwise it is.  Since a different SIMCA object is trained to
-    characterize different classes, it is possible that testing a point on a
-    different SIMCA class will result in multiple class assignments; however,
-    each individual SIMCA class is binary.
+    In general, you need a separate SIMCA object for each class in the dataset you wish to characterize. This code is based on implementation described in [1].  An F-test is performed based on the squared orthogonal distance (OD); if it is in excess of some critical value a point is not assigned to a class, otherwise it is.  Since a different SIMCA object is trained to characterize different classes, it is possible that testing a point on a different SIMCA class will result in multiple class assignments; however, each individual SIMCA class is binary.
 
-    Improvements have been suggested, including the use of Mahalanobis distance
-    instead of the OD (see discussion in [3]), however we implement a more
-    "classic" version here.
+    Improvements have been suggested, including the use of Mahalanobis distance instead of the OD (see discussion in [3]), however we implement a more "classic" version here.
 
     References
     ----------
-    [1] "Robust classification in high dimensions based on the SIMCA Method,"
-    Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems
-    79 (2005) 10-21.
+    [1] "Robust classification in high dimensions based on the SIMCA Method," Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems 79 (2005) 10-21.
 
-    [2] "Pattern recognition by means of disjoint principal components models,"
-    S. Wold, Pattern Recognition 8 (1976) 127–139.
+    [2] "Pattern recognition by means of disjoint principal components models," S. Wold, Pattern Recognition 8 (1976) 127–139.
 
-    [3] "Decision criteria for soft independent modelling of class analogy
-    applied to near infrared data" De Maesschalk et al., Chemometrics and
-    Intelligent Laboratory Systems 47 (1999) 65-77.
+    [3] "Decision criteria for soft independent modelling of class analogy applied to near infrared data" De Maesschalk et al., Chemometrics and Intelligent Laboratory Systems 47 (1999) 65-77.
     """
 
     n_components: ClassVar[int]
@@ -1113,61 +1047,30 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Significance level.
 
     gamma : scalar(float), optional(default=None)
-        Outlier significance level.  If `None` then no outlier detection is
-        performed on the training data; this also disables the `sft` option
-        which only makes sense if you specify a `gamma` value.
+        Outlier significance level.  If `None` then no outlier detection is performed on the training data; this also disables the `sft` option which only makes sense if you specify a `gamma` value.
 
     scale_x : bool, optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+        Whether or not to scale X by its sample standard deviation or not. This depends on the meaning of X and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that X is always centered.
 
     robust : str, optional(default="semi")
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        "full" is not implemented yet, but involves robust PCA and robust
-        degrees of freedom estimation; "semi" (default) is described in [2] and
-        uses classical PCA but robust DoF estimation; all other values
-        revert to classical PCA and classical DoF estimation.
-        If the dataset is clean (no outliers) it is best practice to use a classical
-        method [2], however, to initially test for and potentially remove these
-        points, a robust variant is recommended. This is why "semi" is the
-        default value. If `sft`=True then this value is ignored and a robust
-        method is applied to iteratively clean the dataset, while the final
-        fitting uses the classical approach.
+        Whether or not to apply robust methods to estimate degrees of freedom. "full" is not implemented yet, but involves robust PCA and robust degrees of freedom estimation; "semi" (default) is described in [2] and uses classical PCA but robust DoF estimation; all other values revert to classical PCA and classical DoF estimation. If the dataset is clean (no outliers) it is best practice to use a classical method [2], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why "semi" is the default value. If `sft`=True then this value is ignored and a robust method is applied to iteratively clean the dataset, while the final fitting uses the classical approach.
 
     sft : bool, optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in [3], called "sequential focused trimming."  If not used (default)
-        robust estimates of parameters may be attempted; if the iterative
-        approach is used, these robust estimates are only computed during the
-        outlier removal loop(s) while the final "clean" data uses classical
-        estimates.  This option may throw away data it is originally provided
-        for training; it keeps only "regular" samples (inliers and extremes)
-        to train the model.  If a `gamma` value is not specified then this
-        option is not available.
+        Whether or not to use the iterative outlier removal scheme described in [3], called "sequential focused trimming."  If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.  If a `gamma` value is not specified then this option is not available.
 
     Note
     ----
-    DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared
-    distribution, to determine the acceptance criteria to belong to a class.
-    The degrees of freedom in this model are estimated from a data-driven
-    approach. This implementation follows [1].
+    DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared distribution, to determine the acceptance criteria to belong to a class. The degrees of freedom in this model are estimated from a data-driven approach. This implementation follows [1].
 
-    As in SIMCA, this is designed to be a binary classification tool (yes/no)
-    for a single class.  A separate object must be trained for each class you
-    wish to model.
+    As in SIMCA, this is designed to be a binary classification tool (yes/no) for a single class.  A separate object must be trained for each class you wish to model.
 
     References
     ----------
-    [1] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
+    [1] "Acceptance areas for multivariate classification derived by projection methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
 
-    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
 
     n_components: ClassVar[int]

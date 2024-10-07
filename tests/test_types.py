@@ -33,7 +33,7 @@ class MyPyTest(unittest.TestCase):
         self.assertEqual(browse_result, 0, "mypy found errors")
 
     @pytest.mark.skip(
-        reason="At the moment it is not a priority to enforce type checking on the tests."
+        reason="At the moment it is not a priority to enforce type checking on the tests. This can be enabled in the future, if desired."
     )
     def test_run_mypy_tests(self):
         """Run mypy on all tests in module under the tests directory."""

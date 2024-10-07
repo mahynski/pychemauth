@@ -1030,7 +1030,6 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         ):
             self.deep_ = True
 
-        self.knowns_ = None
         y_check_ = None
         if not self.deep_:
             # Shallow models should have 2D input, deep models might have higher dimensional tensors
@@ -1080,8 +1079,8 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         if not (self.clf_style in ["soft", "hard"]):
             raise ValueError("clf_style should be either 'hard' or 'soft'.")
 
-        # Remove any classes the classification model should not be responsible for
-        # learning.
+        # Remove any classes the classification model should not be responsible for learning.
+        self.knowns_: NDArray
         if self.known_classes is None:  # Consider all training examples.
             self.knowns_ = np.unique(y_check_)
         else:  # Manually specified - possibly overwrite

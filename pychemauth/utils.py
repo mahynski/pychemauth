@@ -21,6 +21,7 @@ import tqdm
 import sys
 import pathlib
 import shutil
+import matplotlib
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,9 @@ from tempfile import TemporaryDirectory
 from huggingface_hub import hf_hub_download, HfApi, ModelCard, ModelCardData
 from tensorflow.keras import backend as K
 
+from typing import Any, Union, Sequence, ClassVar, Callable
+from numpy.typing import NDArray
+
 
 class fastnumpyio:
     """
@@ -44,13 +48,11 @@ class fastnumpyio:
 
     These tools can accelerate I/O operations by a factor of ~25.
 
-    This is a copy-paste from https://github.com/divideconcept/fastnumpyio provided under the MIT license,
-    from commit tag 627bb17 + hotfix to address #4.  If this package is ever released on pypi in the future
-    it will be included in the installation rather than an explicit copy here.
+    This is a copy-paste from https://github.com/divideconcept/fastnumpyio provided under the MIT license, from commit tag 627bb17 + hotfix to address #4.  If this package is ever released on pypi in the future it will be included in the installation rather than an explicit copy here.
     """
 
     @staticmethod
-    def save(file, array):
+    def save(file: Any, array: NDArray) -> None:
         """Save a numpy array to disk."""
         magic_string = b"\x93NUMPY\x01\x00v\x00"
         header = bytes(
@@ -71,7 +73,7 @@ class fastnumpyio:
         file.write(array.data)
 
     @staticmethod
-    def pack(array):
+    def pack(array: NDArray) -> bytes:
         """Pack a numpy array."""
         size = len(array.shape)
         return (
@@ -88,7 +90,7 @@ class fastnumpyio:
         )
 
     @staticmethod
-    def load(file):
+    def load(file: Any) -> Union[NDArray, None]:
         """Load a numpy array from disk."""
         if type(file) == str:
             file = open(file, "rb")
@@ -112,7 +114,7 @@ class fastnumpyio:
         return np.ndarray(shape, dtype=descr, buffer=file.read(datasize))
 
     @staticmethod
-    def unpack(data):
+    def unpack(data: bytes) -> NDArray:
         """Unpack a numpy array."""
         dtype = str(data[:2], "utf-8")
         dtype += str(data[2])
@@ -128,7 +130,7 @@ class fastnumpyio:
         )
 
 
-def _sort_xdata(directory):
+def _sort_xdata(directory: str) -> tuple[list, int]:
     """Sort x_i.ext files in a directory by their index, i."""
     path = pathlib.Path(directory).absolute()
     sorted_x = [
@@ -143,17 +145,22 @@ def _sort_xdata(directory):
     return [str(p) for p in sorted_x], final_idx
 
 
-def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
+def write_dataset(
+    directory: Union[str, pathlib.Path],
+    X: NDArray,
+    y: NDArray,
+    fmt: str = "npy",
+    overwrite: bool = False,
+    augment: bool = False,
+) -> tuple[list[str], str]:
     """
     Write a dataset from memory to disk.
 
-    Each observation in X (row, or first dimension) is saved as a separate file named "x_i.ext"
-    where i is the index and ext is the file extension.  All y values are saved in a single file
-    called "y.ext".
+    Each observation in `X` (row, or first dimension) is saved as a separate file named "x_i.ext" where i is the index and ext is the file extension.  All `y` values are saved in a single file called "y.ext".
 
     Parameters
     ----------
-    directory : str, optional(default=None)
+    directory : str or pathlib.Path, optional(default=None)
         Directory to save dataset to.
 
     X : ndarray
@@ -198,26 +205,26 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
         raise Exception("X and y should have the same length.")
 
     # Work with absolute paths
-    directory = pathlib.Path(directory).absolute()
+    directory_ = str(pathlib.Path(directory).absolute())
 
-    if not augment and not overwrite and os.path.isdir(directory):
-        raise Exception(f"{directory} already exists.")
+    if not augment and not overwrite and os.path.isdir(directory_):
+        raise Exception(f"{directory_} already exists.")
 
-    if overwrite and os.path.isdir(directory):
-        shutil.rmtree(directory)  # Completely wipe old directory
+    if overwrite and os.path.isdir(directory_):
+        shutil.rmtree(directory_)  # Completely wipe old directory
 
     x_start = 0
-    if augment and os.path.isdir(directory):
-        _, x_start = _sort_xdata(directory)
+    if augment and os.path.isdir(directory_):
+        _, x_start = _sort_xdata(directory_)
         x_start += 1
 
     # Create directory if it doesn't already exist
-    os.makedirs(directory, exist_ok=True)
+    os.makedirs(directory_, exist_ok=True)
 
     x_files, y_file = [], ""
     if fmt == "npy":
         # Save y to disk
-        file = str(pathlib.Path(os.path.join(directory, "y.npy")).absolute())
+        file = str(pathlib.Path(os.path.join(directory_, "y.npy")).absolute())
         if augment:
             try:
                 y_prev = fastnumpyio.load(file)
@@ -227,7 +234,12 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
                         "Augmentation error: previous x files found but y does not seem to exist."
                     )
             else:
-                y = np.concatenate((y_prev, y), axis=0)
+                if y_prev is None:
+                    raise IOError(
+                        f"Cannot load {file} - it seems to have no header."
+                    )
+                else:
+                    y = np.concatenate((y_prev, y), axis=0)
         fastnumpyio.save(file, y)
         y_file = file
 
@@ -235,7 +247,7 @@ def write_dataset(directory, X, y, fmt="npy", overwrite=False, augment=False):
         for i in range(X.shape[0]):
             file = str(
                 pathlib.Path(
-                    os.path.join(directory, f"x_{i+x_start:09}.npy")
+                    os.path.join(directory_, f"x_{i+x_start:09}.npy")
                 ).absolute()
             )
             fastnumpyio.save(file, X[i])
@@ -263,23 +275,32 @@ class NNTools:
         ... )
         """
 
+        x_files: ClassVar[Union[Sequence[str], NDArray[np.str_]]]
+        y: ClassVar[NDArray]
+        batch_size: ClassVar[int]
+        fmt: ClassVar[str]
+        shuffle: ClassVar[bool]
+        include: ClassVar[Union[Sequence, NDArray, None]]
+        exclude: ClassVar[Union[Sequence, NDArray, None]]
+        filter: ClassVar[Union[NDArray[np.bool_], None]]
+
         def __init__(
             self,
-            x_files,
-            y,
-            batch_size,
-            fmt="npy",
-            shuffle=False,
-            include=None,
-            exclude=None,
-            filter=None,
-        ):
+            x_files: Union[Sequence[str], NDArray[np.str_]],
+            y: NDArray,
+            batch_size: int,
+            fmt: str = "npy",
+            shuffle: bool = False,
+            include: Union[Sequence, NDArray, None] = None,
+            exclude: Union[Sequence, NDArray, None] = None,
+            filter: Union[NDArray[np.bool_], None] = None,
+        ) -> None:
             """
             Instantiate the class.
 
             Parameters
             ----------
-            x_files : list(str)
+            x_files : array_like(str)
                 List of filenames, in order, that correspond to X.
 
             y : ndarray(object, ndim=1)
@@ -294,13 +315,13 @@ class NNTools:
             shuffle : bool, optional(default=False)
                 Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
 
-            include : array-like, optional(default=None)
+            include : array_like, optional(default=None)
                 List of `y` values to include when iterating.  If specified, only instances where `y` is in this list will be returned.  This will create uneven or empty batches. You cannot specify this and `exclude` simultaneously.
 
-            exclude : array-like, optional(default=None)
+            exclude : array_like, optional(default=None)
                 List of `y` values to exclude when iterating.  This allows you to filter out certain classes.  This will create uneven or empty batches. You cannot specify this and `include` simultanously.
 
-            filter : numpy.ndarray(bool, ndim=1)
+            filter : ndarray(bool, ndim=1)
                 Mask to filter instances. The length of this filter should be equal to that of `x_files`.  All instances for which `filter=False` will not be calculated.  The order corresponds to the ordering of `x_files` when instantiated.  This filter will be shuffled consistently with `x_files` and `y` at the end of an epoch, if desired.  This will create uneven or empty batches.  This can be simultaneously specified with either `include` or `exclude`.  Only observations which satisfy both criteria are calculated and returned.
 
             Raises
@@ -320,10 +341,11 @@ class NNTools:
             self._set_filter(filter)
             self.filter_orig = copy.copy(self.__filter)
 
-            self.batch_size = int(batch_size)
-            self.shuffle = shuffle
+            self.batch_size = int(batch_size)  # type: ignore[misc]
+            self.shuffle = shuffle  # type: ignore[misc]
 
-            self.__exclude, self.__include = None, None
+            self.__exclude: Union[Sequence, NDArray, None] = None
+            self.__include: Union[Sequence, NDArray, None] = None
             self.set_include(include)
             self.set_exclude(exclude)
 
@@ -332,7 +354,7 @@ class NNTools:
             else:
                 raise NotImplementedError(f"Cannot load data in {fmt} format")
 
-        def set_include(self, include):
+        def set_include(self, include: Union[Sequence, NDArray, None]) -> None:
             """Set the include value."""
             if self.__exclude is not None and include is not None:
                 raise Exception(
@@ -340,7 +362,7 @@ class NNTools:
                 )
             self.__include = include
 
-        def set_exclude(self, exclude):
+        def set_exclude(self, exclude: Union[Sequence, NDArray, None]) -> None:
             """Set the exclude value."""
             if self.__include is not None and exclude is not None:
                 raise Exception(
@@ -348,7 +370,7 @@ class NNTools:
                 )
             self.__exclude = exclude
 
-        def _set_filter(self, filter):
+        def _set_filter(self, filter: Union[NDArray[np.bool_], None]) -> None:
             """
             Set the filter value.
 
@@ -356,6 +378,7 @@ class NNTools:
             -----
             This is only intended to be used when instantiated.
             """
+            self.__filter: Union[NDArray[np.bool_], None]
             if filter is not None:
                 self.__filter = np.asarray(filter, dtype=bool)
                 assert (
@@ -365,11 +388,11 @@ class NNTools:
             else:
                 self.__filter = None
 
-        def __len__(self):
+        def __len__(self) -> int:
             """Return the number of datapoints in a batch."""
             return int(np.ceil(len(self.__x) / self.batch_size))
 
-        def __getitem__(self, idx):
+        def __getitem__(self, idx: int) -> tuple[NDArray, NDArray]:
             """
             Retrieve a batch of data.
 
@@ -383,7 +406,7 @@ class NNTools:
             X_batch : ndarray
                 Numpy array of X data for this batch.
 
-            y_batch : ndarray(object, ndim=1)
+            y_batch : ndarray(ndim=1)
                 Target data for this batch.
             """
             low = idx * self.batch_size
@@ -424,7 +447,7 @@ class NNTools:
                 np.array(batch_y)[mask],
             )
 
-        def on_epoch_end(self):
+        def on_epoch_end(self) -> None:
             """Execute changes at the end of a training epoch."""
             if self.shuffle:  # Shuffle if desired
                 if self.__filter is None:
@@ -436,21 +459,21 @@ class NNTools:
 
     @staticmethod
     def build_loader(
-        directory,
-        loader="x",
-        batch_size=1,
-        fmt="npy",
-        shuffle=False,
-        include=None,
-        exclude=None,
-        filter=None,
-    ):
+        directory: Union[str, pathlib.Path],
+        loader: str = "x",
+        batch_size: int = 1,
+        fmt: str = "npy",
+        shuffle: bool = False,
+        include: Union[Sequence, NDArray, None] = None,
+        exclude: Union[Sequence, NDArray, None] = None,
+        filter: Union[NDArray[np.bool_], None] = None,
+    ) -> tf.keras.utils.Sequence:
         """
         Build a dataset loader from a directory.
 
         Parameters
         ----------
-        directory : str, optional(default=None)
+        directory : str or pathlib.Path, optional(default=None)
             Directory to read dataset from.  Should be the directory used in `write_dataset`.
 
         loader : str, optional(default='x')
@@ -465,10 +488,10 @@ class NNTools:
         shuffle : bool, optional(default=False)
             Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
 
-        include : array-like, optional(default=None)
+        include : array_like, optional(default=None)
             List of `y` values to include when iterating. If specified, only instances where `y` is in this list will be returned. This will create uneven or empty batch sizes. You cannot specify this and `exclude` simultaneously.
 
-        exclude : array-like, optional(default=None)
+        exclude : array_like, optional(default=None)
             List of `y` values to exclude when iterating. This allows you to filter out certain classes. This will create uneven or empty batch sizes. You cannot specify this and `include` simultaneously.
 
         filter : numpy.ndarray(bool, ndim=1)
@@ -483,7 +506,7 @@ class NNTools:
         >>> Train_Loader = NNTools.build_loader('./data/train', batch_size=10)
         >>> Test_Loader = NNTools.build_loader('./data/test', batch_size=10)
         """
-        directory = pathlib.Path(directory).absolute()
+        directory_ = str(pathlib.Path(directory).absolute())
 
         def _read_y(y_file):
             if y_file.endswith("npy"):
@@ -492,15 +515,15 @@ class NNTools:
                 raise NotImplementedError(f"Cannot save data in {fmt} format.")
 
         if loader.lower() == "x":
-            if not os.path.isdir(directory):
-                raise Exception(f"{directory} does not exist.")
+            if not os.path.isdir(directory_):
+                raise Exception(f"{directory_} does not exist.")
 
-            y_file = os.path.join(directory, f"y.{fmt}")
+            y_file = os.path.join(directory_, f"y.{fmt}")
             if not os.path.isfile(y_file):
-                raise Exception(f"Could not find {y_file} in {directory}.")
+                raise Exception(f"Could not find {y_file} in {directory_}.")
 
             loader = NNTools.XLoader(
-                x_files=_sort_xdata(directory)[0],
+                x_files=_sort_xdata(directory_)[0],
                 y=_read_y(y_file),
                 batch_size=batch_size,
                 fmt=fmt,
@@ -523,14 +546,9 @@ class NNTools:
 
         See `NNTools.find_learning_rate` for a more user-friendly interface to this function.
 
-        Essentially, at the beginning of training the learning rate is set to a lower bound.
-        Then it is increased exponentially after each batch. Initially, the loss function
-        should not change since the learning rate is too low; however, a minimum in the loss
-        tends to appear at intermediate learning rates, before "exploding" at high rates.
+        Essentially, at the beginning of training the learning rate is set to a lower bound. Then it is increased exponentially after each batch. Initially, the loss function should not change since the learning rate is too low; however, a minimum in the loss tends to appear at intermediate learning rates, before "exploding" at high rates.
 
-        The band between roughly the point where the loss starts to change and the minimum
-        is a reasonably optimal learning rate.  Cyclical learning rates can also be used
-        to dynamically move between them.
+        The band between roughly the point where the loss starts to change and the minimum is a reasonably optimal learning rate.  Cyclical learning rates can also be used to dynamically move between them.
 
         Notes
         -----
@@ -553,14 +571,20 @@ class NNTools:
         ...     ax.axvline(l_, color='red')
         """
 
+        start_lr: ClassVar[float]
+        end_lr: ClassVar[float]
+        n_updates: ClassVar[int]
+        stop_factor: ClassVar[float]
+        beta: ClassVar[float]
+
         def __init__(
             self,
-            start_lr=1.0e-8,
-            end_lr=10.0,
-            n_updates=100,
-            stop_factor=4.0,
-            beta=0.98,
-        ):
+            start_lr: float = 1.0e-8,
+            end_lr: float = 10.0,
+            n_updates: int = 100,
+            stop_factor: float = 4.0,
+            beta: float = 0.98,
+        ) -> None:
             """
             Instantiate the class.
 
@@ -580,47 +604,47 @@ class NNTools:
                 The factor multiplied by the smallest loss found to determine the limit at which the run should stop.  This stops the training from continuing after the loss goes through a minimum.
 
             beta : float, optional(default=0.98)
-            Smoothing factor used to smooth the loss value over time.
+                Smoothing factor used to smooth the loss value over time.
             """
             super(NNTools.LearningRateFinder, self).__init__()
-            self.start_lr = start_lr
-            self.end_lr = end_lr
-            self.n_updates = n_updates
-            self.stop_factor = stop_factor
-            self.beta = beta
+            self.start_lr = start_lr  # type: ignore[misc]
+            self.end_lr = end_lr  # type: ignore[misc]
+            self.n_updates = n_updates  # type: ignore[misc]
+            self.stop_factor = stop_factor  # type: ignore[misc]
+            self.beta = beta  # type: ignore[misc]
 
-            self._smoothed_loss = []
-            self._loss = []
-            self._lr = []
+            self._smoothed_loss: list = []
+            self._loss: list = []
+            self._lr: list = []
             self.batch_num = 0
             self.avg_loss = 0
             self.best_loss = np.inf
             self.lr_mult = (self.end_lr / self.start_lr) ** (1.0 / n_updates)
 
         @property
-        def smoothed_loss(self):
+        def smoothed_loss(self) -> list:
             """Return the smoothed loss."""
             return copy.copy(self._smoothed_loss)
 
         @property
-        def loss(self):
+        def loss(self) -> list:
             """Return the (unsoothed) loss."""
             return copy.copy(self._loss)
 
         @property
-        def learning_rate(self):
+        def learning_rate(self) -> list:
             """Return the learning rates."""
             return copy.copy(self._lr)
 
-        def on_train_begin(self, logs=None):
+        def on_train_begin(self, logs=None) -> None:
             """Configure the model parameters when the training starts."""
-            # Set optimizer's initial learning rate
-            K.set_value(self.model.optimizer.lr, self.start_lr)
+            K.set_value(
+                self.model.optimizer.lr, self.start_lr
+            )  # Set optimizer's initial learning rate
 
-        def on_train_batch_end(self, batch, logs=None):
+        def on_train_batch_end(self, batch, logs=None) -> None:
             """Update the learning rate and save history."""
-            # Current state
-            current_lr = K.get_value(self.model.optimizer.lr)
+            current_lr = K.get_value(self.model.optimizer.lr)  # Current state
             current_loss = logs["loss"]
 
             self._lr.append(current_lr)
@@ -647,7 +671,9 @@ class NNTools:
             # Update lr for next batch
             K.set_value(self.model.optimizer.lr, current_lr * self.lr_mult)
 
-        def plot(self, ax=None):
+        def plot(
+            self, ax: Union[matplotlib.pyplot.Axes, None] = None
+        ) -> matplotlib.pyplot.Axes:
             """
             Plot the smoothed loss vs. the learning rate.
 
@@ -673,26 +699,21 @@ class NNTools:
 
             return ax
 
-        def estimate_clr(self, frac=0.75, skip=0):
+        def estimate_clr(
+            self, frac: float = 0.75, skip: int = 0
+        ) -> tuple[float, float]:
             """
             Automatically estimate the upper and lower cyclical learning rate bounds.
 
-            The upper bound is taken as the order of magnitude just below the minima;
-            e.g., if lr_opt = 0.0123 then the max_lr = 0.01.  The lower bound is taken
-            as the learning rate where the loss is 25% of the way from the
-            value at a learning rate of 0 to the minimum.
+            The upper bound is taken as the order of magnitude just below the minima; e.g., if `lr_opt` = 0.0123 then the `max_lr` = 0.01.  The lower bound is taken as the learning rate where the loss is 25% of the way from the value at a learning rate of 0 to the minimum.
 
             Parameters
             ----------
             frac : float, optional(default=0.75)
-                Determines the lower bound on the learning rate which is set when the
-                loss is 100*(1-frac)% of the way from the value at a learning rate of
-                0 to the minimum.
+                Determines the lower bound on the learning rate which is set when the loss is 100*(1-`frac`)% of the way from the value at a learning rate of 0 to the minimum.
 
             skip : int, optional(default=0)
-                Number of points to skip from the beginning of the sweep when performing
-                analysis.  This can be helpful to trim off any initial dips or other
-                unusual behavior from the warmup stage.
+                Number of points to skip from the beginning of the sweep when performing analysis.  This can be helpful to trim off any initial dips or other unusual behavior from the warmup stage.
 
             Returns
             -------
@@ -785,16 +806,24 @@ class NNTools:
         ... )
         """
 
+        base_lr: ClassVar[float]
+        max_lr: ClassVar[float]
+        step_size: ClassVar[int]
+        mode: ClassVar[str]
+        gamma: ClassVar[float]
+        scale_fn: ClassVar[Union[Callable[[int], Any], None]]
+        scale_mode: ClassVar[str]
+
         def __init__(
             self,
-            base_lr=0.001,
-            max_lr=0.01,
-            step_size=20,
-            mode="triangular2",
-            gamma=1.0,
-            scale_fn=None,
-            scale_mode="cycle",
-        ):
+            base_lr: float = 0.001,
+            max_lr: float = 0.01,
+            step_size: int = 20,
+            mode: str = "triangular2",
+            gamma: float = 1.0,
+            scale_fn: Union[Callable[[int], Any], None] = None,
+            scale_mode: str = "cycle",
+        ) -> None:
             """
             Instantiate the class.
 
@@ -814,39 +843,37 @@ class NNTools:
                 If a `scale_fn` is provided then this argument is ignored.
 
             gamma : float, optional(default=1.0)
-                Constant in 'exp_range' scaling function gamma**(cycle iterations); ignored if not using this policy.
+                Constant in 'exp_range' scaling function `gamma`**(cycle iterations); ignored if not using this policy.
 
             scale_fn : callable, optional(default=None)
-                Custom scaling policy defined by a single argument lambda function, where 0 <= scale_fn(x) <= 1 for all x >= 0. The `mode` paramater is ignored if this is provided.
+                Custom scaling policy defined by a single argument lambda function, where 0 <= `scale_fn`(x) <= 1 for all x >= 0. The `mode` paramater is ignored if this is provided.
 
             scale_mode : str, optional(default='cycle')
                 Defines whether `scale_fn` is evaluated on cycle number or cycle iterations (training iterations since start of cycle). Should be in {'cycle', 'iterations'}.
             """
             super(NNTools.CyclicalLearningRate, self).__init__()
-            self.base_lr = base_lr
-            self.max_lr = max_lr
-            self.step_size = step_size
-            self.mode = mode
-            self.gamma = gamma
-            self.scale_fn = scale_fn
-            self.scale_mode = scale_mode
+            self.base_lr = base_lr  # type: ignore[misc]
+            self.max_lr = max_lr  # type: ignore[misc]
+            self.step_size = step_size  # type: ignore[misc]
+            self.mode = mode  # type: ignore[misc]
+            self.gamma = gamma  # type: ignore[misc]
+            self.scale_fn = scale_fn  # type: ignore[misc]
+            self.scale_mode = scale_mode  # type: ignore[misc]
 
-            self._clr_iterations = 0.0
-            self._trn_iterations = 0.0
-            self._history = {}
+            self._clr_iterations: float = 0.0
+            self._trn_iterations: float = 0.0
+            self._history: dict = {}
 
         @property
-        def history(self):
+        def history(self) -> dict:
             """Return the learning rates."""
             return copy.copy(self._history)
 
-        def _reset(
-            self,
-        ):
+        def _reset(self) -> None:
             """Reset the cycle iterations."""
             self._clr_iterations = 0.0
 
-        def _clr(self):
+        def _clr(self) -> float:
             """Compute instantaneous learning rate."""
             if self.scale_fn is None:
                 if self.mode == "triangular":
@@ -877,14 +904,14 @@ class NNTools:
                     0, (1 - x)
                 ) * scale_fn(self._clr_iterations)
 
-        def on_train_begin(self, logs=None):
+        def on_train_begin(self, logs=None) -> None:
             """Initialize the learning rate when training starts."""
             if self._clr_iterations == 0:
                 K.set_value(self.model.optimizer.lr, self.base_lr)  # First run
             else:
                 K.set_value(self.model.optimizer.lr, self._clr())  # Restarting
 
-        def on_epoch_begin(self, epoch, logs=None):
+        def on_epoch_begin(self, epoch, logs=None) -> None:
             """Update the learning rate at the end of an epoch."""
             self._trn_iterations += 1
             self._clr_iterations += 1
@@ -903,15 +930,15 @@ class NNTools:
 
     @staticmethod
     def visualkeras(
-        model,
-        legend=False,
-        draw_volume=True,
-        scale_xy=0.25,
-        scale_z=10.0,
-        max_z=200,
-        padding=50,
-        **kwargs,
-    ):
+        model: keras.Model,
+        legend: bool = False,
+        draw_volume: bool = True,
+        scale_xy: float = 0.25,
+        scale_z: float = 10.0,
+        max_z: int = 200,
+        padding: int = 50,
+        **kwargs: Any,
+    ) -> None:
         """
         Use visualkeras to visualize a Keras model as a PIL image.
 
@@ -1007,7 +1034,7 @@ class NNTools:
         return img
 
     @staticmethod
-    def _is_data_iter(data):
+    def _is_data_iter(data: Any) -> bool:
         """Check if data is an iterator that returns batches."""
         classes = [
             tf.keras.preprocessing.image.NumpyArrayIterator,
@@ -1025,22 +1052,22 @@ class NNTools:
 
     @staticmethod
     def find_learning_rate(
-        model,
-        data,
-        start_lr=1.0e-8,
-        end_lr=1.0e1,
-        n_updates=100,
-        stop_factor=4.0,
-        beta=0.98,
-        batch_size=100,
-        compiler_kwargs={
+        model: keras.Model,
+        data: Any,
+        start_lr: float = 1.0e-8,
+        end_lr: float = 1.0e1,
+        n_updates: int = 100,
+        stop_factor: float = 4.0,
+        beta: float = 0.98,
+        batch_size: int = 100,
+        compiler_kwargs: dict = {
             "optimizer": "adam",
             "loss": "sparse_categorical_crossentropy",
             "weighted_metrics": ["accuracy", "sparse_categorical_accuracy"],
         },
-        seed=42,
-        class_weight=None,
-    ):
+        seed: int = 42,
+        class_weight: Union[dict, None] = None,
+    ) -> "NNTools.LearningRateFinder":
         """
         Scan through different learning rates to understand how the model trains.
 
@@ -1051,8 +1078,8 @@ class NNTools:
         model : keras.Model
             Uncompiled model to use.
 
-        data : tuple or iterable
-            If the data is in memory this can be provided as (X_train, y_train). Otherwise, provide an iterable, like `NNTools.XLoader` that can provide data in batches, consistent with Keras' API.  If the latter is provided, `batch_size` is ignored.
+        data : tuple or data iterator
+            If the data is in memory this can be provided as (`X_train`, `y_train`). Otherwise, provide an iterable, like `NNTools.XLoader` that can provide data in batches, consistent with Keras' API.  If the latter is provided, `batch_size` is ignored.
 
         start_lr : float, optional(default=1.0e-8)
             Initial learning rate.  Should be a value expected to be too small.
@@ -1061,8 +1088,7 @@ class NNTools:
             Final learning rate.  Should be a value expected to be too large.
 
         n_updates : int, optional(default=100)
-            Number of times to update learning rate; this is done after each bactch so this determines
-            the total number of batches / epochs run.
+            Number of times to update learning rate; this is done after each bactch so this determines the total number of batches / epochs run.
 
         stop_factor : float, optional(default=4.0)
             The factor multiplied by the smallest loss found to determine the limit at which the run should stop.  This stops the training from continuing after the loss goes through a minimum.
@@ -1080,10 +1106,7 @@ class NNTools:
             Seed for keras random weight initialization when the model is compiled.
 
         class_weight : dict(int, float), optional(default=None)
-            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
-            inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
-            To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
-            simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
+            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html. To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics' simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
 
         Returns
         -------
@@ -1145,20 +1168,24 @@ class NNTools:
         return finder
 
     @staticmethod
-    def load(filepath, weights_only=False, model=None):
+    def load(
+        filepath: Union[str, pathlib.Path],
+        weights_only: bool = False,
+        model: Union[keras.Model, None] = None,
+    ) -> keras.Model:
         """
         Load a Keras model from disk.
 
         Parameters
         ----------
         filepath : str or pathlib.Path
-            Path to saved information (weights or a complete model).
+            Path to saved information (weights or a complete `model`).
 
         weights_only : bool, optional(default=False)
-            If True, the filepath should contain the weights of the model to load.  The `model` provided should have the same architecture. and will not be compiled after loading the weights. If False, assumes the filepath points to a complete keras model which will be compiled automatically after loading.
+            If True, the `filepath` should contain the weights of the `model` to load.  The `model` provided should have the same architecture. and will not be compiled after loading the weights. If False, assumes the `filepath` points to a complete keras.Model which will be compiled automatically after loading.
 
         model : keras.Model, optional(default=None)
-            Model to use if `weights_only=True`; it does not need to be compiled so you can use `NNFactory()` to produce a new model that will inherit weights from an old model of the exact same architecture.
+            Model to use if `weights_only=True`; it does not need to be compiled so you can use `NNFactory()` to produce a new `model` that will inherit weights from an old `model` of the exact same architecture.
 
         Returns
         -------
@@ -1166,7 +1193,7 @@ class NNTools:
             Model loaded from disk.
         """
         if weights_only:
-            model.load_weights(filepath, skip_mismatch=False)
+            model.load_weights(filepath, skip_mismatch=False)  # type: ignore[union-attr]
         else:
             model = keras.saving.load_model(
                 filepath, custom_objects=None, compile=True
@@ -1175,7 +1202,7 @@ class NNTools:
         return model
 
     @staticmethod
-    def _json_serializable(arg_dict):
+    def _json_serializable(arg_dict: dict) -> dict:
         """Check what can be serialized from a dictionary so WandB can save these parts as its config."""
 
         def _safe(x):
@@ -1193,13 +1220,15 @@ class NNTools:
         return new_args
 
     @staticmethod
-    def _summarize_batches(data):
+    def _summarize_batches(
+        data: Any,
+    ) -> tuple[int, int, dict, NDArray, NDArray]:
         """
         Perform 1 iteration over the dataset to summarize its contents for various consistency checks.
 
         Parameters
         ----------
-        data : iterator
+        data : data iterator
             A data iterator of some kind for a Keras model.
 
         Returns
@@ -1214,10 +1243,10 @@ class NNTools:
             Unique classes found in the data and their counts in the dataset.  If not a classification problem returns an empty dictionary.
 
         X_batch : ndarray
-            First batch of X data.
+            First batch of `X` data.
 
         y_batch : ndarray
-            First batch of y data.
+            First batch of `y` data.
         """
         if len(data) < 1:
             raise Exception("data iterator appears to be empty")
@@ -1240,7 +1269,7 @@ class NNTools:
         else:
             raise Exception("Target should have no more than 2 dimensions.")
 
-        unique_targets = {}
+        unique_targets: dict = {}
 
         def _update(y_batch):  # Update class count for classification
             if y_batch.ndim == 1:  # Single integers or strings for each class
@@ -1284,14 +1313,14 @@ class NNTools:
 
     @staticmethod
     def train(
-        model,
-        data,
-        compiler_kwargs={
+        model: keras.Model,
+        data: Any,
+        compiler_kwargs: dict = {
             "optimizer": "adam",
             "loss": "sparse_categorical_crossentropy",
             "weighted_metrics": ["accuracy", "sparse_categorical_accuracy"],
         },
-        fit_kwargs={
+        fit_kwargs: dict = {
             "batch_size": 100,
             "epochs": 100,
             "validation_split": 0.0,
@@ -1318,14 +1347,14 @@ class NNTools:
                 ),
             ],
         },
-        class_weight=None,
-        seed=42,
-        wandb_project=None,
-        wandb_kwargs=None,
-        model_filename="trained_model.keras",
-        history_filename="training_history.pkl",
-        restart=None,
-    ):
+        class_weight: Union[dict, None] = None,
+        seed: int = 42,
+        wandb_project: Union[str, None] = None,
+        wandb_kwargs: Union[dict, None] = None,
+        model_filename: Union[str, None] = "trained_model.keras",
+        history_filename: Union[str, None] = "training_history.pkl",
+        restart: Union[dict, None] = None,
+    ) -> keras.Model:
         """
         Train a Keras model.
 
@@ -1352,10 +1381,7 @@ class NNTools:
             Arguments to use when fitting the `model`. See https://keras.io/api/models/model_training_apis/#fit-method for details. A large `batch_size` can lead to memory overflow if you have large images or other data.  Consider reducing this if you run in issues, or using a data iterator instead; in this case `batch_size` will be ignored.  Also, `validation_split` is invalid when using data iterators; in that case, specify `validation_data` with a test or validation set iterator of its own.
 
         class_weight : dict(int, float), optional(default=None)
-            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting
-            inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html.
-            To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics'
-            simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
+            Dictionary mapping class indices (integers) to a weight (float) value, used for weighting the loss function (during training only). By default, use class weighting inversely proportional to observation frequency as in sklearn's RandomForest: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html. To turn off weighting, specify `class_weight={c:1 for c in range(N)}` where `N` is the number of classes in the model. Turning off weighting means the 'weighted_metrics' simply become equivalent to 'metrics'.  Normally, this weighting is part of `fit_kwargs` but we have kept it separate here because the default behavior used is different from Keras.  This will be added to `fit_kwargs` before the model is fit, and will overwrite any class_weight previously specified in `fit_kwargs`.
 
         seed : int, optional(default=42)
             Seed for keras random weight initialization when the model is compiled.
@@ -1437,7 +1463,7 @@ class NNTools:
         if NNTools._is_data_iter(data):
             _, _, unique_targets, X, y = NNTools._summarize_batches(data)
             N_data = len(unique_targets)
-            vals = sorted(unique_targets.keys())
+            vals = np.array(sorted(unique_targets.keys()))
             counts = np.array([unique_targets[k] for k in vals])
 
             # Overwrite this to ensure batch size is determined by the data iterator.  Keras knows to ignore this, but this is good to alert the user.
@@ -1599,11 +1625,11 @@ class HuggingFace:
     @staticmethod
     def from_pretrained(
         model_id: str,
-        filename="model.pkl",
-        revision=None,
-        token=None,
-        library_version=None,
-    ):
+        filename: str = "model.pkl",
+        revision: Union[str, None] = None,
+        token: Union[str, None] = None,
+        library_version: Union[str, None] = None,
+    ) -> Any:
         """
         Load a pre-trained model from Hugging Face.
 
@@ -1629,7 +1655,7 @@ class HuggingFace:
 
         Returns
         -------
-        model : sklearn.base.BaseEstimator
+        model : estimator
             Model, or pipeline, from PyChemAuth that is compatible with sklearn's estimator API.
         """
         filename = hf_hub_download(
@@ -1644,28 +1670,25 @@ class HuggingFace:
 
     @staticmethod
     def push_to_hub(
-        model: sklearn.base.BaseEstimator,
+        model: Any,
         namespace: str,
         repo_name: str,
         token: str,
-        revision=None,
-        private=True,
+        revision: Union[str, None] = None,
+        private: Union[bool, None] = True,
     ) -> None:
         """
         Push a PyChemAuth model, or pipeline, to Hugging Face.
 
-        If no repo (namespace/repo_name) exists on Hugging Face this creates a minimal model
-        card and repo to hold a PyChemAuth model or pipeline. By default, all new repos are
-        set to private.
+        If no repo (namespace/repo_name) exists on Hugging Face this creates a minimal model card and repo to hold a PyChemAuth model or pipeline. By default, all new repos are set to private.
 
-        It is strongly recommended that you visit the link below for instructions on how to
-        fill out an effective model card that accurately and completely describes your model.
+        It is strongly recommended that you visit the link below for instructions on how to fill out an effective model card that accurately and completely describes your model.
 
         https://huggingface.co/docs/hub/model-card-annotated
 
         Parameters
         ----------
-        model : sklearn.base.BaseEstimator
+        model : estimator
             Model, or pipeline, from PyChemAuth that is compatible with sklearn's estimator API.
 
         namespace : str
@@ -1675,8 +1698,7 @@ class HuggingFace:
             Name of Hugging Face repository, e.g., "my-awesome-model".
 
         token : str
-            Your Hugging Face access token.  Be sure it has write access.
-            Refer to https://huggingface.co/settings/tokens.
+            Your Hugging Face access token.  Be sure it has write access. Refer to https://huggingface.co/settings/tokens.
 
         revision : str, optional(default=None)
             The git revision to commit from. Defaults to the head of the `"main"` branch.
@@ -1829,13 +1851,13 @@ class ControlBoundary:
         """Initialize class."""
         self.boundary_ = None
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "ControlBoundary":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         raise NotImplementedError
 
@@ -1849,7 +1871,9 @@ class ControlBoundary:
         return copy.deepcopy(self.boundary_)
 
 
-def _adjusted_covariance(X, method, center, dim):
+def _adjusted_covariance(
+    X: NDArray, method: str, center: Union[Sequence, NDArray, None], dim: int
+) -> tuple[NDArray, NDArray]:
     """Compute the covariance of data around a fixed center."""
     if center is None:
         # Not forcing the center, leave
@@ -1884,30 +1908,40 @@ def _adjusted_covariance(X, method, center, dim):
 class CovarianceEllipse(ControlBoundary):
     """Draw chi-squared limits of a two dimensional distribution as an ellipse."""
 
-    def __init__(self, method="empirical", center=None):
+    method: ClassVar[str]
+    center: ClassVar[str]
+
+    def __init__(
+        self,
+        method: str = "empirical",
+        center: Union[Sequence, NDArray, None] = None,
+    ):
         """
         Instantiate the class.
 
         Parameters
         ----------
         method : str, optional(default='empirical')
-            How to compute the covariance matrix.  The default 'empirical' uses the
-            empirical covariance, if 'mcd' the minimum covariance determinant
-            is computed.
+            How to compute the covariance matrix.  The default 'empirical' uses the empirical covariance, if 'mcd' the minimum covariance determinant is computed.
 
         center : array_like(float, ndim=1), optional(default=None)
-            Shifts the training data to make this the center.  If None, no shifting
-            is done, and the data is not assumed to be centered when the ellipse is
-            calculated.
+            Shifts the training data to make this the center.  If `None`, no shifting is done, and the data is not assumed to be centered when the ellipse is calculated.
         """
         super(CovarianceEllipse, self).__init__()
         self.set_params(**{"method": method, "center": center})
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {"method": self.method, "center": self.center}
 
-    def fit(self, X):
+    @property
+    def S(self) -> NDArray:
+        """Return the covariance matrix."""
+        return self.__S_.copy()
+
+    def fit(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> "CovarianceEllipse":
         """
         Fit the covariance ellipse to the data.
 
@@ -1954,13 +1988,18 @@ class CovarianceEllipse(ControlBoundary):
 
         return self
 
-    def visualize(self, ax, alpha=0.05, ellipse_kwargs={"alpha": 0.3}):
+    def visualize(
+        self,
+        ax: matplotlib.axes.Axes,
+        alpha: float = 0.05,
+        ellipse_kwargs: dict = {"alpha": 0.3},
+    ) -> matplotlib.axes.Axes:
         """
         Draw a covariance ellipse boundary at a certain threshold.
 
         Parameters
         ----------
-        ax : matplotlib.Axes.axes
+        ax : matplotlib.axes.Axes
             Axes object to plot the ellipse on.
 
         alpha : float, optional(default=0.05)
@@ -1972,7 +2011,7 @@ class CovarianceEllipse(ControlBoundary):
 
         Returns
         -------
-        ax : matplotlib.Axes.axes
+        ax : matplotlib.axes.Axes
             Axes object with ellipse plotted on it.
         """
         k = np.sqrt(
@@ -1993,30 +2032,40 @@ class CovarianceEllipse(ControlBoundary):
 class OneDimLimits(ControlBoundary):
     """Draw chi-squared limits of a one dimensional distribution as a rectangle."""
 
-    def __init__(self, method="empirical", center=None):
+    method: ClassVar[str]
+    center: ClassVar[str]
+
+    def __init__(
+        self,
+        method: str = "empirical",
+        center: Union[Sequence, NDArray, None] = None,
+    ):
         """
         Instantiate the class.
 
         Parameters
         ----------
         method : str, optional(default='empirical')
-            How to compute the covariance matrix.  The default 'empirical' uses the
-            empirical covariance, if 'mcd' the minimum covariance determinant
-            is computed.
+            How to compute the covariance matrix.  The default 'empirical' uses the empirical covariance, if 'mcd' the minimum covariance determinant is computed.
 
         center : array_like(float, ndim=1), optional(default=None)
-            Shifts the training data to make this the center.  If None, no shifting
-            is done, and the data is not assumed to be centered when the ellipse is
-            calculated.
+            Shifts the training data to make this the center.  If None, no shifting is done, and the data is not assumed to be centered when the ellipse is calculated.
         """
         super(OneDimLimits, self).__init__()
         self.set_params(**{"method": method, "center": center})
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {"method": self.method, "center": self.center}
 
-    def fit(self, X):
+    @property
+    def S(self) -> NDArray:
+        """Return the covariance matrix."""
+        return self.__S_.copy()
+
+    def fit(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> "OneDimLimits":
         """
         Fit the covariance to the data.
 
@@ -2054,19 +2103,23 @@ class OneDimLimits(ControlBoundary):
         return self
 
     def visualize(
-        self, ax, x, alpha=0.05, rectangle_kwargs={"alpha": 0.3}, vertical=True
-    ):
+        self,
+        ax: matplotlib.axes.Axes,
+        x: float,
+        alpha: float = 0.05,
+        rectangle_kwargs: dict = {"alpha": 0.3},
+        vertical: bool = True,
+    ) -> matplotlib.axes.Axes:
         """
         Draw a covariance boundary as a rectangle at a certain threshold.
 
         Parameters
         ----------
-        ax : matplotlib.Axes.axes
+        ax : matplotlib.axes.Axes
             Axes object to plot the ellipse on.
 
         x : float
-            X coordinate to center the covariance "bar" on. If `vertical` is True, this is
-            a y coordinate instead.
+            `X` coordinate to center the covariance "bar" on. If `vertical` is True, this is a `y` coordinate instead.
 
         alpha : float, optional(default=0.05)
             Significance level (Type I error rate).
@@ -2080,7 +2133,7 @@ class OneDimLimits(ControlBoundary):
 
         Returns
         -------
-        ax : matplotlib.Axes.axes
+        ax : matplotlib.axes.Axes
             Axes object with rectangle plotted on it.
         """
         d_crit = scipy.stats.chi2.ppf(1.0 - alpha, 1)
@@ -2111,7 +2164,11 @@ class OneDimLimits(ControlBoundary):
         return ax
 
 
-def estimate_dof(u_vals, robust=True, initial_guess=None):
+def estimate_dof(
+    u_vals: Union[Sequence[float], NDArray[np.floating]],
+    robust: bool = True,
+    initial_guess: Union[float, None] = None,
+) -> tuple[int, Any]:
     """
     Estimate the degrees of freedom for projection-based modeling.
 
@@ -2123,7 +2180,7 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
     robust : bool, optional(default=True)
         Whether to use a statistically robust approach or not.
 
-    initial_guess : scalar(float or None), optional(default=None)
+    initial_guess : scalar(float), optional(default=None)
         Initial guess for the degrees of freedom.
 
     Returns
@@ -2136,14 +2193,11 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
 
     References
     ----------
-    [1] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    [1] "Acceptance areas for multivariate classification derived by projection methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
 
-    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A.,
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev A., Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
     if not robust:
         # Eq. 12 in [2]
@@ -2218,7 +2272,11 @@ def estimate_dof(u_vals, robust=True, initial_guess=None):
     return Nu, u0
 
 
-def pos_def_mat(S, inner_max=10, outer_max=100):
+def pos_def_mat(
+    S: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+    inner_max: int = 10,
+    outer_max: int = 100,
+) -> NDArray[np.floating]:
     """
     Create a positive definite approximation of a square, symmetric matrix.
 
@@ -2278,7 +2336,7 @@ def pos_def_mat(S, inner_max=10, outer_max=100):
     raise Exception("Unable to create a symmetric, positive definite matrix")
 
 
-def pls_vip(pls: PLSRegression, mode="weights"):
+def pls_vip(pls: PLSRegression, mode: str = "weights") -> NDArray[np.floating]:
     """
     Compute the variable importance in projection (VIP) in a PLS(1) model.
 
@@ -2287,7 +2345,7 @@ def pls_vip(pls: PLSRegression, mode="weights"):
     pls : sklearn.cross_decomposition.PLSRegression
         Trained PLS model.
 
-    mode : scalar(str), optional(default='weights')
+    mode : str, optional(default='weights')
         Whether to use the weights or the rotations to compute the VIP.
 
     Returns
@@ -2320,7 +2378,7 @@ def pls_vip(pls: PLSRegression, mode="weights"):
     return np.sqrt(n * (w**2 @ s) / np.sum(s))
 
 
-def _logistic_proba(x):
+def _logistic_proba(x: NDArray[np.floating]) -> NDArray[np.floating]:
     """
     Compute the logistic function of a given input.
 
@@ -2347,8 +2405,14 @@ def _logistic_proba(x):
 
 
 def _multi_cm_metrics(
-    df, Itot, trained_classes, use_classes, style, not_assigned, actual
-):
+    df: pd.DataFrame,
+    Itot: pd.Series,
+    trained_classes: Union[NDArray[np.integer], NDArray[np.str_]],
+    use_classes: Union[NDArray[np.integer], NDArray[np.str_]],
+    style: str,
+    not_assigned: Union[int, str],
+    actual: Union[NDArray[np.integer], NDArray[np.str_]],
+) -> dict:
     """
     Compute metrics for a (possibly) multiclass, multilabel classifier / authenticator using the confusion matrix.
 
@@ -2360,20 +2424,20 @@ def _multi_cm_metrics(
     Itot : pandas.Series
         Number of each class asked to classify.  Should have a row for each class in `use_classes`; e.g., 0 for classes seen during training but not testing.
 
-    trained_classes : numpy.ndarray(str or int)
+    trained_classes : ndarray(int or str)
         Classes seen during training.
 
-    use_classes : numpy.ndarray(str or int)
+    use_classes : ndarray(int or str)
         Classes to use when computing metrics; this includes all classes seen during testing and training excluding the "unknown" class.
 
     style : str
         Either "hard" or "soft' denoting whether a point can be assigned to one or multiple classes, respectively.
         This determines whether the metrics are multilabel (soft) or not (hard).
 
-    not_assigned : str or int
+    not_assigned : int or str
         The designation for an "unknown" or unrecognized class.
 
-    actual : numpy.ndarray(str or int)
+    actual : ndarray(int or str)
         True target (y) values.
 
     Returns
@@ -2515,8 +2579,13 @@ def _multi_cm_metrics(
 
 
 def _occ_cm_metrics(
-    df, Itot, target_class, trained_classes, not_assigned, actual
-):
+    df: pd.DataFrame,
+    Itot: pd.Series,
+    target_class: Union[NDArray[np.integer], NDArray[np.str_]],
+    trained_classes: Union[NDArray[np.integer], NDArray[np.str_]],
+    not_assigned: Union[int, str],
+    actual: Union[NDArray[np.integer], NDArray[np.str_]],
+) -> dict:
     """
     Compute one-class classifier (OCC) metrics from the confusion matrix.
 
@@ -2530,13 +2599,16 @@ def _occ_cm_metrics(
     Itot : pandas.Series
         Number of each class asked to classify.
 
-    trained_classes : numpy.ndarray(str or int)
+    target_class : scalar(int or str), optional(default=None)
+        The class used to fit the model; the rest are used to test specificity.
+
+    trained_classes : ndarray(int or str)
         Classes seen during training.
 
-    not_assigned : str or int
+    not_assigned : int or str
         The designation for an "unknown" or unrecognized class.
 
-    actual : numpy.ndarray(str or int)
+    actual : ndarray(int or str)
         True target (y) values.
 
     Returns
@@ -2626,7 +2698,12 @@ def _occ_cm_metrics(
     return fom
 
 
-def _occ_metrics(X, y, target_class, predict_function):
+def _occ_metrics(
+    X: NDArray[np.floating],
+    y: Union[NDArray[np.integer], NDArray[np.str_]],
+    target_class: Union[int, str],
+    predict_function: Callable[..., NDArray[np.bool_]],
+) -> tuple[dict, list]:
     """
     Compute one-class classifier (OCC) metrics directly from data.
 
@@ -2634,18 +2711,17 @@ def _occ_metrics(X, y, target_class, predict_function):
 
     Parameters
     ----------
-    X : array_like(float, ndim=2)
+    X : ndarray(float, ndim=2)
         Input feature matrix.
 
-    y : array_like(str or int, ndim=1)
+    y : ndarray(str or int, ndim=1)
         Class labels or indices.
 
-    target_class : str or int
+    target_class : int or str
         Target class being modeled by the OCC; should have the same type as `y`.
 
     predict_function : callable
-        Should return a 1D numpy array of booleans corresponding to whether a point
-        is an inlier.
+        Should return a 1D numpy array of booleans corresponding to whether a point is an inlier.
 
     Returns
     -------
