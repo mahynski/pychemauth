@@ -24,8 +24,8 @@ setuptools.setup(
         "Operating System :: POSIX :: Linux",
     ],
     install_requires=[
-        "mypy==1.11.2", # For type hints and checking
-        "types-requests==2.32.0.20240914", # For type checking
+        "mypy==1.11.2",  # For type hints and checking
+        "types-requests==2.32.0.20240914",  # For type checking
         "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
         "dime-pytorch==1.0.1",
         "baycomp==1.0.3",
