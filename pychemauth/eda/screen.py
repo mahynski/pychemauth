@@ -722,12 +722,10 @@ class JSScreen:
         self.__transforms_ = self._all_sets(self.__y_, self.n)
 
         self.__js_ = JensenShannonDivergence(
-            **{
-                "per_class": False,
-                "feature_names": None,  # Index
-                "bins": self.js_bins,
-                "robust": self.robust,
-            }
+            per_class=False,
+            feature_names=None,  # Index
+            bins=self.js_bins,
+            robust=self.robust,
         )
 
         self.__row_labels_ = (
@@ -1149,12 +1147,10 @@ class JSBinary:
             Fitted model.
         """
         js = JensenShannonDivergence(
-            **{
-                "per_class": True,  # Sorts by max automatically
-                "feature_names": None,  # Index
-                "bins": self.js_bins,
-                "robust": self.robust,
-            }
+            per_class=True,  # Sorts by max automatically
+            feature_names=None,  # Index
+            bins=self.js_bins,
+            robust=self.robust,
         )
 
         self.__enc_ = LabelEncoder()
