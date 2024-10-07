@@ -14,7 +14,6 @@ import pandas as pd
 from scipy.stats import entropy
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pychemauth.eda.explore import InspectData
 
