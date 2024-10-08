@@ -575,7 +575,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
         }
 
 
-class EllipticManifold_Model(BaseEstimator, ClassifierMixin):
+class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
     r"""
     Perform a dimensionality reduction with decision boundary determined by an ellipse.
 

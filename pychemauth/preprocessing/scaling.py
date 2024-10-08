@@ -241,7 +241,7 @@ class RobustScaler(TransformerMixin, BaseEstimator):
         }
 
 
-class CorrectedScaler:
+class CorrectedScaler(TransformerMixin, BaseEstimator):
     """
     Perform variations of autoscaling on the data.
 
