@@ -37,7 +37,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
 
-    scale_x : scalar(bool), optional(default=False)
+    scale_x : bool, optional(default=False)
         Whether or not to scale X columns by the standard deviation.
 
     robust : str, optional(default="semi")
@@ -51,7 +51,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         points, a robust variant is recommended. This is why "semi" is the
         default value.
 
-    sft : scalar(bool), optional(default=False)
+    sft : bool, optional(default=False)
         Whether or not to use the iterative outlier removal scheme described
         in [2], called "sequential focused trimming."  If not used (default)
         robust estimates of parameters may be attempted; if the iterative
@@ -141,11 +141,11 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(int, str or float, ndim=1), optional(default=None)
+        y : array-like(int, str or float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -346,7 +346,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
@@ -420,7 +420,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
@@ -448,11 +448,11 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -481,11 +481,11 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -520,7 +520,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -543,7 +543,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -580,7 +580,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Data to evaluate the number of non-inliers (outliers + extremes) in.
 
         upper_frac : scalar(float), optional(default=0.25)
@@ -668,11 +668,11 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -727,7 +727,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
 
         ax : matplotlib.pyplot.Axes, optional(default=None)
@@ -792,7 +792,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         Parameters
         ----------
-        X : array_like(str, ndim=2)
+        X : array-like(str, ndim=2)
             Columns are features, observations are rows - will be converted to
             numpy array automatically.
 

@@ -83,10 +83,10 @@ class RobustScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -127,7 +127,7 @@ class RobustScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Unscaled feature matrix.
 
         Returns
@@ -164,7 +164,7 @@ class RobustScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Scaled feature matrix.
 
         Returns
@@ -201,10 +201,10 @@ class RobustScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -315,10 +315,10 @@ class CorrectedScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -361,7 +361,7 @@ class CorrectedScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Unscaled feature matrix.
 
         Returns
@@ -405,7 +405,7 @@ class CorrectedScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Scaled feature matrix.
 
         Returns
@@ -442,10 +442,10 @@ class CorrectedScaler(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns

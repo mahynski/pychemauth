@@ -43,7 +43,7 @@ class InspectData:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         clusters : list(int), optional(default=range(1, 11))
@@ -97,7 +97,7 @@ class InspectData:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         clustering : sklearn.cluster
@@ -418,7 +418,7 @@ class InspectData:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Dense feature matrix.
 
         feature_names : list, optional(default=None)

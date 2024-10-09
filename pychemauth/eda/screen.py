@@ -85,10 +85,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1)
+        y : array-like(float, int, or str, ndim=1)
             Target to predict.
 
         Raises
@@ -165,10 +165,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1)
+        y : array-like(float, int, or str, ndim=1)
             Target to predict. If these are floating points, also check for NaN values.
 
         Returns
@@ -207,10 +207,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1)
+        y : array-like(float, int, or str, ndim=1)
             Target to predict. If these are floating points, also check for Inf values.
 
         Returns
@@ -246,10 +246,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -281,10 +281,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
+        y : array-like(str or float, ndim=1), optional(default=None)
             Target to predict. If `None` this test is not performed.
 
         n : scalar(int), optional(default=5)
@@ -324,10 +324,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Target to predict. If `None` this test is not performed.
 
         n : scalar(int), optional(default=5)
@@ -381,10 +381,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Ignored.
 
         tol : scalar(float), optional(default=1.0e-12)
@@ -428,10 +428,10 @@ class RedFlags:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Target to predict. If `None` this test is not performed.
 
         Returns
@@ -574,7 +574,7 @@ class JSScreen:
 
         Parameters
         ----------
-        atomic_classes : array_like(str or int, ndim=1)
+        atomic_classes : array-like(str or int, ndim=1)
             List of classes, can strings or integers, for example.
 
         n : scalar(int) or None
@@ -606,7 +606,7 @@ class JSScreen:
 
         Parameters
         ----------
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground-truth classes.
 
         macroclass : tuple(str)
@@ -669,7 +669,7 @@ class JSScreen:
 
         Parameters
         ----------
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground-truth classes.
 
         n : scalar(int) or None
@@ -701,10 +701,10 @@ class JSScreen:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes.
 
         Result
@@ -872,7 +872,7 @@ class JSScreen:
         bins : scalar(int), optional(default=25)
             Number of bins to use in the histogram.
 
-        ax : array_like(matplotlib.pyplot.Axes, ndim=1), optional(default=None)
+        ax : array-like(matplotlib.pyplot.Axes, ndim=1), optional(default=None)
             Axes to plot each macroclasses on. Should have length of :math:`top`.
 
         Returns
@@ -1135,10 +1135,10 @@ class JSBinary:
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Features matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes.
 
         Returns
@@ -1192,7 +1192,7 @@ class JSBinary:
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of feature names. Results are internally stored as
             indices so if this is provided, converts indices to names
             based on this array; otherwise a matrix of indices is

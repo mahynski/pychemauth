@@ -300,7 +300,7 @@ class NNTools:
 
             Parameters
             ----------
-            x_files : array_like(str)
+            x_files : array-like(str)
                 List of filenames, in order, that correspond to X.
 
             y : ndarray(object, ndim=1)
@@ -315,10 +315,10 @@ class NNTools:
             shuffle : bool, optional(default=False)
                 Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
 
-            include : array_like, optional(default=None)
+            include : array-like, optional(default=None)
                 List of `y` values to include when iterating.  If specified, only instances where `y` is in this list will be returned.  This will create uneven or empty batches. You cannot specify this and `exclude` simultaneously.
 
-            exclude : array_like, optional(default=None)
+            exclude : array-like, optional(default=None)
                 List of `y` values to exclude when iterating.  This allows you to filter out certain classes.  This will create uneven or empty batches. You cannot specify this and `include` simultanously.
 
             filter : ndarray(bool, ndim=1)
@@ -488,10 +488,10 @@ class NNTools:
         shuffle : bool, optional(default=False)
             Whether or not to shuffle the order of X between epochs. The seed for this is already set during training so one is not assigned here.
 
-        include : array_like, optional(default=None)
+        include : array-like, optional(default=None)
             List of `y` values to include when iterating. If specified, only instances where `y` is in this list will be returned. This will create uneven or empty batch sizes. You cannot specify this and `exclude` simultaneously.
 
-        exclude : array_like, optional(default=None)
+        exclude : array-like, optional(default=None)
             List of `y` values to exclude when iterating. This allows you to filter out certain classes. This will create uneven or empty batch sizes. You cannot specify this and `include` simultaneously.
 
         filter : numpy.ndarray(bool, ndim=1)
@@ -1924,7 +1924,7 @@ class CovarianceEllipse(ControlBoundary):
         method : str, optional(default='empirical')
             How to compute the covariance matrix.  The default 'empirical' uses the empirical covariance, if 'mcd' the minimum covariance determinant is computed.
 
-        center : array_like(float, ndim=1), optional(default=None)
+        center : array-like(float, ndim=1), optional(default=None)
             Shifts the training data to make this the center.  If `None`, no shifting is done, and the data is not assumed to be centered when the ellipse is calculated.
         """
         super(CovarianceEllipse, self).__init__()
@@ -1949,7 +1949,7 @@ class CovarianceEllipse(ControlBoundary):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix with at least 2 features (columns).
 
         Returns
@@ -2048,7 +2048,7 @@ class OneDimLimits(ControlBoundary):
         method : str, optional(default='empirical')
             How to compute the covariance matrix.  The default 'empirical' uses the empirical covariance, if 'mcd' the minimum covariance determinant is computed.
 
-        center : array_like(float, ndim=1), optional(default=None)
+        center : array-like(float, ndim=1), optional(default=None)
             Shifts the training data to make this the center.  If None, no shifting is done, and the data is not assumed to be centered when the ellipse is calculated.
         """
         super(OneDimLimits, self).__init__()
@@ -2071,7 +2071,7 @@ class OneDimLimits(ControlBoundary):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix with a single feature (column).
 
         Returns
@@ -2174,7 +2174,7 @@ def estimate_dof(
 
     Parameters
     ----------
-    u_vals : array_like(float, ndim=1)
+    u_vals : array-like(float, ndim=1)
         Observation values.
 
     robust : bool, optional(default=True)
@@ -2282,7 +2282,7 @@ def pos_def_mat(
 
     Parameters
     ----------
-    S : array_like(float, ndim=2)
+    S : array-like(float, ndim=2)
         2D square, symmetric matrix to make positive definite.
 
     inner_max : scalar(int), optional(default=10)

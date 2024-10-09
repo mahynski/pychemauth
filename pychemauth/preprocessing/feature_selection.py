@@ -110,7 +110,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        input_features : array_like(str, ndim=1), optional(default=None)
+        input_features : array-like(str, ndim=1), optional(default=None)
             List of input features to mask.
 
         Returns
@@ -151,10 +151,10 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -228,12 +228,12 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
         Returns
         -------
-        X_selected : array_like(float, ndim=2) or pandas.DataFrame
+        X_selected : array-like(float, ndim=2) or pandas.DataFrame
             X with all features not selected removed. If X is provided as a DataFrame a DataFrame is returned.
         """
         check_is_fitted(self, "is_fitted_")
@@ -267,15 +267,15 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
-        X_selected : array_like(float, ndim=2)
+        X_selected : array-like(float, ndim=2)
             X with all features not selected removed.
         """
         self.fit(X, y)
@@ -326,7 +326,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
     per_class : bool, optional(default=True)
         Do we want to return the `top_k` analytes (above threshold) on average (False) or the `top_k` per class (True)?  If True, up to `top_k`*`n_classes` can be returned, otherwise just `top_k` above `threshold`.
 
-    feature_names : array_like(str, ndim=1), optional(default=None)
+    feature_names : array-like(str, ndim=1), optional(default=None)
         List of names of features (columns of X) in order.
 
     bins : scalar(int), optional(default=25)
@@ -458,10 +458,10 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Observations (columns as features); this is converted to a numpy array behind the scenes.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Classes; this is converted to a numpy array behind the scenes.
 
         Returns
@@ -616,7 +616,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Observations (columns as features); this is converted to a numpy array behind the scenes. Should be in the same column order as the `X` trained on.
 
         Returns
@@ -655,7 +655,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
         by_class : bool, optional(default=True)
             Whether to plot feature divergences sorted by class (`per_class`=True) or by their overall mean (`per_class`=False). This is independent of the choice for `per_class` made at instantiation.
 
-        classes : array_like(str, ndim=1), optional(default=None)
+        classes : array-like(str, ndim=1), optional(default=None)
             List of classes to plot; if None, plot all trained on. Only relevant for when `by_class` is true.
 
         threshold : scalar(float), optional(default=None)
@@ -836,7 +836,7 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
     Parameters
     ----------
-    column_names : array_like(str, ndim=1), optional(default=None)
+    column_names : array-like(str, ndim=1), optional(default=None)
         Name of the columns in the feature matrix.
 
     model : sklearn.base.BaseEstimator, optional(default=sklearn.ensemble.RandomForestClassifier)
@@ -964,10 +964,10 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
-        y : array_like(float, int, or str, ndim=1) or pandas.Series
+        y : array-like(float, int, or str, ndim=1) or pandas.Series
             Response variable or classes, depending on whether this is is a classification or regression problem.
 
         Returns
@@ -1037,12 +1037,12 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
         Returns
         ----------
-        X_selected : array_like(float, ndim=2)
+        X_selected : array-like(float, ndim=2)
             Feature matrix with only the relevant columns.
         """
         check_is_fitted(self, "is_fitted_")

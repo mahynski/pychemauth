@@ -24,7 +24,7 @@ class LOD(TransformerMixin, BaseEstimator):
 
     Parameters
     ----------
-    lod : array_like(float, ndim=1)
+    lod : array-like(float, ndim=1)
         Numerical limit of detection for each feature.
 
     missing_values : scalar(float), optional(default=numpy.nan)
@@ -36,7 +36,7 @@ class LOD(TransformerMixin, BaseEstimator):
     ignore : scalar(float), optional(default=None)
         Anything in X with this value is ignored. You can use this to mask certain values as needed; e.g., for future processing. If this is set to `np.nan` it overrides `missing_values` and the imputer will only operate on values explicitly below the LOD.
 
-    skip_columns : array_like(int, ndim=1), optional(default=None)
+    skip_columns : array-like(int, ndim=1), optional(default=None)
         Indices of columns to skip (not impute).
 
     Note
@@ -100,10 +100,10 @@ class LOD(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -185,15 +185,15 @@ class LOD(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
         -------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix with data below LOD replaced. If `X` was supplied as a pandas.DataFrame a new DataFrame is returned.
         """
         _ = self.fit(X)
@@ -209,12 +209,12 @@ class LOD(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
         Returns
         -------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix with data below LOD replaced. If `X` was supplied as a pandas.DataFrame a new DataFrame is returned.
         """
         X_checked = check_array(
@@ -403,10 +403,10 @@ class PCA_IA(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -543,10 +543,10 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -566,10 +566,10 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -605,10 +605,10 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -777,10 +777,10 @@ class PLS_IA(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
@@ -961,15 +961,15 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
-        X_filled : array_like(float, ndim=2)
+        X_filled : array-like(float, ndim=2)
             Matrix with missing data filled in.
         """
         _ = self.fit(X, y)
@@ -984,10 +984,10 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -1023,10 +1023,10 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns

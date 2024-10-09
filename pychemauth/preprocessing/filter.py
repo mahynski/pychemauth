@@ -20,7 +20,7 @@ class MSC(TransformerMixin, BaseEstimator):
 
     Parameters
     ----------
-    Xref : array_like(float, ndim=2), optional(default=None)
+    Xref : array-like(float, ndim=2), optional(default=None)
         Optional reference to use as background instead of `X` when fitting.
 
     Note
@@ -75,10 +75,10 @@ class MSC(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix to use as background. If `Xref` is provided this is ignored.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -128,7 +128,7 @@ class MSC(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -169,10 +169,10 @@ class MSC(TransformerMixin, BaseEstimator):
 
         Parameter
         ---------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -291,10 +291,10 @@ class SNV(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.  Not stored, but is used to determined the expected size of future matrices.
 
-        y : array_like(float, ndimd=1)
+        y : array-like(float, ndimd=1)
             Ignored.
 
         Returns
@@ -335,12 +335,12 @@ class SNV(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
         -------
-        X_corrected : array_like(float, ndim=2)
+        X_corrected : array-like(float, ndim=2)
             Corrected feature matrix.
         """
         X_ = check_array(
@@ -394,10 +394,10 @@ class SNV(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -523,10 +523,10 @@ class SavGol(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns
@@ -573,7 +573,7 @@ class SavGol(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -615,10 +615,10 @@ class SavGol(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Ignored.
 
         Returns

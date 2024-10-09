@@ -136,10 +136,10 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
@@ -467,7 +467,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -501,10 +501,10 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
@@ -523,7 +523,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -561,10 +561,10 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
@@ -596,7 +596,7 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -641,10 +641,10 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         Returns
@@ -693,10 +693,10 @@ class PCR(RegressorMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
+        y : array-like(float, ndim=1)
             Response values. Should only have a single scalar response for each observation.
 
         figsize : tuple(int, int), optional(default=None)

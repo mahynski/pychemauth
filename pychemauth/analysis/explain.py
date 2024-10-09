@@ -1565,13 +1565,13 @@ def color_series(
 
     Parameters
     ----------
-    y : array_like(float, ndim=1)
+    y : array-like(float, ndim=1)
         Series values, such as spectral (signal) intensities.
 
-    x : array_like(float, ndim=1)
+    x : array-like(float, ndim=1)
         Location series was measured at, for example, wavelengths or energy.
 
-    importance_values : array_like(float, ndim=1)
+    importance_values : array-like(float, ndim=1)
         Importance value assigned. Should have the same length as `x` and `y`.
 
     cmap : str or matplotlib.colors.LinearSegmentedColormap, optional(default="coolwarm")
@@ -1638,13 +1638,13 @@ def bokeh_color_spectrum(
 
     Parameters
     ----------
-    y : array_like(float, ndim=1)
+    y : array-like(float, ndim=1)
         Series values, such as spectral (signal) intensities.
 
-    x : array_like(float, ndim=1)
+    x : array-like(float, ndim=1)
         Location series was measured at, for example, wavelengths or energy.
 
-    importance_values : array_like(float, ndim=1)
+    importance_values : array-like(float, ndim=1)
         Importance value assigned to each feature. Should have the same length as `x` and `y`.
 
     palette : bokeh.palettes, optional(default=Spectral10)

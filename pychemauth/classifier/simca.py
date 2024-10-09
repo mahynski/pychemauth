@@ -140,10 +140,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices. Should include some examples of "target_class".
 
         Returns
@@ -209,7 +209,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -244,10 +244,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices. Should include some examples of "target_class".
 
         Returns
@@ -270,7 +270,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -301,7 +301,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -333,7 +333,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -392,10 +392,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices.
 
         Returns
@@ -450,10 +450,10 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices.
 
         Returns
@@ -589,12 +589,12 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
@@ -670,7 +670,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
@@ -711,17 +711,17 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : array-like(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         self.fit(X, y)
@@ -735,7 +735,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -784,7 +784,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -814,7 +814,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -851,7 +851,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -877,11 +877,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -936,11 +936,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -974,11 +974,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1134,12 +1134,12 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
@@ -1352,7 +1352,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
@@ -1392,11 +1392,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
@@ -1446,7 +1446,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to a numpy array automatically.
 
@@ -1474,7 +1474,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1504,7 +1504,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1543,7 +1543,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1568,11 +1568,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -1627,11 +1627,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1665,11 +1665,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1706,7 +1706,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1744,7 +1744,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Data to evaluate the number of outliers + extremes in.
 
         upper_frac : scalar(float), optional(default=0.25)
@@ -1834,7 +1834,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
 
         ax : matplotlib.pyplot.Axes, optional(default=None)
@@ -1914,11 +1914,11 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Labels for observations in X.
 
         ax : matplotlib.pyplot.Axes, optional(default=None)

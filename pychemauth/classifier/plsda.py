@@ -56,7 +56,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     style : str, optional(default="soft")
         PLS style; can be "soft" or "hard".
 
-    scale_x : scalar(bool), optional(default=True)
+    scale_x : bool, optional(default=True)
         Whether or not to scale the X matrix during the PLS(2) stage.
         This depends on the meaning of X and is up to the user to
         determine if scaling it (by the standard deviation) makes sense.
@@ -190,11 +190,11 @@ class PLSDA(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
@@ -455,13 +455,13 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : array-like(float, ndim=2)
             Projection of X via PLS, then by PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
@@ -503,7 +503,7 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -579,11 +579,11 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -622,11 +622,11 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -705,7 +705,7 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -756,12 +756,12 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        predictions : array_like(str or int, ndim=2) or array_like(str or int, ndim=1)
+        predictions : array-like(str or int, ndim=2) or array-like(str or int, ndim=1)
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
 
-        actual : array_like(str or int, ndim=1)
+        actual : array-like(str or int, ndim=1)
             Array of ground truth classes for the predicted points.  Should
             have only one class per point.
 
@@ -867,11 +867,11 @@ n_features [{}])] = [{}, {}].".format(
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
@@ -921,7 +921,7 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        return_coeff : scalar(bool), optional(default=False)
+        return_coeff : bool, optional(default=False)
             Return PLS2 coefficients instead of the figure axis. N x D where D
             is the number of features in X (X.shape[1]) and N is the number of
             categories.
@@ -1035,7 +1035,7 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        show_training : scalar(bool), optional(default=True)
+        show_training : bool, optional(default=True)
             If True, plot the training set points.
 
         Returns
@@ -1196,7 +1196,7 @@ n_features [{}])] = [{}, {}].".format(
         ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        show_training : scalar(bool), optional(default=True)
+        show_training : bool, optional(default=True)
             If True, plot the training set points.
 
         Returns

@@ -891,7 +891,7 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
         Keyword arguments to instantiate the outlier model with.  If `outlier_model=None` these are
         ignored since they are not used.
 
-    known_classes : array_like(int or str, ndim=1), optional(default=None)
+    known_classes : array-like(int or str, ndim=1), optional(default=None)
         A list of classes which the classifier is responsible for recognizing. If `None`,
         all unique values of `y` are used; otherwise, `y` is filtered to only include these
         instances when training the classifier, if training is performed.
@@ -1013,10 +1013,10 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or data iterator
+        X : array-like(float, ndim=2) or data iterator
             Input feature matrix. Data iterators are only supported if `clf_model` is deep.  Data iterators supply both `X` and `y` values.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Class labels or indices. If `X` is a data iterator, leave this as None since the iterator will provide this information.
 
         Returns
@@ -1186,12 +1186,12 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or data iterator.
+        X : array-like(float, ndim=2) or data iterator.
             Input feature matrix. Data iterators are only supported if `clf_model` is deep.
 
         Returns
         -------
-        predictions : array_like(int or str, ndim=2)
+        predictions : array-like(int or str, ndim=2)
             Class, or classes, assigned to each point.  Points considered outliers are assigned the value `unknown_class`. This is returned as a list to accommodate multi-label, or soft, classifiers which can return multiple predictions for each observation.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1249,15 +1249,15 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or data iterator
+        X : array-like(float, ndim=2) or data iterator
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices. If `X` is a data iterator, leave this as None since the iterator will provide this information.
 
         Returns
         -------
-        predictions : array_like(int or str, ndim=2)
+        predictions : array-like(int or str, ndim=2)
             Class, or classes, assigned to each point.  Points considered outliers are
             assigned the value `unknown_class`.
         """
@@ -1270,10 +1270,10 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or data iterator
+        X : array-like(float, ndim=2) or data iterator
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array automatically. If `X` is a data iterator, leave this as None since the iterator will provide this information.
 
         Returns
@@ -1324,12 +1324,12 @@ class OpenSetClassifier(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        predictions : array_like(str or int, ndim=2)
+        predictions : array-like(str or int, ndim=2)
             Array of values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions.
 
-        actual : array_like(str or int, ndim=1)
+        actual : array-like(str or int, ndim=1)
             Array of ground truth classes for the predicted points.  Should
             have only one class per point.
 

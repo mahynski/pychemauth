@@ -20,7 +20,7 @@ from pychemauth.utils import (
     _occ_metrics,
 )
 
-from typing import Any, Callable, Union, Sequence, ClassVar
+from typing import Any, Union, Sequence, ClassVar
 from numpy.typing import NDArray
 
 
@@ -248,10 +248,10 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(int or str, ndim=1)
+        y : array-like(int or str, ndim=1)
             Class labels or indices. Should include some examples of "target_class".
 
         Returns
@@ -302,7 +302,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -340,10 +340,10 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(int or str, ndim=1)
+        y : array-like(int or str, ndim=1)
             Class labels or indices. Should include some examples of "target_class".
 
         Returns
@@ -365,7 +365,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -395,7 +395,7 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -442,10 +442,10 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(int or str, ndim=1)
+        y : array-like(int or str, ndim=1)
             Class labels or indices.
 
         Returns
@@ -509,10 +509,10 @@ class EllipticManifold_Authenticator(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(int or str, ndim=1)
+        y : array-like(int or str, ndim=1)
             Class labels or indices.
 
         Returns
@@ -739,10 +739,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(int or str, ndim=1), optional(default=None)
+        y : array-like(int or str, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods). If passed, it is checked that they are all identical and this label is used; otherwise the name "Training Class" is assigned.
 
         Returns
@@ -832,7 +832,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -861,10 +861,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
@@ -884,7 +884,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -918,7 +918,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -953,10 +953,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(int or str, ndim=1), optional(default=None)
+        y : array-like(int or str, ndim=1), optional(default=None)
             Response. Ignored if it is not used by :py:func:`dr_model.fit` (unsupervised methods).
 
         Returns
@@ -976,7 +976,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -999,7 +999,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -1026,7 +1026,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
         Returns
@@ -1059,10 +1059,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(int, ndim=1)
+        y : array-like(int, ndim=1)
             Correct labels; +1 for inlier, 0 otherwise.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -1105,10 +1105,10 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1129,11 +1129,11 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1160,7 +1160,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Data to evaluate the number of outliers (not inliers) in.
 
         upper_frac : scalar(float), optional(default=0.25)
@@ -1228,7 +1228,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X_mats : list(array_like(float, ndim=2))
+        X_mats : list(array-like(float, ndim=2))
             List of different feature matrices to plot.
 
         labels : list(str)
@@ -1262,7 +1262,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X_mats : list(array_like(float, ndim=2))
+        X_mats : list(array-like(float, ndim=2))
             List of different feature matrices to plot.
 
         labels : list(str)
@@ -1328,7 +1328,7 @@ class EllipticManifold_Model(ClassifierMixin, BaseEstimator):
 
         Parameters
         ----------
-        X_mats : list(array_like(float, ndim=2))
+        X_mats : list(array-like(float, ndim=2))
             List of different feature matrices to plot.
 
         labels : list(str)

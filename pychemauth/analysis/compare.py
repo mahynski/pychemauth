@@ -18,9 +18,11 @@ from sklearn.base import clone
 from sklearn.model_selection import (
     GridSearchCV,
     KFold,
+    GroupKFold,
     RepeatedKFold,
     RepeatedStratifiedKFold,
     StratifiedKFold,
+    StratifiedGroupKFold,
 )
 
 from typing import Union, Sequence, Any
@@ -41,44 +43,19 @@ class BiasedNestedCV:
 
     Note
     ----
-    This performs a version of repeated "flat CV" as defined in [1] to statistically
-    compare the performance of two pipelines or models.  This is done by
-    nesting flat CV inside an outer loop, akin to nested CV.
-    This differs from scikit-learn's "built in" method of doing nested CV of
-    cross_val_score(GridSeachCV()) in that cross_val_score() returns
-    the scores from each test fold on the outer loop, obtained by training the best
-    model on the entire inner set of training folds using the best
-    hyperparameters determined by that the inner loop.  This is conventional "Nested CV"
-    which uses the performance on the held-out test fold for an unbiased esimate of
-    the generalization error [2].
+    This performs a version of repeated "flat CV" as defined in [1] to statistically compare the performance of two pipelines or models.  This is done by nesting flat CV inside an outer loop, akin to nested CV. This differs from scikit-learn's "built in" method of doing nested CV of cross_val_score(GridSeachCV()) in that cross_val_score() returns the scores from each test fold on the outer loop, obtained by training the best model on the entire inner set of training folds using the best hyperparameters determined by that the inner loop.  This is conventional "Nested CV" which uses the performance on the held-out test fold for an unbiased esimate of the generalization error [2].
 
-    Here, we instead extract the performance estimates from the best model's validation
-    fold (held out part of the inner training folds) used to select the hyperparameters
-    for a given iteration of the outer loop.  These performance estimates are positively
-    biased, but extensive real-world testing suggests that using the scores from the
-    "flat CV" to **rank** different models does not make practical difference [2] to
-    their relative ordering. Therefore, we can use the inner scores directly in concert
-    with paired t-tests to compare different pipelines when it is too computationally
-    expensive to do repeated nested CV.
+    Here, we instead extract the performance estimates from the best model's validation fold (held out part of the inner training folds) used to select the hyperparameters for a given iteration of the outer loop.  These performance estimates are positively biased, but extensive real-world testing suggests that using the scores from the "flat CV" to **rank** different models does not make practical difference [2] to their relative ordering. Therefore, we can use the inner scores directly in concert with paired t-tests to compare different pipelines when it is too computationally expensive to do repeated nested CV.
 
-    Unlike simple repetition of any CV procedure, framing this as a nested CV uses
-    the outer loop as way to "shift" or decorrelate the data chunks more relative to
-    simply reshuffling and reusing the data.  Thus, the Nadeau and Bengio's correction
-    factor [3] for the t-test is less necessary, but further aids in making conservative
-    inference.
+    Unlike simple repetition of any CV procedure, framing this as a nested CV uses the outer loop as way to "shift" or decorrelate the data chunks more relative to simply reshuffling and reusing the data.  Thus, the Nadeau and Bengio's correction factor [3] for the t-test is less necessary, but further aids in making conservative inference.
 
     References
     ----------
-    [1] Wainer, J. and Cawley G., "Nested cross-validation when
-    selecting classifiers is overzealous for most practical applications."
-    Expert Systems with Applications 182, 115222 (2021).
+    [1] Wainer, J. and Cawley G., "Nested cross-validation when selecting classifiers is overzealous for most practical applications," Expert Systems with Applications 182, 115222 (2021).
 
-    [2] Cawley, G.C. and Talbot, N.L.C., "On over-fitting in model selection and
-    subsequent selection bias in performance evaluation," J. Mach. Learn. Res
-    11, 2079-2107 (2010).
+    [2] Cawley, G.C. and Talbot, N.L.C., "On over-fitting in model selection and subsequent selection bias in performance evaluation," J. Mach. Learn. Res. 11, 2079-2107 (2010).
 
-    [3] Nadeau, C. and Bengio Y., "Inference for the Generalization Error," Machine
-    Learning 52, 239-281 (2003).
+    [3] Nadeau, C. and Bengio Y., "Inference for the Generalization Error," Machine Learning 52, 239-281 (2003).
     """
 
     def __init__(self, k_inner: int = 10, k_outer: int = 10) -> None:
@@ -87,7 +64,7 @@ class BiasedNestedCV:
         self.__k_outer = k_outer
 
     def _get_test_scores(
-        self, gs: sklearn.model_selection.GridSeachCV
+        self, gs: sklearn.model_selection.GridSearchCV
     ) -> NDArray[np.float64]:
         """Extract test scores from the GridSearch object."""
         # From the grid, extract the results from the hyperparameter set with
@@ -107,14 +84,16 @@ class BiasedNestedCV:
             scores.append(
                 gs.cv_results_["split{}_test_score".format(i)][best_set_idx]
             )
+
         return np.array(scores)
 
     def _outer_loop(
         self,
-        pipeline: Union[sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline],
+        grid_search: sklearn.model_selection.GridSearchCV,
         X: NDArray[Any],
         y: NDArray[Any],
         cv: sklearn.model_selection.BaseCrossValidator,
+        groups: Union[NDArray[np.integer], NDArray[np.str_], None]
     ) -> NDArray[np.floating]:
         """Perform outer loop."""
         scores = np.array([])
@@ -122,7 +101,10 @@ class BiasedNestedCV:
             X_train, _ = X[train_index], X[test_index]
             y_train, _ = y[train_index], y[test_index]
 
-            pipeline.fit(X_train, y_train)
+            if groups is None:
+                grid_search.fit(X_train, y_train)
+            else:
+                grid_search.fit(X_train, y_train, groups=groups[train_index])
 
             # We don't actually use the test set here!
             # Unlike nested CV where we have k_outer test score estimates, now
@@ -131,7 +113,7 @@ class BiasedNestedCV:
             # decorrelate different repeats of the inner fold.  The "basic"
             # alternative is not to bother with the "outer fold" and just
             # repeat the inner fold procedure k_outer times (on the same data).
-            scores = np.concatenate((scores, self._get_test_scores(pipeline)))
+            scores = np.concatenate((scores, self._get_test_scores(grid_search)))
 
         return scores
 
@@ -147,6 +129,7 @@ class BiasedNestedCV:
         y: Union[NDArray[np.floating], NDArray[np.integer], NDArray[np.str_]],
         classification: bool = True,
         error_score: Union[float, int] = np.nan,
+        groups: Union[Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_], None] = None
     ) -> NDArray[np.floating]:
         """
         Perform nested grid search CV.
@@ -157,7 +140,7 @@ class BiasedNestedCV:
             Pipeline to evaluate.
 
         param_grid : list(dict)
-            GridSearchCV.param_grid object to perform grid search over.
+            `GridSearchCV.param_grid` object to perform grid search over.
 
         X : ndarray(float, ndim=2)
             Dense 2D array of observations (rows) of features (columns).
@@ -165,11 +148,14 @@ class BiasedNestedCV:
         y : ndarray(float, int, or str, ndim=1)
             Array of targets.
 
-        classification : scalar(bool), optional(default=True)
+        classification : bool, optional(default=True)
             Is this a classification task (otherwise assumed to be regression)?
 
         error_score : scalar(float, int, np.nan), optional(default=np.nan)
             Value to return as the score if a failure occurs during fitting.
+        
+        groups : array-like, optional(default=None)
+            If specified, these are the groups used to perform splitting in cross-validation.  If `None` it is assumed there is no grouping.  For classification tasks, stratification is also performed.
 
         Returns
         -------
@@ -178,22 +164,33 @@ class BiasedNestedCV:
 
         Note
         ----
-        For an RxK nested loop, R*K total scores are returned.  For
-        classification tasks, KFolds are stratified.
+        For an RxK nested loop, R*K total scores are returned.  For classification tasks, the folds are stratified.
         """
+
+        if len(groups) != len(y):
+            raise ValueError("Groups must have same length as y.")
+
+        cv_ = None
+        if classification and groups is None:
+            cv_ = StratifiedKFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
+        if classification and groups is not None:
+            cv_ = StratifiedGroupKFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
+        elif not classification and groups is None:
+            cv_ = KFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
+        else: # not classification and groups is not None
+            cv_ = GroupKFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
+
+        # This is the "inner" loop whose validation folds are going to be used as the "test" results and should use groupings to be less biased.
         self.gs = GridSearchCV(
             estimator=pipeline,
             param_grid=param_grid,
             n_jobs=-1,
             error_score=error_score,
-            cv=StratifiedKFold(
-                n_splits=self.__k_inner, random_state=1, shuffle=True
-            )
-            if classification
-            else KFold(n_splits=self.__k_inner, random_state=1, shuffle=True),
-            return_train_score=True,  # Results from the test folds are stored
+            cv=cv_,
+            return_train_score=True,  # Results from the validation folds are stored
         )
 
+        # The "outer" loop is just here to "shuffle" the data in a way that produces disjoint subsets that are removed from the training data pool.  We do NOT want to remove entire groups from the model's awareness; though this choice could be made.  If we use groups here then the "test" folds that are removed on each iteration will contain entire groups, while the model is trained on a fold of data with the "remaining" groups.
         scores = self._outer_loop(
             self.gs,
             X,
@@ -203,7 +200,9 @@ class BiasedNestedCV:
             )
             if classification
             else KFold(n_splits=self.__k_outer, random_state=1, shuffle=True),
+            groups=groups
         )
+
         return scores
 
 
@@ -339,6 +338,7 @@ class Compare:
                 sklearn.pipeline.Pipeline,
                 imblearn.pipeline.Pipeline,
                 sklearn.base.BaseEstimator,
+                sklearn.model_selection.GridSearchCV
             ]
         ],
         X: NDArray[np.floating],
@@ -356,13 +356,13 @@ class Compare:
 
         Parameters
         ----------
-        estimators : array_like(sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline or sklearn.base.BaseEstimator, ndim=1)
+        estimators : array-like(sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline, sklearn.base.BaseEstimator, or sklearn.model_selection.GridSearchCV, ndim=1)
             A list of pipelines or estimators that implements the fit() and score() methods. These can also be a GridSearchCV object.
 
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Matrix of features.
 
-        y : array_like(float, int, or str, ndim=1)
+        y : array-like(float, int, or str, ndim=1)
             Array of outputs to predict.
 
         n_repeats : scalar(int), optional(default=5)
@@ -374,29 +374,22 @@ class Compare:
         random_state : scalar(int) or numpy.random.RandomState instance, optional(default=0)
             Controls the randomness of each repeated cross-validation instance.
 
-        stratify : scalar(bool), optional(default=True)
-            If True, use RepeatedStratifiedKFold - this is only valid for
-            classification tasks.
+        stratify : bool, optional(default=True)
+            If True, use RepeatedStratifiedKFold - this is only valid for classification tasks.
 
-        estimators_mask : list(array_like(bool, ndim=1)), optional(default=None)
-            Which columns of X to use in each estimator; default of None uses all columns for
-            all estimators.  If specified, a mask must be given for each estimator.
+        estimators_mask : list(array-like(bool, ndim=1)), optional(default=None)
+            Which columns of X to use in each estimator; default of None uses all columns for all estimators.  If specified, a mask must be given for each estimator.
 
         Returns
         -------
         scores : ndarray(float, ndim=2)
-            List of scores for estimator.  Each row is a different estimator, in order
-            of how they were provided, and each column is the result from a different
-            test fold.
+            List of scores for estimator.  Each row is a different estimator, in order of how they were provided, and each column is the result from a different test fold.
 
         Note
         ----
-        The random state of the CV is the same for each so each pipeline or
-        algorithm is tested on exactly the same dataset.  This enables paired
-        t-test hypothesis testing using these scores.
+        The random state of the CV is the same for each so each pipeline or algorithm is tested on exactly the same dataset.  This enables paired t-test hypothesis testing using these scores.
 
-        When comparing 2 pipelines that use different columns of X, use the
-        estimators_mask variables to specify which columns to use.
+        When comparing 2 pipelines that use different columns of X, use the estimators_mask variables to specify which columns to use.
         """
         if not hasattr(estimators, "__iter__"):
             raise TypeError("estimators is not iterable")
@@ -458,21 +451,17 @@ class Compare:
 
         Parameters
         ----------
-        scores1 : array_like(float, ndim=1)
+        scores1 : array-like(float, ndim=1)
             List of scores from pipeline 1.
 
-        scores2 : array_like(float, ndim=1)
+        scores2 : array-like(float, ndim=1)
             List of scores from pipeline 2.
 
         n_repeats : scalar(int)
             Number of times k-fold was repeated (i.e., k_outer in BiasedNestedCV).
 
         ignore : scalar(float or int, or None), optional(default=np.nan)
-            If any score is equal to this value (in either list of scores) their
-            comparison is ignored.  This is to exclude scores from failed fits.
-            sklearn's default `error_score` is `np.nan` so this is set as the
-            default here, but a numeric value of 0 is also commonly used. A
-            warning is raised if any scores are ignored.
+            If any score is equal to this value (in either list of scores) their comparison is ignored.  This is to exclude scores from failed fits. sklearn's default `error_score` is `np.nan` so this is set as the default here, but a numeric value of 0 is also commonly used. A warning is raised if any scores are ignored.
 
         Returns
         -------
@@ -481,23 +470,13 @@ class Compare:
 
         Note
         ----
-        Perform 1-sided hypothesis testing to see if any difference in
-        pipelines' performances are statisically significant using a
-        correlated, paired t-test with the Nadeau & Bengio (2003)
-        correction. The test checks if the first pipeline is superior to the
-        second using the alternative hypothesis, H1: mean(scores1-scores2) > 0.
+        Perform 1-sided hypothesis testing to see if any difference in pipelines' performances are statisically significant using a correlated, paired t-test with the Nadeau & Bengio (2003) correction. The test checks if the first pipeline is superior to the second using the alternative hypothesis, H1: mean(scores1-scores2) > 0.
 
-        Reject H0 (that pipelines are equally good) in favor of H1 (pipeline1
-        is better) if p < alpha, otherwise fail to reject H0 (not enough
-        evidence to suggest they are different). The formulation of this test
-        is that pipeline1 has the best (average) performance or score of the
-        two, and you want to check if that is statistically significant or not.
+        Reject H0 (that pipelines are equally good) in favor of H1 (pipeline1 is better) if p < alpha, otherwise fail to reject H0 (not enough evidence to suggest they are different). The formulation of this test is that pipeline1 has the best (average) performance or score of the two, and you want to check if that is statistically significant or not.
 
         Warning
         -------
-        It is a good idea to manually check the scores for any `np.nan` or 0
-        values, etc. which can indicate a failed fit. Use `ignore` to exclude
-        these points from the calculation.
+        It is a good idea to manually check the scores for any `np.nan` or 0 values, etc. which can indicate a failed fit. Use `ignore` to exclude these points from the calculation.
         """
         scores1, scores2, mask = Compare._check_scores(
             scores1=scores1, scores2=scores2, ignore=ignore
@@ -574,10 +553,10 @@ class Compare:
 
         Parameters
         ----------
-        scores1 : array_like(float, ndim=1)
+        scores1 : array-like(float, ndim=1)
             List of scores from each repeat of each CV fold for pipe1.
 
-        scores2 : array_like(float, ndim=1)
+        scores2 : array-like(float, ndim=1)
             List of scores from each repeat of each CV fold for pipe2.
 
         n_repeats : scalar(int)
@@ -590,11 +569,7 @@ class Compare:
             The width of the region of practical equivalence.
 
         ignore : scalar(int or float, or None), optional(default=np.nan)
-            If any score is equal to this value (in either list of scores) their
-            comparison is ignored.  This is to exclude scores from failed fits.
-            sklearn's default `error_score` is `np.nan` so this is set as the
-            default here, but a numeric value of 0 is also commonly used. A
-            warning is raised if any scores are ignored.
+            If any score is equal to this value (in either list of scores) their comparison is ignored.  This is to exclude scores from failed fits. sklearn's default `error_score` is `np.nan` so this is set as the default here, but a numeric value of 0 is also commonly used. A warning is raised if any scores are ignored.
 
         Returns
         -------
@@ -606,23 +581,17 @@ class Compare:
 
         Note
         ----
-        Perform Bayesian analysis to predict the probability that pipe(line)1
-        outperforms pipe(line)2 based on repeated kfold cross validation
-        results using a correlated t-test.
+        Perform Bayesian analysis to predict the probability that pipe(line)1 outperforms pipe(line)2 based on repeated kfold cross validation results using a correlated t-test.
 
-        If prob[X] > 1.0 - alpha, then you make the decision that X is better.
-        If no prob's reach this threshold, make no decision about the
-        super(infer)iority of the pipelines relative to each other.
+        If prob[X] > 1.0 - alpha, then you make the decision that X is better. If no prob's reach this threshold, make no decision about the super(infer)iority of the pipelines relative to each other.
 
         References
-        -----
+        ----------
         See https://baycomp.readthedocs.io/en/latest/functions.html.
 
         Warning
         -------
-        It is a good idea to manually check the scores for any `np.nan` or 0
-        values, etc. which can indicate a failed fit. Use `ignore` to exclude
-        these points from the calculation.
+        It is a good idea to manually check the scores for any `np.nan` or 0 values, etc. which can indicate a failed fit. Use `ignore` to exclude these points from the calculation.
         """
         scores1, scores2, mask = Compare._check_scores(
             scores1=scores1, scores2=scores2, ignore=ignore
