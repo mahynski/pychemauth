@@ -25,8 +25,194 @@ from sklearn.model_selection import (
     StratifiedGroupKFold,
 )
 
-from typing import Union, Sequence, Any
-from numpy.typing import NDArray
+from typing import Union, Sequence, Any, ClassVar, Generator
+from numpy.typing import NDArray, ArrayLike
+
+
+class _RepeatedGroupKFold:
+    """Repeat (Stratified)GroupKFold a number of times."""
+
+    n_splits: ClassVar[int]
+    n_repeats: ClassVar[int]
+    random_state: ClassVar[Union[int, None]]
+    stratified: ClassVar[bool]
+
+    def __init__(self, n_splits: int = 5, n_repeats: int = 10, random_state: Union[int, None] = None, stratified: bool = False) -> None:
+        """
+        Perform (Stratified)GroupKFold a number of times.
+        
+        Parameters
+        ----------
+        n_splits : int, optional(default=5)
+            Number of splits for GroupKFold.
+            
+        n_repeats : int, optional(default=10)
+            Number of times to repeat the GroupKFold.
+            
+        random_state : int, optional(default=None)
+            Random state which controls how data is initially shuffled and split to create different GroupKFold results.
+            
+        stratified : bool, optional(default=False)
+            Whether to attempt to stratify the results.
+        """
+        self.set_params(**{
+            'n_splits': n_splits,
+            'n_repeats': n_repeats,
+            'random_state': random_state,
+            'stratified': stratified
+        })
+    
+    def set_params(self, **parameters: Any) -> "_RepeatedGroupKFold":
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+    
+    def get_n_splits(self, X=None, y=None, groups=None) -> int:
+        """
+        Parameters
+        ----------
+        X : object
+            Always ignored, exists for compatibility.
+            
+        y : object
+            Always ignored, exists for compatibility.
+            
+        groups : object
+            Always ignored, exists for compatibility.
+            
+        Returns
+        -------
+        n_splits : int
+            Returns the number of splitting iterations in the cross-validator.
+        """
+        return self.n_splits*self.n_repeats
+    
+    def split(self, X: ArrayLike, y: Union[ArrayLike, None] = None, groups: Union[ArrayLike, None] = None) -> Generator[tuple[NDArray[np.integer], NDArray[np.integer]]]:
+        """
+        Generate indices to split data into training and test set.
+        
+        Step 1:
+        The data initially broken up by a simple (outer) KFold split with max(`n_splits`, `n_repeats`) splits.  This creates several datasets with varied group structure.  The train set is selected for Step 2.
+        
+        Step 2:
+        (Stratified)GroupKFold is performed on each outer training set.  GroupKFold is a deterministic operation which is why Step 1 is required; even if stratified the randomness is somewhat limited.  Instead, this operation breaks up certain groups into the inner test and inner train folds.
+        
+        Step 3:
+        The inner datasets form the basis of what is returned, but they are only a subset of the total data provided due to the split in Step 1.  To remedy this, the outer test data is added to the inner splits based on their group so that the group structure determined by the inner (Stratified)GroupKFold split is maintained.
+        
+        Parameters
+        ----------
+        X : array-like
+            Training data.
+        
+        y : array-like
+            The target variable for supervised learning problems.
+        
+        groups : array-like
+            Group labels for the samples used while splitting the dataset into train/test set.
+        
+        Yields
+        ------
+        train : ndarray(int)
+            The training set indices for that split.
+
+        test : ndarray(int)
+            The testing set indices for that split.
+        """
+        X_ = np.asarray(X)
+        y_ = np.asarray(y)
+        
+        if groups is None:
+            raise ValueError(f"groups must be specified for {self.__class__.__name__}")
+        else:
+            groups_ = np.asarray(groups)
+        
+        """
+        Step 1. 
+        Use CV to randomly split up the dataset initially - this serves as the seed for each of the repeats.
+        GroupKFold has no randomness to it so that needs to be introduced via data splitting in the outer loop.
+        Using max([n_splits, n_repeats]) avoid issues with small values of n_repeats.
+        """
+        outer = KFold(
+            n_splits=np.max([self.n_splits, self.n_repeats]),
+            random_state=self.random_state, 
+            shuffle=True
+        )
+
+        for n_repeat, (split_index, hold_index) in enumerate(outer.split(X_, y_)):
+            # Number of outer splits may exceed n_repeats to terminate when appropriate.
+            if n_repeat >= self.n_repeats:
+                break
+                
+            X_split, _ = X_[split_index], X_[hold_index]
+            y_split, _ = y_[split_index], y_[hold_index]
+            groups_split, groups_hold = groups_[split_index], groups_[hold_index]
+
+            """
+            Step 2. 
+            Based on this training dataset make another split that respects the group structure.
+            GroupKFold has no randomness to it so that needs to be introduced via data splitting in the outer loop.
+            StratifiedGroupKFold has some, but just changing the RNG seed in this does introduce as much noise/variance as this splitting does, which is deemed prefereable.
+            Each group will appear exactly once in the test set across all folds (the number of distinct groups has to be at least equal to the number of folds).
+            """
+            inner = StratifiedGroupKFold(n_splits=self.n_splits, random_state=n_repeat, shuffle=True) if self.stratified else GroupKFold(n_splits=self.n_splits)
+            for i, (train_idx, test_idx) in enumerate(inner.split(X_split, y_split, groups_split)):
+                """
+                Step 3.
+                Take the inner split as the basis of the datasets.
+                Then assign the points from the outer held out fold to test/train based on their group.
+                Groups were assigned based on the inner split's decision.
+                """
+                global_train_idx = split_index[train_idx]
+                global_test_idx = split_index[test_idx]
+                for idx_, g_ in zip(hold_index, groups_hold):
+                    if g_ in set(groups_split[test_idx]):
+                        np.append(global_test_idx, idx_)
+                    else:
+                        np.append(global_train_idx, idx_)
+
+                yield global_train_idx, global_test_idx
+
+
+class RepeatedGroupKFold(_RepeatedGroupKFold):
+    """Repeat GroupKFold a number of times."""
+    def __init__(self, n_splits: int = 5, n_repeats: int = 10, random_state: Union[int, None] = None) -> None:
+        """
+        Perform GroupKFold a number of times.
+        
+        Parameters
+        ----------
+        n_splits : int, optional(default=5)
+            Number of splits for GroupKFold.
+            
+        n_repeats : int, optional(default=10)
+            Number of times to repeat the GroupKFold.
+            
+        random_state : int, optional(default=None)
+            Random state which controls how data is initially shuffled and split to create different GroupKFold results.
+        """
+        super().__init__(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state, stratified=False)
+
+
+class RepeatedStratifiedGroupKFold(_RepeatedGroupKFold):
+    """Repeat StratifiedGroupKFold a number of times."""
+    def __init__(self, n_splits: int = 5, n_repeats: int = 10, random_state: Union[int, None] = None) -> None:
+        """
+        Perform StratifiedGroupKFold a number of times.
+        
+        Parameters
+        ----------
+        n_splits : int, optional(default=5)
+            Number of splits for GroupKFold.
+            
+        n_repeats : int, optional(default=10)
+            Number of times to repeat the GroupKFold.
+            
+        random_state : int, optional(default=None)
+            Random state which controls how data is initially shuffled and split to create different GroupKFold results.
+        """
+        super().__init__(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state, stratified=True)
 
 
 class BiasedNestedCV:
@@ -167,8 +353,9 @@ class BiasedNestedCV:
         For an RxK nested loop, R*K total scores are returned.  For classification tasks, the folds are stratified.
         """
 
-        if len(groups) != len(y):
-            raise ValueError("Groups must have same length as y.")
+        if groups is not None:
+            if len(groups) != len(y):
+                raise ValueError("Groups must have same length as y.")
 
         cv_ = None
         if classification and groups is None:
@@ -178,7 +365,7 @@ class BiasedNestedCV:
         elif not classification and groups is None:
             cv_ = KFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
         else: # not classification and groups is not None
-            cv_ = GroupKFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
+            cv_ = GroupKFold(n_splits=self.__k_inner)
 
         # This is the "inner" loop whose validation folds are going to be used as the "test" results and should use groupings to be less biased.
         self.gs = GridSearchCV(
@@ -200,7 +387,7 @@ class BiasedNestedCV:
             )
             if classification
             else KFold(n_splits=self.__k_outer, random_state=1, shuffle=True),
-            groups=groups
+            groups=np.asarray(groups)
         )
 
         return scores
@@ -341,12 +528,13 @@ class Compare:
                 sklearn.model_selection.GridSearchCV
             ]
         ],
-        X: NDArray[np.floating],
-        y: Union[NDArray[np.floating], NDArray[np.integer], NDArray[np.str_]],
+        X: ArrayLike,
+        y: ArrayLike,
         n_repeats: int = 5,
         k: int = 2,
         random_state: Union[int, np.random.RandomState] = 0,
         stratify: bool = True,
+        groups: Union[ArrayLike, None] = None,
         estimators_mask: Union[
             Sequence[Sequence[bool]], Sequence[NDArray[np.bool_]], None
         ] = None,
@@ -357,7 +545,7 @@ class Compare:
         Parameters
         ----------
         estimators : array-like(sklearn.pipeline.Pipeline, imblearn.pipeline.Pipeline, sklearn.base.BaseEstimator, or sklearn.model_selection.GridSearchCV, ndim=1)
-            A list of pipelines or estimators that implements the fit() and score() methods. These can also be a GridSearchCV object.
+            A list of pipelines or estimators that implements the `.fit()` and `.score()` methods. These can also be a `GridSearchCV` object.
 
         X : array-like(float, ndim=2)
             Matrix of features.
@@ -375,10 +563,13 @@ class Compare:
             Controls the randomness of each repeated cross-validation instance.
 
         stratify : bool, optional(default=True)
-            If True, use RepeatedStratifiedKFold - this is only valid for classification tasks.
+            If True, use `RepeatedStratifiedKFold` or `RepeatedStratifiedGroupKFold`, depending on if `groups` is specified - this is only valid for classification tasks.
+
+        groups : array-like(int or str, ndim=1), optional(default=None)
+            Groups each observation (row) in `X` belongs to.
 
         estimators_mask : list(array-like(bool, ndim=1)), optional(default=None)
-            Which columns of X to use in each estimator; default of None uses all columns for all estimators.  If specified, a mask must be given for each estimator.
+            Which columns of `X` to use in each estimator; default of `None` uses all columns for all estimators.  If specified, a mask must be given for each estimator.
 
         Returns
         -------
@@ -396,19 +587,22 @@ class Compare:
         else:
             estimators = [clone(est) for est in estimators]
 
-        if stratify:
-            rkf = RepeatedStratifiedKFold(
-                n_splits=k, n_repeats=n_repeats, random_state=random_state
-            )
-            split = rkf.split(X, y)
-        else:
-            rkf = RepeatedKFold(
-                n_splits=k, n_repeats=n_repeats, random_state=random_state
-            )
-            split = rkf.split(X)
+        X_ = np.asarray(X)
+        y_ = np.asarray(y)
+        if groups is not None:
+            groups_ = np.asarray(groups)
 
-        X = np.asarray(X)
-        y = np.asarray(y)
+        if stratify:
+            if groups is None:
+                rkf = RepeatedStratifiedKFold
+            else:
+                rkf = RepeatedStratifiedGroupKFold
+        else:
+            if groups is None:
+                rkf = RepeatedKFold
+            else:
+                rkf = RepeatedGroupKFold
+        split = rkf(n_splits=k, n_repeats=n_repeats, random_state=random_state).split(X_, y_, groups=groups_)
 
         if estimators_mask is not None:
             if len(estimators_mask) != len(estimators):
@@ -417,17 +611,17 @@ class Compare:
                 np.asarray(mask, dtype=bool) for mask in estimators_mask
             ]
             for i, mask in enumerate(estimators_mask):
-                if len(mask) != X.shape[1]:
+                if len(mask) != X_.shape[1]:
                     raise ValueError(f"Mask index {i} has the wrong size")
         else:
             estimators_mask = [
-                np.array([True] * X.shape[1]) for est in estimators
+                np.array([True] * X_.shape[1]) for _ in estimators
             ]
 
         scores = []
         for train_index, test_index in split:
-            X_train, X_test = X[train_index], X[test_index]
-            y_train, y_test = y[train_index], y[test_index]
+            X_train, X_test = X_[train_index], X_[test_index]
+            y_train, y_test = y_[train_index], y_[test_index]
 
             fold_scores = []
             for i, est in enumerate(estimators):
