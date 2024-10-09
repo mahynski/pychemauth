@@ -12,6 +12,17 @@ If you use these tools be sure to cite the original authors.
 Code
 ####
 
+If you use the Kennard-Stone features in PyChemAuth please cite the original authors:
+
+.. code-block:: bibtex
+
+   @misc{kennard-stone,
+   title={kennard-stone},
+   author={yu9824},
+   year={2021},
+   howpublished={\url{https://github.com/yu9824/kennard_stone}},
+   }
+
 If you use UMAP refer to the authors' `github repo <https://github.com/lmcinnes/umap>`_ for information about citation.
 At the very least, you should cite the manuscript associated with the software itself:
 
@@ -138,13 +149,14 @@ PyChemAuth is configured to use the `tensorflow <>`_ backend of Keras, so if you
 If you use "DIME" to perform out-of-distribution detection on a neural network model, please cite:
 
 .. code-block:: bibtex
+
    @misc{sjogren2021outofdistribution,
-   title={Out-of-Distribution Example Detection in Deep Neural Networks using Distance to Modelled Embedding},
-   author={Rickard Sjögren and Johan Trygg},
-   year={2021},
-   eprint={2108.10673},
-   archivePrefix={arXiv},
-   primaryClass={cs.LG}
+   title = {Out-of-Distribution Example Detection in Deep Neural Networks using Distance to Modelled Embedding},
+   author = {Rickard Sjögren and Johan Trygg},
+   year = {2021},
+   eprint = {2108.10673},
+   archivePrefix = {arXiv},
+   primaryClass = {cs.LG}
    }
 
 If you use `visualkeras <https://github.com/paulgavrikov/visualkeras>`_ to visualize any Keras models, please cite:
@@ -163,6 +175,7 @@ If you use `visualkeras <https://github.com/paulgavrikov/visualkeras>`_ to visua
 If you use `pyts <https://pyts.readthedocs.io/en/stable/index.html>`_ to "image" series, or in any other way, please cite:
 
 .. code-block:: bibtex
+
    @article{JMLR:v21:19-763,
    author  = {Johann Faouzi and Hicham Janati},
    title   = {pyts: A Python Package for Time Series Classification},

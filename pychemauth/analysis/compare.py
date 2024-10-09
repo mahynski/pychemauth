@@ -23,7 +23,9 @@ from sklearn.model_selection import (
     RepeatedStratifiedKFold,
     StratifiedKFold,
     StratifiedGroupKFold,
+    ShuffleSplit,
 )
+from kennard_stone import KFold as ks_KFold
 
 from typing import Union, Sequence, Any, ClassVar, Generator
 from numpy.typing import NDArray, ArrayLike
@@ -41,7 +43,7 @@ class _RepeatedGroupKFold:
         self,
         n_splits: int = 5,
         n_repeats: int = 10,
-        random_state: Union[int, None] = None,
+        random_state: Union[int, None] = 42,
         stratified: bool = False,
     ) -> None:
         """
@@ -50,13 +52,13 @@ class _RepeatedGroupKFold:
         Parameters
         ----------
         n_splits : int, optional(default=5)
-            Number of splits for GroupKFold.
+            Number of splits for (Stratified)GroupKFold.
 
         n_repeats : int, optional(default=10)
-            Number of times to repeat the GroupKFold.
+            Number of times to repeat the (Stratified)GroupKFold.
 
-        random_state : int, optional(default=None)
-            Random state which controls how data is initially shuffled and split to create different GroupKFold results.
+        random_state : int, optional(default=42)
+            Random state which controls how data is initially shuffled and split to create different (Stratified)GroupKFold results.
 
         stratified : bool, optional(default=False)
             Whether to attempt to stratify the results.
@@ -103,7 +105,7 @@ class _RepeatedGroupKFold:
         X: ArrayLike,
         y: Union[ArrayLike, None] = None,
         groups: Union[ArrayLike, None] = None,
-    ) -> Generator[tuple[NDArray[np.integer], NDArray[np.integer]]]:
+    ) -> Generator[tuple[NDArray[np.integer], NDArray[np.integer]], None, None]:
         """
         Generate indices to split data into training and test set.
 
@@ -147,7 +149,7 @@ class _RepeatedGroupKFold:
 
         """
         Step 1.
-        Use CV to randomly split up the dataset initially - this serves as the seed for each of the repeats.
+        Use KFold to randomly split up the dataset initially - this serves as the seed for each of the repeats.
         GroupKFold has no randomness to it so that needs to be introduced via data splitting in the outer loop.
         Using max([n_splits, n_repeats]) avoid issues with small values of n_repeats.
         """
@@ -173,7 +175,7 @@ class _RepeatedGroupKFold:
 
             """
             Step 2.
-            Based on this training dataset make another split that respects the group structure.
+            Based on this data subset make another split that respects the group structure.
             GroupKFold has no randomness to it so that needs to be introduced via data splitting in the outer loop.
             StratifiedGroupKFold has some, but just changing the RNG seed in this does introduce as much noise/variance as this splitting does, which is deemed prefereable.
             Each group will appear exactly once in the test set across all folds (the number of distinct groups has to be at least equal to the number of folds).
@@ -185,8 +187,8 @@ class _RepeatedGroupKFold:
                 if self.stratified
                 else GroupKFold(n_splits=self.n_splits)
             )
-            for i, (train_idx, test_idx) in enumerate(
-                inner.split(X_split, y_split, groups_split)
+            for train_idx, test_idx in inner.split(
+                X_split, y_split, groups_split
             ):
                 """
                 Step 3.
@@ -198,9 +200,9 @@ class _RepeatedGroupKFold:
                 global_test_idx = split_index[test_idx]
                 for idx_, g_ in zip(hold_index, groups_hold):
                     if g_ in set(groups_split[test_idx]):
-                        np.append(global_test_idx, idx_)
+                        global_test_idx = np.append(global_test_idx, idx_)
                     else:
-                        np.append(global_train_idx, idx_)
+                        global_train_idx = np.append(global_train_idx, idx_)
 
                 yield global_train_idx, global_test_idx
 
@@ -212,7 +214,7 @@ class RepeatedGroupKFold(_RepeatedGroupKFold):
         self,
         n_splits: int = 5,
         n_repeats: int = 10,
-        random_state: Union[int, None] = None,
+        random_state: Union[int, None] = 42,
     ) -> None:
         """
         Perform GroupKFold a number of times.
@@ -225,7 +227,7 @@ class RepeatedGroupKFold(_RepeatedGroupKFold):
         n_repeats : int, optional(default=10)
             Number of times to repeat the GroupKFold.
 
-        random_state : int, optional(default=None)
+        random_state : int, optional(default=42)
             Random state which controls how data is initially shuffled and split to create different GroupKFold results.
         """
         super().__init__(
@@ -243,7 +245,7 @@ class RepeatedStratifiedGroupKFold(_RepeatedGroupKFold):
         self,
         n_splits: int = 5,
         n_repeats: int = 10,
-        random_state: Union[int, None] = None,
+        random_state: Union[int, None] = 42,
     ) -> None:
         """
         Perform StratifiedGroupKFold a number of times.
@@ -256,7 +258,7 @@ class RepeatedStratifiedGroupKFold(_RepeatedGroupKFold):
         n_repeats : int, optional(default=10)
             Number of times to repeat the GroupKFold.
 
-        random_state : int, optional(default=None)
+        random_state : int, optional(default=42)
             Random state which controls how data is initially shuffled and split to create different GroupKFold results.
         """
         super().__init__(
@@ -265,6 +267,179 @@ class RepeatedStratifiedGroupKFold(_RepeatedGroupKFold):
             random_state=random_state,
             stratified=True,
         )
+
+
+class RepeatedKennardStoneKFold:
+    """Repeat Kennard-Stone KFold a number of times."""
+
+    n_splits: ClassVar[int]
+    n_repeats: ClassVar[int]
+    random_state: Union[int, None] = None
+
+    def __init__(
+        self,
+        n_splits: int = 5,
+        n_repeats: int = 10,
+        random_state: Union[int, None] = 42,
+    ) -> None:
+        """
+        Perform Kennard-Stone KFold a number of times.
+
+        This splits the data initially into 2 subsets. Then the Kennard-Stone algorithm is performed on both subsets to produce 2 train and 2 test splits. Finally, sets are combined to produce a 1 train and 1 test set. Since the data is divided differently each time, each iteration produces different results.
+
+        Each iteration is not exactly a Kennard-Stone design, but is actually a merger of 2 Kennard-Stone results.
+
+        Parameters
+        ----------
+        n_splits : int, optional(default=5)
+            Number of splits for Kennard-Stone KFold.
+
+        n_repeats : int, optional(default=10)
+            Number of times to repeat the Kennard-Stone KFold.
+
+        random_state : int, optional(default=42)
+            Random state which controls how data is initially shuffled and split to create different Kennard-Stone KFold results.
+        """
+        self.set_params(
+            **{
+                "n_splits": n_splits,
+                "n_repeats": n_repeats,
+                "random_state": random_state,
+            }
+        )
+
+    def set_params(self, **parameters: Any) -> "RepeatedKennardStoneKFold":
+        """Set parameters; for consistency with scikit-learn's estimator API."""
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
+        return self
+
+    def get_n_splits(self, X=None, y=None, groups=None) -> int:
+        """
+        Return the number of splitting iterations in the cross-validator.
+
+        Parameters
+        ----------
+        X : object
+            Always ignored, exists for compatibility.
+
+        y : object
+            Always ignored, exists for compatibility.
+
+        groups : object
+            Always ignored, exists for compatibility.
+
+        Returns
+        -------
+        n_splits : int
+            The number of splitting iterations in the cross-validator.
+        """
+        return self.n_splits * self.n_repeats
+
+    def split(
+        self,
+        X: ArrayLike,
+        y: Union[ArrayLike, None] = None,
+        groups=None,
+    ) -> Generator[tuple[NDArray[np.integer], NDArray[np.integer]], None, None]:
+        """
+        Generate indices to split data into training and test set.
+
+        Step 1:
+        The data initially broken up by a simple (outer) KFold split with max(`n_splits`, `n_repeats`) splits.  This creates several datasets with varied group structure.  The train set is selected for Step 2.
+
+        Step 2:
+        Kennard-Stone KFold is performed on each outer training set producing an inner train and inner test set.  This is a deterministic operation which is why Step 1 is required.
+
+        Step 3:
+        The inner datasets form the basis of what is returned, but they are only a subset of the total data provided due to the split in Step 1.  To remedy this, another Kennard-Stone KFold is attempted on the outer test data splitting that data into a train and test fold.  These data are merged with their respective inner datasets.
+
+        Each iteration is not exactly a Kennard-Stone design, but is actually a merger of 2 Kennard-Stone results.
+
+        Parameters
+        ----------
+        X : array-like
+            Training data.
+
+        y : array-like
+            The target variable for supervised learning problems.
+
+        groups : array-like
+            Ignored. Only present for API compatibility.
+
+        Yields
+        ------
+        train : ndarray(int)
+            The training set indices for that split.
+
+        test : ndarray(int)
+            The testing set indices for that split.
+        """
+        X_ = np.asarray(X)
+        y_ = np.asarray(y)
+
+        """
+        Step 1.
+        Use KFold to randomly split up the dataset initially - this serves as the seed for each of the repeats.
+        Kennard-Stone KFold has no randomness to it so that needs to be introduced via data splitting in the outer loop.
+        Using max([n_splits, n_repeats]) avoid issues with small values of n_repeats.
+        """
+        outer = KFold(
+            n_splits=np.max([self.n_splits, self.n_repeats]),
+            random_state=self.random_state,
+            shuffle=True,
+        )
+        for n_repeat, (split_index, hold_index) in enumerate(
+            outer.split(X_, y_)
+        ):
+            # Number of outer splits may exceed n_repeats to terminate when appropriate.
+            if n_repeat >= self.n_repeats:
+                break
+
+            X_split, X_hold = X_[split_index], X_[hold_index]
+            y_split, y_hold = y_[split_index], y_[hold_index]
+
+            """
+            Step 2.
+            Based on this data subset use KS algorithm to split the data.
+            Kennard-Stone has no randomness to it so that needs to be introduced via data splitting in the outer loop.
+            We will also try to use KS on the hold dataset, then merge the two KS splits.
+            For large n_splits there might not be enough data in the "test" fold here - fall back on a random split since this is, by definition, a small subset of data compared to the rest.
+            """
+            inner = ks_KFold(
+                n_splits=self.n_splits,
+                metric="euclidean",
+                device="cpu",
+                n_jobs=-1,
+            )
+            try:  # Try KFold splitting on hold_set
+                hold_iterator = list(inner.split(X_hold, y_hold))
+            except:  # If size of hold_set is < n_splits just randomly split between the test and train sets
+                hold_iterator = list(
+                    ShuffleSplit(
+                        n_splits=self.n_splits,
+                        test_size=1.0 / self.n_splits,
+                        random_state=n_repeat,
+                    ).split(X_hold, y_hold)
+                )
+
+            for (train_idx_split, test_idx_split), (
+                train_idx_hold,
+                test_idx_hold,
+            ) in zip(inner.split(X_split, y_split), hold_iterator):
+                """
+                Step 3.
+                Take the inner split as the basis of the datasets.
+                Then assign the points from the outer held out fold to test/train based on their group.
+                """
+                global_train_idx = np.concatenate(
+                    (split_index[train_idx_split], hold_index[train_idx_hold])
+                )
+                global_test_idx = np.concatenate(
+                    (split_index[test_idx_split], hold_index[test_idx_hold])
+                )
+
+                yield global_train_idx, global_test_idx
 
 
 class BiasedNestedCV:
@@ -330,7 +505,7 @@ class BiasedNestedCV:
         grid_search: sklearn.model_selection.GridSearchCV,
         X: NDArray[Any],
         y: NDArray[Any],
-        cv: sklearn.model_selection.BaseCrossValidator,
+        cv: Any,
         groups: Union[NDArray[np.integer], NDArray[np.str_], None],
     ) -> NDArray[np.floating]:
         """Perform outer loop."""
@@ -376,6 +551,7 @@ class BiasedNestedCV:
             NDArray[np.str_],
             None,
         ] = None,
+        kennard_stone: bool = False,
     ) -> NDArray[np.floating]:
         """
         Perform nested grid search CV.
@@ -403,6 +579,9 @@ class BiasedNestedCV:
         groups : array-like, optional(default=None)
             If specified, these are the groups used to perform splitting in cross-validation.  If `None` it is assumed there is no grouping.  For classification tasks, stratification is also performed.
 
+        kennard_stone : bool, optional(default=False)
+            If True, will use the Kennard-Stone algorithm [1] to perform the inner KFold cross-validation.  This ignores `groups` and does not stratify the data splits, so this is recommended only for regression tasks. The implementation used is from [2].
+
         Returns
         -------
         scores : ndarray(float, ndim=1)
@@ -411,10 +590,15 @@ class BiasedNestedCV:
         Note
         ----
         For an RxK nested loop, R*K total scores are returned.  For classification tasks, the folds are stratified.
+
+        References
+        ----------
+        1. R. W. Kennard & L. A. Stone (1969) Computer Aided Design of Experiments, Technometrics, 11:1, 137-148, DOI: 10.1080/00401706.1969.10490666
+        2. pypi.org/project/kennard-stone/
         """
         if groups is not None:
             if len(groups) != len(y):
-                raise ValueError("Groups must have same length as y.")
+                raise ValueError("groups must have same length as y.")
 
         cv_ = None
         if classification and groups is None:
@@ -429,6 +613,14 @@ class BiasedNestedCV:
             cv_ = KFold(n_splits=self.__k_inner, random_state=1, shuffle=True)
         else:  # not classification and groups is not None
             cv_ = GroupKFold(n_splits=self.__k_inner)
+
+        if kennard_stone:
+            cv_ = ks_KFold(
+                n_splits=self.__k_inner,
+                metric="euclidean",
+                device="cpu",
+                n_jobs=-1,
+            )
 
         # This is the "inner" loop whose validation folds are going to be used as the "test" results and should use groupings to be less biased.
         self.gs = GridSearchCV(
@@ -601,6 +793,7 @@ class Compare:
         estimators_mask: Union[
             Sequence[Sequence[bool]], Sequence[NDArray[np.bool_]], None
         ] = None,
+        kennard_stone: bool = False,
     ) -> NDArray[np.floating]:
         """
         Perform repeated (stratified) k-fold cross validation to get scores for multiple estimators.
@@ -629,21 +822,29 @@ class Compare:
             If True, use `RepeatedStratifiedKFold` or `RepeatedStratifiedGroupKFold`, depending on if `groups` is specified - this is only valid for classification tasks.
 
         groups : array-like(int or str, ndim=1), optional(default=None)
-            Groups each observation (row) in `X` belongs to.
+            Group each observation (row) in `X` belongs to.
 
         estimators_mask : list(array-like(bool, ndim=1)), optional(default=None)
             Which columns of `X` to use in each estimator; default of `None` uses all columns for all estimators.  If specified, a mask must be given for each estimator.
+
+        kennard_stone : bool, optional(default=False)
+            If True, will use the Kennard-Stone algorithm [1] to perform the k-Fold cross-validation.  This ignores `groups` and does not stratify the data splits, so this is recommended only for regression tasks. The implementation used is from [2].
 
         Returns
         -------
         scores : ndarray(float, ndim=2)
             List of scores for estimator.  Each row is a different estimator, in order of how they were provided, and each column is the result from a different test fold.
 
-        Note
-        ----
+        Notes
+        -----
         The random state of the CV is the same for each so each pipeline or algorithm is tested on exactly the same dataset.  This enables paired t-test hypothesis testing using these scores.
 
-        When comparing 2 pipelines that use different columns of X, use the estimators_mask variables to specify which columns to use.
+        When comparing 2 pipelines that use different columns of `X`, use the estimators_mask variables to specify which columns to use.
+
+        References
+        ----------
+        1. R. W. Kennard & L. A. Stone (1969) Computer Aided Design of Experiments, Technometrics, 11:1, 137-148, DOI: 10.1080/00401706.1969.10490666
+        2. pypi.org/project/kennard-stone/
         """
         if not hasattr(estimators, "__iter__"):
             raise TypeError("estimators is not iterable")
@@ -665,6 +866,10 @@ class Compare:
                 rkf = RepeatedKFold
             else:
                 rkf = RepeatedGroupKFold
+
+        if kennard_stone:  # Ignores stratification and groups information
+            rkf = RepeatedKennardStoneKFold
+
         split = rkf(
             n_splits=k, n_repeats=n_repeats, random_state=random_state
         ).split(X_, y_, groups=groups_)
