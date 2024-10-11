@@ -62,4 +62,7 @@ setuptools.setup(
     dependency_links=[
         "https://download.pytorch.org/whl/cpu",  # For torch
     ],
+    extras_require={
+        "gpu": ["tensorflow[and-cuda]==2.14.0"]
+    }
 )
