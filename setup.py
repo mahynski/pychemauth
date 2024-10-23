@@ -27,7 +27,7 @@ setuptools.setup(
         "kennard-stone==2.2.1",
         "mypy==1.11.2",  # For type hints and checking
         "types-requests==2.32.0.20240914",  # For type checking
-        "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
+        "torch==2.4.1+cpu",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
         "dime-pytorch==1.0.1",
         "baycomp==1.0.3",
         "bokeh>=3.4.3",  # Default in Colab
