@@ -13,10 +13,16 @@ build:
     # nodejs: "20"
     # rust: "1.70"
     # golang: "1.20"
-  jobs:
-    pre_build:
-      - pip install --find-links https://download.pytorch.org/whl/cpu torch
-      - pip install dime-pytorch==1.0.1
+  # jobs:
+  #   pre_build: 
+    # The "pip install --upgrade" commands run during build throw an error due to dime-pytorch not being able to fund numpy.  
+    # Pre-install to prevent - alternatively we could customize the the build command to stop a lot of this boilerplate:
+    # https://docs.readthedocs.io/en/stable/build-customization.html
+      # - pip install --find-links https://download.pytorch.org/whl/cpu torch
+      # - pip install dime-pytorch==1.0.1
+  commands:
+    - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+    - python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
