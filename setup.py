@@ -29,7 +29,7 @@ setuptools.setup(
         "types-requests==2.32.0.20240914",  # For type checking
         "baycomp==1.0.3",
         "bokeh>=3.4.3",  # Default in Colab
-        "bokeh_sampledata==2024.2",
+        "bokeh-sampledata==2024.2",
         "BorutaShap @ git+https://github.com/Ekeany/Boruta-Shap.git@38af879",
         "imbalanced-learn==0.11.0",
         "IPython",
