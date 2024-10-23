@@ -1027,6 +1027,7 @@ class NNTools:
             max_z=max_z,
             text_callable=_text_callable,
             padding=padding,
+            **kwargs
         ).convert(
             "RGB"
         )  # default RGBA has some display issues in Jupyter Notebooks
