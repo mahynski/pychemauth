@@ -27,8 +27,6 @@ setuptools.setup(
         "kennard-stone==2.2.1",
         "mypy==1.11.2",  # For type hints and checking
         "types-requests==2.32.0.20240914",  # For type checking
-        "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
-        "dime-pytorch==1.0.1",
         "baycomp==1.0.3",
         "bokeh>=3.4.3",  # Default in Colab
         "bokeh_sampledata==2024.2",
@@ -58,6 +56,8 @@ setuptools.setup(
         "opencv-python==4.10.0.82",  # For SHAP explanations
         "huggingface_hub==0.23.4",
         "tensorflow-cpu==2.14.0",  # This command should install keras==2.14.0 as well - based on Keras recommendation (https://keras.io/getting_started/#installing-keras-3) for creating a "universal GPU environment" based on Colab recommendations: https://colab.research.google.com/drive/13cpd3wCwEHpsmypY9o6XB6rXgBm5oSxu - CPU only default is more portable, we can overwrite on Colab
+        "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
+        "dime-pytorch==1.0.1",
     ],
     dependency_links=[
         "https://download.pytorch.org/whl/cpu",  # For torch
