@@ -57,7 +57,7 @@ setuptools.setup(
         "huggingface_hub==0.23.4",
         "tensorflow-cpu==2.14.0",  # This command should install keras==2.14.0 as well - based on Keras recommendation (https://keras.io/getting_started/#installing-keras-3) for creating a "universal GPU environment" based on Colab recommendations: https://colab.research.google.com/drive/13cpd3wCwEHpsmypY9o6XB6rXgBm5oSxu - CPU only default is more portable, we can overwrite on Colab
         "torch",  # For DIME - just need torch tensor libraries so no need for GPU support which can also cause conflicts
-        # "dime-pytorch==1.0.1",
+        "dime-pytorch==1.0.1",
     ],
     dependency_links=[
         "https://download.pytorch.org/whl/cpu",  # For torch
