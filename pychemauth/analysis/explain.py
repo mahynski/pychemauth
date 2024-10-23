@@ -361,7 +361,7 @@ class CAM1D(CAMBaseExplainer):
             fontsize=fontsize - 2 if fontsize is not None else fontsize,
         )
         ax[0].set_title("Prediction = {}".format(pred_), fontsize=fontsize)
-        ax[0].set_ylabel("Raw Scores", fontsize=fontsize)
+        ax[0].set_ylabel("Logits", fontsize=fontsize)
 
         # Plot colored series from CAM
         ax[1].set_xlim(
@@ -773,7 +773,7 @@ class CAM2D(CAMBaseExplainer):
             rotation=90,
             fontsize=label_fontsize,
         )
-        ax[0].set_ylabel("Raw Scores", fontsize=label_fontsize)
+        ax[0].set_ylabel("Logits", fontsize=label_fontsize)
 
         clipped = np.clip(preds, a_min=-250, a_max=250)
         ax[1].bar(
