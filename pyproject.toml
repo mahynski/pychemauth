@@ -71,6 +71,10 @@ testpaths = [
     "tests",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pychemauth*"]
+
 [tool.setuptools.dynamic]
 version = {attr = "pychemauth.__version__"}
 
