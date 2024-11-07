@@ -1024,9 +1024,9 @@ class CAM2D(CAMBaseExplainer):
         """
         # Create an image to take advantange of built-in tools
         image_ = keras.utils.array_to_img(image)
-        image_ = image_.resize(
+        image_ = image_.resize( # Do linear interpolation to be consistent with interpolation of 1D
             image_shape,
-            resample=PIL.Image.BILINEAR,  # Do linear interpolation to be consistent with interpolation of 1D
+            resample=PIL.Image.BILINEAR,
         )
         image = keras.utils.img_to_array(image_)
 

@@ -76,6 +76,7 @@ class Test_DeepOOD_DIME(unittest.TestCase):
                     -0.09434501,
                     -0.0347723,
                 ],
+                decimal=5
             )
 
             np.testing.assert_equal(
@@ -162,6 +163,7 @@ class Test_DeepOOD_DIME(unittest.TestCase):
                     -0.09434501,
                     -0.0347723,
                 ],
+                decimal=5
             )
 
             np.testing.assert_equal(

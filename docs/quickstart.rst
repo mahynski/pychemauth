@@ -11,6 +11,13 @@ The easiest way to install pychemauth is with `pip <https://pypi.org/project/pip
 
    pip install git+https://github.com/mahynski/pychemauth@main
 
+Sometimes errors related to the inability to find `numpy` can occur during installation; to solve this run `pip install numpy` before install installing pychemauth.  For example:
+
+.. code-block:: python
+   :linenos:
+
+   pip install numpy && pip install git+https://github.com/mahynski/pychemauth@main
+
 You can also download the `repository <https://github.com/mahynski/pychemauth>`_ and install it from there. Check for the most recent version, or whichever is desired, and replace "X.X.X" below.
 
 .. code-block:: bash
