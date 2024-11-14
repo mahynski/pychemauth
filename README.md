@@ -22,6 +22,8 @@ User contributions are welcome!  Please refer to the [documentation](https://pyc
 # Citation
 Refer to the CITATION.cff file for information regarding the citation of this repository.  Also see the [documentation](https://pychemauth.readthedocs.io/en/latest/citation.html) for more details.
 
+The logo was designed using Google Gemini with the prompt "Design a logo concept for PyChemAuth" on Nov. 8, 2024.
+
 # Contact information
 * Nathan A. Mahynski, Material Measurement Laboratory, Chemical Sciences Division, Chemical Informatics Group. Contact: nathan.mahynski@nist.gov
 
