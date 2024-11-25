@@ -19,11 +19,13 @@ Python-based Chemometric Authentication
 .. image:: https://zenodo.org/badge/331207062.svg
    :target: https://zenodo.org/badge/latestdoi/331207062
 
+This is a toolkit to perform chemometric analysis, though it is primarily focused on authentication.  These methods are designed to follow `scikit-learn's estimator API <https://scikit-learn.org/stable/developers/develop.html>`_ so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning (ML) tools.
+
 .. image:: ./_static/logo_no.png
    :height: 100
    :align: left
 
-This is a toolkit to perform chemometric analysis, though it is primarily focused on authentication.  These methods are designed to follow `scikit-learn's estimator API <https://scikit-learn.org/stable/developers/develop.html>`_ so that they can be deployed in pipelines used with GridSearchCV, etc. and are compatible with workflows involving other modern machine learning (ML) tools.  `Wikipedia <https://en.wikipedia.org/wiki/Chemometrics>`_ defines chemometrics as "the science of extracting information from chemical systems by data-driven means." Unlike other areas of science, technology and engineering, many chemical systems remain difficult to collect measurements on making data more scarce than in other arenas.  As a result, conventional statistical methods remain the predominant tool with which chemometric analysis is performed.  As instruments improve, databases are developed, and advanced algorithms become less data-intensive it is clear that modern machine learning and artificial intelligence (AI) methods will be brought to bear on these problems.  A consistent API enables many different models to be easily deployed and compared.
+`Wikipedia <https://en.wikipedia.org/wiki/Chemometrics>`_ defines chemometrics as "the science of extracting information from chemical systems by data-driven means." Unlike other areas of science, technology and engineering, many chemical systems remain difficult to collect measurements on making data more scarce than in other arenas.  As a result, conventional statistical methods remain the predominant tool with which chemometric analysis is performed.  As instruments improve, databases are developed, and advanced algorithms become less data-intensive it is clear that modern machine learning and artificial intelligence (AI) methods will be brought to bear on these problems.  A consistent API enables many different models to be easily deployed and compared.
 
 .. image:: ../pychemauth.png
 
