@@ -32,14 +32,20 @@ extensions = [
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-github_url = "https://github.com/mahynski/pychemauth/"
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_logo = "_static/logo_no.png"
 html_theme = "sphinx_book_theme"  #'sphinx_rtd_theme'
 html_static_path = ["_static"]
+html_context = {
+    "display_github": True, # Integrate GitHub
+    "github_user": "mahynski", # Username
+    "github_repo": "pychemauth", # Repo name
+    "github_version": "main", # Version
+    "conf_py_path": "/docs/", # Path in the checkout to the docs root
+}
+
 pygments_style = "sphinx"
 nbsphinx_execute = "never"  # Always pre-run notebooks and save their output - just display on readthedocs
 # nbsphinx_kernel_name = 'pychemauth-kernel'
