@@ -853,6 +853,8 @@ class Compare:
 
         X_ = np.asarray(X)
         y_ = np.asarray(y)
+
+        groups_ = None
         if groups is not None:
             groups_ = np.asarray(groups)
 
