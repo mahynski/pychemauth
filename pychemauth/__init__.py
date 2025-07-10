@@ -13,3 +13,9 @@ __all__ = [
     "preprocessing",
     "regressor",
 ]
+
+# For Keras 3 - PyChemAuth uses a tensorflow backend
+# https://keras.io/getting_started/#installing-keras-3
+import os
+
+os.environ["KERAS_BACKEND"] = "tensorflow"

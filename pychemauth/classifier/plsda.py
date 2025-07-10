@@ -5,6 +5,7 @@ author: nam
 """
 import copy
 import warnings
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,15 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import pos_def_mat, CovarianceEllipse, OneDimLimits
+from pychemauth.utils import (
+    pos_def_mat,
+    CovarianceEllipse,
+    OneDimLimits,
+    _multi_cm_metrics,
+)
+
+from typing import Any, ClassVar, Union, Sequence
+from numpy.typing import NDArray
 
 
 class PLSDA(ClassifierMixin, BaseEstimator):
@@ -47,7 +56,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     style : str, optional(default="soft")
         PLS style; can be "soft" or "hard".
 
-    scale_x : scalar(bool), optional(default=True)
+    scale_x : bool, optional(default=True)
         Whether or not to scale the X matrix during the PLS(2) stage.
         This depends on the meaning of X and is up to the user to
         determine if scaling it (by the standard deviation) makes sense.
@@ -88,16 +97,24 @@ class PLSDA(ClassifierMixin, BaseEstimator):
     Chemometrics (2018). https://doi.org/10.1002/cem.3030.
     """
 
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[float]
+    not_assigned: ClassVar[Union[int, str]]
+    style: ClassVar[str]
+    scale_x: ClassVar[bool]
+    score_metric: ClassVar[str]
+
     def __init__(
         self,
-        n_components=1,
-        alpha=0.05,
-        gamma=0.01,
-        not_assigned=-1,
-        style="soft",
-        scale_x=True,
-        score_metric="TEFF",
-    ):
+        n_components: int = 1,
+        alpha: float = 0.05,
+        gamma: float = 0.01,
+        not_assigned: Union[int, str] = -1,
+        style: str = "soft",
+        scale_x: bool = True,
+        score_metric: str = "TEFF",
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -111,13 +128,13 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "PLSDA":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "alpha": self.alpha,
@@ -129,7 +146,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
             "score_metric": self.score_metric,
         }
 
-    def _check_category_type(self, y):
+    def _check_category_type(self, y) -> None:
         """Check that categories are same type as "not_assigned" variable."""
         if self.style.lower() == "soft":
             t_ = None
@@ -147,7 +164,7 @@ class PLSDA(ClassifierMixin, BaseEstimator):
                     )
                 )
 
-    def _column_y(self, y):
+    def _column_y(self, y) -> NDArray[Any]:
         """Convert y to column format."""
         y = np.asarray(y)
         if y.ndim != 2:
@@ -156,22 +173,28 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         return y
 
     @property
-    def categories(self):
+    def categories(self) -> NDArray[Any]:
         """Return the known categories."""
         check_is_fitted(self, "is_fitted_")
         return copy.copy(self.__ohencoder_.categories_[0])
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "PLSDA":
         """
         Fit the PLS-DA model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
@@ -179,9 +202,10 @@ class PLSDA(ClassifierMixin, BaseEstimator):
         -------
         self : PLSDA
         """
-        self.n_components = int(
-            self.n_components
+        self.set_params(
+            **{"n_components": int(self.n_components)}
         )  # scikit-learn PLS does not understand floats
+
         self.__X_, y = check_X_y(
             X,
             y,
@@ -375,7 +399,7 @@ n_features [{}])] = [{}, {}].".format(
         self.is_fitted_ = True
         return self
 
-    def check_outliers(self):
+    def check_outliers(self) -> NDArray[np.bool_]:
         """
         Check if outliers exist in the training data originally fit to.
 
@@ -401,11 +425,16 @@ n_features [{}])] = [{}, {}].".format(
         outliers = [False] * self.__X_.shape[0]
         for j, t in enumerate(self.__T_train_):
             # Find which class entry j belongs to
-            cat = None
+            cat = -1
             for i in range(len(self.__ohencoder_.categories_[0])):
                 if self.__class_mask_[i][j]:
                     cat = i
                     break
+            if cat < 0:
+                raise Exception(
+                    f"Could not locate which class entry index {j} belongs to."
+                )
+
             d = np.matmul(
                 np.matmul(
                     (t - self.__class_centers_[cat]),
@@ -418,19 +447,21 @@ n_features [{}])] = [{}, {}].".format(
 
         return np.array(outliers)
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Project X into the feature subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : array-like(float, ndim=2)
             Projection of X via PLS, then by PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
@@ -442,7 +473,7 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -453,24 +484,32 @@ n_features [{}])] = [{}, {}].".format(
             )
         )
 
-    def fit_transform(self, X, y):
+    def fit_transform(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> NDArray[np.floating]:
         """Fit and transform."""
         _ = self.fit(X, y)
         return self.transform(X)
 
-    def mahalanobis(self, X):
+    def mahalanobis(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute the squared Mahalanobis distance to each class center.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
         Returns
         -------
-        distance : array_like(float, ndim=1)
+        distance : ndarray(float, ndim=1)
             Squared distance to each class for each observation.
 
         Note
@@ -492,17 +531,17 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         T_test = self.transform(X)
 
-        distances = []  # Actually squared
+        distances_ = []  # Actually squared
         for t in T_test:
             if self.style.lower() == "soft":  # This 'soft' rule is based on QDA
-                distances.append(
+                distances_.append(
                     [
                         np.matmul(
                             np.matmul(
@@ -515,7 +554,7 @@ n_features [{}])] = [{}, {}].".format(
                     ]
                 )
             else:  # This 'hard' rule is based on LDA
-                distances.append(
+                distances_.append(
                     [
                         np.matmul(
                             np.matmul(
@@ -527,27 +566,29 @@ n_features [{}])] = [{}, {}].".format(
                         for i in range(len(self.__ohencoder_.categories_[0]))
                     ]
                 )
-        distances = np.array(distances)
+        distances = np.array(distances_)
         assert np.all(distances >= 0), "All distances must be >= 0"
 
         return distances
 
-    def decision_function(self, X, y=None):
+    def decision_function(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]], y=None
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Response. Ignored if it is not used (unsupervised methods).
+        y : array-like(str or int, ndim=1), optional(default=None)
+            Ignored.
 
         Returns
         -------
-        decision_function : ndarray
+        decision_function : ndarray(float, ndim=1)
             Shifted, negative distance for each sample.
 
         Note
@@ -573,18 +614,20 @@ n_features [{}])] = [{}, {}].".format(
 
         return f
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]], y=None
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations belong each class.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
-            Response. Ignored if it is not used (unsupervised methods).
+        y : array-like(str or int, ndim=1), optional(default=None)
+            Ignored.
 
         Returns
         -------
@@ -654,13 +697,15 @@ n_features [{}])] = [{}, {}].".format(
 
         return prob
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> Sequence[Any]:
         """
         Predict the class(es) for a given set of features.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -701,18 +746,22 @@ n_features [{}])] = [{}, {}].".format(
 
         return predictions
 
-    def figures_of_merit(self, predictions, actual):
+    def figures_of_merit(
+        self,
+        predictions: Union[Sequence[Any], NDArray[Any]],
+        actual: Union[Sequence[Any], NDArray[Any]],
+    ) -> dict[str, Any]:
         """
         Compute figures of merit for PLS-DA approaches as in [1].
 
         Parameters
         ----------
-        predictions : array_like(str or int, ndim=2) or array_like(str or int, ndim=1)
+        predictions : array-like(str or int, ndim=2) or array-like(str or int, ndim=1)
             Array of array values containing the predicted class of points (in
             order). Each row may have multiple entries corresponding to
             multiple class predictions in the soft PLS-DA case.
 
-        actual : array_like(str or int, ndim=1)
+        actual : array-like(str or int, ndim=1)
             Array of ground truth classes for the predicted points.  Should
             have only one class per point.
 
@@ -794,105 +843,35 @@ n_features [{}])] = [{}, {}].".format(
         )
         assert np.sum(Itot) == len(actual)
 
-        # Class-wise FoM
-        # Sensitivity is "true positive" rate and is only defined for
-        # trained/known classes
-        CSNS = pd.Series(
-            [
-                df[kk][kk] / Itot[kk] if Itot[kk] > 0 else np.nan
-                for kk in trained_classes
-            ],
-            index=trained_classes,
+        results = _multi_cm_metrics(
+            df=df,
+            Itot=Itot,
+            trained_classes=trained_classes,
+            use_classes=use_classes,
+            style=self.style,
+            not_assigned=self.not_assigned,
+            actual=actual,
         )
 
-        # Specificity is the fraction of points that are NOT a given class that
-        # are correctly predicted to be something besides the class. Thus,
-        # specificity can only be computed for the columns that correspond to
-        # known classes since we have only trained on them. These are "true
-        # negatives". This is always >= 0.
-        CSPS = pd.Series(
-            [
-                1.0
-                - np.sum(df[kk][df.index != kk])  # Column sum
-                / np.sum(Itot[Itot.index != kk])
-                for kk in trained_classes
-            ],
-            index=trained_classes,
-        )
+        return results
 
-        # If CSNS can't be calculated, using CSPS as efficiency;
-        # Oliveri & Downey introduced this "efficiency" used in [1]
-        CEFF = pd.Series(
-            [
-                np.sqrt(CSNS[c] * CSPS[c]) if not np.isnan(CSNS[c]) else CSPS[c]
-                for c in trained_classes
-            ],
-            index=trained_classes,
-        )
-
-        # Total FoM
-
-        # Evaluates overall ability to recognize a class is itself.  If you
-        # show the model some class it hasn't trained on, it can't be predicted
-        # so no contribution to the diagonal.  We will normalize by total
-        # number of points shown [1].  If some classes being tested were seen in
-        # training they contribute, otherwise TSNS goes down for a class never
-        # seen before.  This might seem unfair, but TSNS only makes sense if
-        # (1) you are examining what you have trained on or (2) you are
-        # examining extraneous objects so you don't calculate this at all.
-        TSNS = np.sum([df[kk][kk] for kk in trained_classes]) / np.sum(Itot)
-
-        # If any untrained class is correctly predicted to be "NOT_ASSIGNED" it
-        # won't contribute to df[use_classes].sum().sum().  Also, unseen
-        # classes can't be assigned to so the diagonal components for those
-        # entries is also 0 (df[k][k]).
-        TSPS = 1.0 - (
-            df[use_classes].sum().sum()
-            - np.sum([df[kk][kk] for kk in use_classes])
-        ) / np.sum(Itot) / (
-            1.0 if self.style.lower() == "hard" else len(trained_classes) - 1.0
-        )
-        # Soft models can assign a point to all categories which would make this
-        # sum > 1, meaning TSPS < 0 would be possible.  By scaling by the total
-        # number of classes, TSPS is always positive; TSPS = 0 means all points
-        # assigned to all classes (trivial result) vs. TSPS = 1 means no mistakes.
-
-        # Sometimes TEFF is reported as TSPS when TSNS cannot be evaluated (all
-        # previously unseen samples).
-        TEFF = np.sqrt(TSPS * TSNS)
-
-        return dict(
-            zip(
-                ["CM", "I", "CSNS", "CSPS", "CEFF", "TSNS", "TSPS", "TEFF"],
-                (
-                    df[
-                        [c for c in df.columns if c in trained_classes]
-                        + [self.not_assigned]
-                    ][
-                        [x in np.unique(actual) for x in df.index]
-                    ],  # Re-order for easy visualization
-                    Itot,
-                    CSNS,
-                    CSPS,
-                    CEFF,
-                    TSNS,
-                    TSPS,
-                    TEFF,
-                ),
-            )
-        )
-
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> float:
         """
         Score the prediction.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes - will be converted to numpy array
             automatically.
 
@@ -911,7 +890,7 @@ n_features [{}])] = [{}, {}].".format(
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -924,7 +903,12 @@ n_features [{}])] = [{}, {}].".format(
         else:
             return metrics[self.score_metric.upper()]
 
-    def pls2_coeff(self, classes=None, ax=None, return_coeff=False):
+    def pls2_coeff(
+        self,
+        classes: Union[Sequence[str], NDArray[np.str_], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        return_coeff: bool = False,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot the coefficients in the PLS2 model to examine variable importance.
 
@@ -934,17 +918,17 @@ n_features [{}])] = [{}, {}].".format(
             If None, plot coefficients for all categories; otherwise just classes
             specified.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        return_coeff : scalar(bool), optional(default=False)
+        return_coeff : bool, optional(default=False)
             Return PLS2 coefficients instead of the figure axis. N x D where D
             is the number of features in X (X.shape[1]) and N is the number of
             categories.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes or ndarray
+        ax : matplotlib.pyplot.Axes or ndarray
             Figure axes being plotted on or the PLS2 coefficients depending on
             the value of `return_coeff`.
         """
@@ -986,7 +970,12 @@ n_features [{}])] = [{}, {}].".format(
         else:
             return ax
 
-    def visualize(self, styles=None, ax=None, show_training=True):
+    def visualize(
+        self,
+        styles: Union[Sequence[str], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        show_training: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot training results in 1D or 2D automatically.
 
@@ -997,15 +986,15 @@ n_features [{}])] = [{}, {}].".format(
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        show_training : scalar(bool), optional(default=True)
+        show_training : bool, optional(default=True)
             If True, plot the training set points.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Figure axes being plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1027,7 +1016,12 @@ n_features [{}])] = [{}, {}].".format(
 
         return ax
 
-    def visualize_1d(self, styles=None, ax=None, show_training=True):
+    def visualize_1d(
+        self,
+        styles: Union[Sequence[str], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        show_training: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot 1D training results.
 
@@ -1038,15 +1032,15 @@ n_features [{}])] = [{}, {}].".format(
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        show_training : scalar(bool), optional(default=True)
+        show_training : bool, optional(default=True)
             If True, plot the training set points.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Figure axes being plotted on.
 
         Note
@@ -1183,7 +1177,12 @@ n_features [{}])] = [{}, {}].".format(
 
         return ax
 
-    def visualize_2d(self, styles=None, ax=None, show_training=True):
+    def visualize_2d(
+        self,
+        styles: Union[Sequence[str], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        show_training: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot 2D training data results.
 
@@ -1194,15 +1193,15 @@ n_features [{}])] = [{}, {}].".format(
             include ["hard"], but "soft" is only possible if the class was
             instantiated to be use the "soft" style boundaries.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot results on.  If None, a new figure is created.
 
-        show_training : scalar(bool), optional(default=True)
+        show_training : bool, optional(default=True)
             If True, plot the training set points.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Figure axes being plotted on.
 
         Note

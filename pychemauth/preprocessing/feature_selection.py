@@ -4,17 +4,21 @@ Feature selection algorithms.
 author: nam
 """
 import copy
+import matplotlib
+import scipy
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
+
 from scipy.stats import entropy
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.ensemble import RandomForestClassifier as RF
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
-
 from pychemauth.eda.explore import InspectData
+
+from typing import Any, Union, Sequence, ClassVar
+from numpy.typing import NDArray
 
 
 class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
@@ -24,21 +28,16 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
     Parameters
     ----------
     t : scalar(float), optional(default=0.0)
-        See `InspectData.cluster_collinear; Ward clustering threshold to
-        determine the number of clusters.
+        See `InspectData.cluster_collinear; Ward clustering threshold to determine the number of clusters.
 
     seed : scalar(int), optional(default=42)
-        Random number generator seed.  Set this value for reproducible
-        calculations.
+        Random number generator seed.  Set this value for reproducible calculations.
 
-    minimize_label_entropy : scalar(bool)
-        Whether or not to refine choices based on a lookup function which
-        defines the similarity of features.
+    minimize_label_entropy : bool
+        Whether or not to refine choices based on a lookup function which defines the similarity of features.
 
-    kwargs : dict()
-        A dictionary of keyword arguments to `InspectData.minimize_cluster_label_entropy`.
-        If `minimize_label_entropy` is true, this should at least contain a `lookup` function, but may also
-        include: {cutoff_factor, n_restarts, max_iters, early_stopping, T}.
+    kwargs : dict
+        A dictionary of keyword arguments to `InspectData.minimize_cluster_label_entropy`. If `minimize_label_entropy` is True, this should at least contain a `lookup` function, but may also include: {`cutoff_factor`, `n_restarts`, `max_iters`, `early_stopping`, `T`}.
 
     Note
     ----
@@ -46,14 +45,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
     Warning
     -------
-    If you are using `minimize_label_entropy` the lookup function has an important restriction.
-    The `lookup` function may take multiple default arguments, but the first should be an
-    integer corresponding to the column index (starting from 0).  Data column names are not present if
-    data is a numpy array, and not stored if it is provided as as pandas.DataFrame so that operations
-    are consistent with `sklearn.feature_selection.SelectFromModel`. Fortunately, name information
-    can be encoded in the default parameters when it is defined at the scope of the SelectFromModel
-    object. This is important if you want to categorize features based on their name.
-    See the example below for illustration.
+    If you are using `minimize_label_entropy` the lookup function has an important restriction. The `lookup` function may take multiple default arguments, but the first should be an integer corresponding to the column index (starting from 0).  Data column names are not present if data is a numpy array, and not stored if it is provided as as pandas.DataFrame so that operations are consistent with `sklearn.feature_selection.SelectFromModel`. Fortunately, name information can be encoded in the default parameters when it is defined at the scope of the SelectFromModel object. This is important if you want to categorize features based on their name. See the example below for illustration.
 
     Example
     -------
@@ -72,7 +64,18 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
     >>> se.fit(X_train)
     """
 
-    def __init__(self, t=0.0, seed=42, minimize_label_entropy=False, kwargs={}):
+    t: ClassVar[float]
+    seed: ClassVar[int]
+    minimize_label_entropy: ClassVar[bool]
+    kwargs: ClassVar[dict]
+
+    def __init__(
+        self,
+        t: float = 0.0,
+        seed: int = 42,
+        minimize_label_entropy: bool = False,
+        kwargs: dict = {},
+    ) -> None:
         """Instantiate the selector."""
         self.set_params(
             **{
@@ -83,13 +86,13 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "CollinearFeatureSelector":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "t": self.t,
@@ -98,13 +101,16 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
             "kwargs": self.kwargs,
         }
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(
+        self,
+        input_features: Union[Sequence[str], NDArray[np.str_], None] = None,
+    ) -> Union[NDArray[np.str_], NDArray[np.bool_]]:
         """
         Return the selected features.
 
         Parameters
         ----------
-        input_features : array_like(str, ndim=1), optional(default=None)
+        input_features : array-like(str, ndim=1), optional(default=None)
             List of input features to mask.
 
         Returns
@@ -123,7 +129,7 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         else:
             return mask
 
-    def get_support(self):
+    def get_support(self) -> NDArray[np.bool_]:
         """
         Return the selected features.
 
@@ -135,16 +141,20 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return np.asarray(self.feature_importances_, dtype=bool)
 
-    def fit(self, X, y=None):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating], pd.DataFrame],
+        y=None,
+    ) -> "CollinearFeatureSelector":
         """
         Fit the selector.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -209,20 +219,22 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating], pd.DataFrame],
+    ) -> Union[NDArray[np.floating], pd.DataFrame]:
         """
         Transform X by removing features not selected.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
         Returns
         -------
-        X_selected : array_like(float, ndim=2) or pandas.DataFrame
-            X with all features not selected removed. If X is provided as a DataFrame
-            a DataFrame is returned.
+        X_selected : array-like(float, ndim=2) or pandas.DataFrame
+            X with all features not selected removed. If X is provided as a DataFrame a DataFrame is returned.
         """
         check_is_fitted(self, "is_fitted_")
         mask = np.asarray(self.feature_importances_, dtype=bool)
@@ -245,21 +257,25 @@ class CollinearFeatureSelector(TransformerMixin, BaseEstimator):
         else:
             return X_
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating], pd.DataFrame],
+        y=None,
+    ) -> Union[NDArray[np.floating], pd.DataFrame]:
         """
         Fit then transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Input feature matrix.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
-        X_selected : array_like(float, ndim=2)
+        X_selected : array-like(float, ndim=2)
             X with all features not selected removed.
         """
         self.fit(X, y)
@@ -302,94 +318,42 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
         Return this many top ranked (closest to 1) features.
 
     threshold : scalar(float), optional(default=0.0)
-        If specified, it should be between [0, 1]; this enforces that only
-        the `top_k` features with at least this value are returned.
+        If specified, it should be between [0, 1]; this enforces that only the `top_k` features with at least this value are returned.
 
     epsilon : scalar(float), optional(default=1.0e-12)
-        A noise term is added to the distributions so probabilities are
-        non-zero when not measured; this is numerically required to
-        compute the KL divergence as part of the JS divergence.
+        A noise term is added to the distributions so probabilities are non-zero when not measured; this is numerically required to compute the KL divergence as part of the JS divergence.
 
-    per_class : scalar(bool), optional(default=True)
-        Do we want to return the top_k analytes (above threshold) on average
-        (False) or the top_k per class (True)?  If True, up to
-        top_k*n_classes can be returned, otherwise just top_k above
-        threshold.
+    per_class : bool, optional(default=True)
+        Do we want to return the `top_k` analytes (above threshold) on average (False) or the `top_k` per class (True)?  If True, up to `top_k`*`n_classes` can be returned, otherwise just `top_k` above `threshold`.
 
-    feature_names : array_like(str, ndim=1), optional(default=None)
+    feature_names : array-like(str, ndim=1), optional(default=None)
         List of names of features (columns of X) in order.
 
     bins : scalar(int), optional(default=25)
         Number of bins to use to construct the probability distribution.
 
-    robust : scalar(bool), optional(default=False)
-        Whether or not to use Q[1 or 3] +/- 1.5*IQR as a threshold to limit
-        the range over which probability distributions are generated by
-        histograms. This can make the results robust against skewed
-        distributions with outliers which might cause the binning to
-        become too coarse, but it might mask real differences or exclude
-        important points if they aren't really outliers.
+    robust : bool, optional(default=False)
+        Whether or not to use Q[1 or 3] +/- 1.5*IQR as a threshold to limit the range over which probability distributions are generated by histograms. This can make the results robust against skewed distributions with outliers which might cause the binning to become too coarse, but it might mask real differences or exclude important points if they aren't really outliers.
 
     Note
     ----
-    The JS divergence is a measure of similarity between 2 distributions;
-    it essentially describes the mean Kullback-Leibler divergence of two
-    distributions from their mean.  When using a base of 2, the value is
-    bounded between 0 (identical) and 1 (maximally difference).
+    The JS divergence is a measure of similarity between 2 distributions; it essentially describes the mean Kullback-Leibler divergence of two distributions from their mean.  When using a base of 2, the value is bounded between 0 (identical) and 1 (maximally difference).
 
-    This is computed for each feature by comparing the distribution of
-    that feature for observations of a class vs. those of all other classes.
-    This "one-vs-all" comparison means that if the JS divergence is high
-    (close to 1) for a feature for a certain class, then it is likely quite
-    easy to construct some bounds that define intervals of that feature which
-    characterize that class, and only that class.  For example, class A could
-    have higher levels of some analyte than all other classes, or it could
-    fall in range min < class A < max, where all other classes exist outside
-    of this range.
+    This is computed for each feature by comparing the distribution of that feature for observations of a class vs. those of all other classes. This "one-vs-all" comparison means that if the JS divergence is high (close to 1) for a feature for a certain class, then it is likely quite easy to construct some bounds that define intervals of that feature which characterize that class, and only that class.  For example, class A could have higher levels of some analyte than all other classes, or it could fall in range min < class A < max, where all other classes exist outside of this range.
 
-    Features with high JS divergences for given classes mean that decision
-    trees are likely to be successful if trained using those features.
-    Therefore, this can be used as a feature selection method; alternatively,
-    this can be used during the initial data analysis or exploratory data
-    analysis phases to generate hypotheses.
+    Features with high JS divergences for given classes mean that decision trees are likely to be successful if trained using those features. Therefore, this can be used as a feature selection method; alternatively, this can be used during the initial data analysis or exploratory data analysis phases to generate hypotheses.
 
-    A suggestion for choosing the number of bins is to ensure the average
-    number of points per bin is >= 5.  So if you have n_samples, the number
-    of bins ~ n_samples/5.  This is a heuristic.  Also note n_samples is the
-    total number of samples, regardless of class - since the distribution is
-    going to be divided up to do a OvA comparison and both the "O" and "A"
-    must be histogrammed using the same bins, it makes sense to look at the
-    overall distribution.  However, this can cause issues if you have a
-    minority class that is poorly sampled.  One solution could be do SMOTE
-    in advance of any such calculation.  Since the JS divergence is (also)
-    supervised, these should both appear in the pipeline for
-    cross-validation anyway.  The example below illustrates this.
+    A suggestion for choosing the number of bins is to ensure the average number of points per bin is >= 5.  So if you have n_samples, the number of bins ~ n_samples/5.  This is a heuristic.  Also note n_samples is the total number of samples, regardless of class - since the distribution is going to be divided up to do a OvA comparison and both the "O" and "A" must be histogrammed using the same bins, it makes sense to look at the overall distribution.  However, this can cause issues if you have a minority class that is poorly sampled.  One solution could be do SMOTE in advance of any such calculation.  Since the JS divergence is (also) supervised, these should both appear in the pipeline for cross-validation anyway.  The example below illustrates this.
 
-    * Because class information is utilized, this is a supervised method and
-    should be fit on the training sets/folds only.
+    * Because class information is utilized, this is a supervised method and should be fit on the training sets/folds only.
 
-    * If you request the top_k features for n_classes, you may receive less
-    than top_k*n_classes features because classes may share analytes. This
-    is only an upper bound.
+    * If you request the `top_k` features for `n_classes`, you may receive less than `top_k`*`n_classes` features because classes may share analytes. This is only an upper bound.
 
-    * You can search for the top_k features overall, but it may happen that
-    one class has k or more features that have very different distributions
-    from the rest, and therefore the top_k are only useful for distinguishing
-    one (or only a few) classes, so per_class=True is set to True by default.
+    * You can search for the `top_k` features overall, but it may happen that one class has k or more features that have very different distributions from the rest, and therefore the `top_k` are only useful for distinguishing one (or only a few) classes, so `per_class`=True is set to True by default.
 
-    * Using too many bins makes individual measurements all start to
-    look unique and therefore 2 distributions appear to have a large
-    JS divergence.  Be sure to try using a different number of bins
-    to check your results qualitatively.  This also means outliers
-    can be very problematic because they cause the the (max-min)
-    range to be amplified artificially, which might actually make
-    divergences look small because the bins are now too coarse. Use the robust
-    option to investigate this.
+    * Using too many bins makes individual measurements all start to look unique and therefore 2 distributions appear to have a large JS divergence.  Be sure to try using a different number of bins to check your results qualitatively.  This also means outliers can be very problematic because they cause the the (max-min) range to be amplified artificially, which might actually make divergences look small because the bins are now too coarse. Use the robust option to investigate this.
 
-    * As a counterargument, if a minority class is well separated by a
-    feature, it could be that the entire class is considered an outlier
-    and the code will return a NaN for that feature.  Investigate further
-    and avoid using the `robust` option in that case.
+    * As a counterargument, if a minority class is well separated by a feature, it could be that the entire class is considered an outlier and the code will return a `NaN` for that feature.  Investigate further and avoid using the `robust` option in that case.
 
     References
     ----------
@@ -416,16 +380,24 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
     >>> results = ncv.grid_search(pipeline, param_grid, X.values, y.values)
     """
 
+    top_k: ClassVar[int]
+    threshold: ClassVar[float]
+    epsilon: ClassVar[float]
+    per_class: ClassVar[bool]
+    feature_names: Union[str, None]
+    bins: ClassVar[int]
+    robust: ClassVar[bool]
+
     def __init__(
         self,
-        top_k=1,
-        threshold=0.0,
-        epsilon=1.0e-12,
-        per_class=True,
-        feature_names=None,
-        bins=25,
-        robust=False,
-    ):
+        top_k: int = 1,
+        threshold: float = 0.0,
+        epsilon: float = 1.0e-12,
+        per_class: bool = True,
+        feature_names: Union[str, None] = None,
+        bins: int = 25,
+        robust: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -439,13 +411,13 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "JensenShannonDivergence":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "epsilon": self.epsilon,
@@ -457,27 +429,39 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             "robust": self.robust,
         }
 
-    def _make_prob(self, p, ranges, bins=25):
+    def _make_prob(
+        self,
+        p: NDArray[np.floating],
+        ranges: tuple[float, float],
+        bins: int = 25,
+    ) -> NDArray[np.floating]:
         """Make the probability distribution for a feature."""
         prob, _ = np.histogram(p, bins=bins, range=ranges)
         return (prob + self.epsilon) / np.sum(prob)
 
-    def _jensen_shannon(self, p, q):
+    def _jensen_shannon(
+        self, p: NDArray[np.floating], q: NDArray[np.floating]
+    ) -> float:
         """Compute the JS divergence between p and q in base 2."""
         m = 0.5 * (p + q)
         return 0.5 * entropy(p, m, base=2) + 0.5 * entropy(q, m, base=2)
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "JensenShannonDivergence":
         r"""
         Compute the JSD for each class, for each feature.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
-            Observations (columns as features); this is converted to
-            a numpy array behind the scenes.
+        X : array-like(float, ndim=2)
+            Observations (columns as features); this is converted to a numpy array behind the scenes.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Classes; this is converted to a numpy array behind the scenes.
 
         Returns
@@ -487,8 +471,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
 
         Note
         ----
-        If `per_class` is True, then the ranking is done for each class
-        and the `top_k` are chosen from each.
+        If `per_class` is True, then the ranking is done for each class and the `top_k` are chosen from each.
         """
         self.__X_, self.__y_ = check_X_y(
             X,
@@ -547,7 +530,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
                 div[class_] = self._jensen_shannon(p, q)
             return div
 
-        self.__divergence_ = {}
+        self.__divergence_: Union[list[tuple], dict] = {}
         for i in range(self.n_features_in_):
             self.__divergence_[i] = compute_(i)
 
@@ -625,16 +608,16 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Select analytes with the highest divergences.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
-            Observations (columns as features); this is converted to
-            a numpy array behind the scenes.Should be in the same
-            column order as the X trained on.
+        X : array-like(float, ndim=2)
+            Observations (columns as features); this is converted to a numpy array behind the scenes. Should be in the same column order as the `X` trained on.
 
         Returns
         -------
@@ -642,45 +625,46 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             Matrix with only the features selected.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
             ensure_2d=True,
             force_all_finite=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        return X[:, self.__mask_]
+        return X_[:, self.__mask_]
 
     def visualize(
-        self, by_class=True, classes=None, threshold=None, ax=None, figsize=None
-    ):
+        self,
+        by_class: bool = True,
+        classes: Union[Sequence[str], NDArray[np.str_], None] = None,
+        threshold: Union[float, None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        figsize: Union[tuple[int, int], None] = None,
+    ) -> None:
         """
         Plot divergences for each class.
 
         Parameters
         ----------
-        by_class : scalar(bool), optional(default=True)
-            Whether to plot feature divergences sorted by class
-            (per_class=True) or by their overall mean (per_class=False). This
-            is independent of the choice for per_class made at instantiation.
+        by_class : bool, optional(default=True)
+            Whether to plot feature divergences sorted by class (`per_class`=True) or by their overall mean (`per_class`=False). This is independent of the choice for `per_class` made at instantiation.
 
-        classes : array_like(str, ndim=1), optional(default=None)
-            List of classes to plot; if None, plot all trained on. Only
-            relevant for when by_class is true.
+        classes : array-like(str, ndim=1), optional(default=None)
+            List of classes to plot; if None, plot all trained on. Only relevant for when `by_class` is true.
 
         threshold : scalar(float), optional(default=None)
             Draws a horizontal red line to visualize this threshold.
 
-        ax : list(matplotlib.pyplot.axes), optional(default=None)
-            If None, creates its own plots, otherwise plots on the axes
-            given.
+        ax : list(matplotlib.pyplot.Axes), optional(default=None)
+            If `None`, creates its own plots, otherwise plots on the axes given.
 
-        figsize : tuple(int,int), optional(default=None)
+        figsize : tuple(int, int), optional(default=None)
             Figure size to produce.
 
         Example
@@ -730,7 +714,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
                 ax = plt.gca()
 
             if self.per_class:
-                arbitrary_class = list(self.divergence.keys())[0]
+                arbitrary_class = list(self.divergence.keys())[0]  # type: ignore[union-attr]
                 xv = [a[0] for a in self.divergence[arbitrary_class]]
                 yv = [
                     np.mean(list(a[1].values()))
@@ -750,14 +734,16 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
             _ = ax.set_xticklabels(xv, rotation=90)
             plt.tight_layout()
 
-    def get_feature_names_out(self):
+    def get_feature_names_out(
+        self,
+    ) -> Union[NDArray[np.str_], NDArray[np.bool_]]:
         """
         Return the selected features.
 
-        Note
-        ----
-        This will return a boolean mask if feature_names was not specified,
-        otherwise they are converted to column names.
+        Returns
+        -------
+        feature_names : ndarray(str or bool)
+            This will return a boolean mask if `feature_names` was not specified, otherwise returns the names of the selected columns.
         """
         check_is_fitted(self, "is_fitted_")
         if self.feature_names is not None:
@@ -765,7 +751,7 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
         else:
             return self.__mask_
 
-    def get_support(self):
+    def get_support(self) -> NDArray[np.bool_]:
         """
         Return the selected features.
 
@@ -778,16 +764,13 @@ class JensenShannonDivergence(TransformerMixin, BaseEstimator):
         return self.__mask_
 
     @property
-    def divergence(self):
+    def divergence(self) -> Union[list[tuple], dict]:
         """
         Return the JS divergences computed.
 
         Note
         ----
-        If per_class is True, this returns a dictionary with sorted entries
-        for each class, otherwise an array of (feature, {class:JS divergence})
-        is returned sorted by the highest average JS divergence for that
-        feature.
+        If `per_class` is True, this returns a dictionary with sorted entries for each class, otherwise an array of (feature, {class:JS divergence}) is returned sorted by the highest average JS divergence for that feature.
 
         Example
         -------
@@ -853,55 +836,35 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
     Parameters
     ----------
-    column_names : array_like(str, ndim=1), optional(default=None)
+    column_names : array-like(str, ndim=1), optional(default=None)
         Name of the columns in the feature matrix.
 
     model : sklearn.base.BaseEstimator, optional(default=sklearn.ensemble.RandomForestClassifier)
         An unfitted model for estimating SHAP values.
 
-    classification : scalar(bool), optional(default=True)
-        Whether this is a classification or regression problem.  Make sure the `model` you are using
-        is consistent with this choice.
+    classification : bool, optional(default=True)
+        Whether this is a classification or regression problem.  Make sure the `model` you are using is consistent with this choice.
 
     percentile : scalar(int), optional(default=100)
-        BorutaSHAP percentile to use.  This sets the percentile of the shadow features'
-        importances which the algorithm uses as the threshold to determine if a feature
-        gets a "hit".  The original Boruta implementation uses the max importance feature
-        of all the shadow features, equivalent to the default value of 100 here.
+        BorutaSHAP percentile to use.  This sets the percentile of the shadow features' importances which the algorithm uses as the threshold to determine if a feature gets a "hit".  The original Boruta implementation uses the max importance feature of all the shadow features, equivalent to the default value of 100 here.
 
     pvalue : scalar(float), optional(default=0.05)
-        P-value to use in BorutaSHAP.
+        p-value to use in BorutaSHAP.
 
     seed : scalar(int), optional(default=42)
         Seed for BorutaSHAP calculation.
 
     Note
     ----
-    Create a BorutaSHAP instance that is compatible with
-    scikit-learn's estimator API and can be used in scikit-learn and
-    imblearn's pipelines. It is intended for use with
-    `sklearn.feature_selection.SelectFromModel`.  Internally, accepted
-    features are given a feature_importance_ of 1, while those rejected
-    are assigned zero so that a threshold of, e.g., 0.5 will separate
-    them.
+    Create a BorutaSHAP instance that is compatible with scikit-learn's estimator API and can be used in scikit-learn and imblearn's pipelines. It is intended for use with `sklearn.feature_selection.SelectFromModel`.  Internally, accepted features are given a feature_importance_ of 1, while those rejected are assigned zero so that a threshold of, e.g., 0.5 will separate them.
 
-    This is essentially a wrapper for
-    `BorutaSHAP <https://github.com/Ekeany/Boruta-Shap>`_. See
-    documentation therein for additional details. This requires input as a
-    Pandas DataFrame so an internal conversion will be performed.  Also,
-    you must provide the names of the original columns (in order) at
-    instantiation.
+    This is essentially a wrapper for `BorutaSHAP <https://github.com/Ekeany/Boruta-Shap>`_. See documentation therein for additional details. This requires input as a pandas.DataFrame so an internal conversion will be performed.  Also, you must provide the names of the original columns (in order) at instantiation.
 
-    BorutaSHAP works with tree-based models which do not require scaling or
-    other preprocessing, therefore this stage can actually be put in the
-    pipeline either before or after standard scaling (see example below).
+    BorutaSHAP works with tree-based models which do not require scaling or other preprocessing, therefore this stage can actually be put in the pipeline either before or after standard scaling (see example below).
 
-    BorutaSHAP is expensive; default parameters are set to be gentle but it can
-    dramatically increase the cost of nested CV or grid searching.
+    BorutaSHAP is expensive; default parameters are set to be gentle but it can dramatically increase the cost of nested cross-validation or grid searching.
 
-    Leave `column_names` as None in pipelines which have feature engineers that
-    can change the number of components. BorutaSHAPFeatureSelector will just label columns
-    with integers to handle things consistently internally.
+    Leave `column_names` as `None` in pipelines which have feature engineers that can change the number of components. BorutaSHAPFeatureSelector will just label columns with integers to handle things consistently internally.
 
     Example
     -------
@@ -928,20 +891,27 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
     >>> BiasedNestedCV().grid_search(pipeline, param_grid, X.values, y.values)
     """
 
+    column_names: ClassVar[Union[Sequence[str], NDArray[np.str_], None]]
+    model: ClassVar[Any]
+    classification: ClassVar[bool]
+    percentile: ClassVar[int]
+    pvalue: ClassVar[float]
+    seed: ClassVar[int]
+
     def __init__(
         self,
-        column_names=None,
-        model=RF(
+        column_names: Union[Sequence[str], NDArray[np.str_], None] = None,
+        model: Any = RandomForestClassifier(
             n_estimators=100,
             criterion="entropy",
             random_state=0,
             class_weight="balanced",
         ),
-        classification=True,
-        percentile=100,
-        pvalue=0.05,
-        seed=42,
-    ):
+        classification: bool = True,
+        percentile: int = 100,
+        pvalue: float = 0.05,
+        seed: int = 42,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -954,13 +924,13 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "BorutaSHAPFeatureSelector":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         params = {
             "column_names": self.column_names,
@@ -976,18 +946,29 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
             )
         return params
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating], pd.DataFrame],
+        y: Union[
+            Sequence[float],
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.floating],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            pd.Series,
+        ],
+    ) -> "BorutaSHAPFeatureSelector":
         """
         Fit BorutaSHAP to data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
-        y : array_like(str or int, ndim=1) or array_like(float, ndim=1) or pandas.Series
-            Response variable or classes, depending on whether this is is a
-            classification or regression problem.
+        y : array-like(float, int, or str, ndim=1) or pandas.Series
+            Response variable or classes, depending on whether this is is a classification or regression problem.
 
         Returns
         -------
@@ -1047,18 +1028,21 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating], pd.DataFrame],
+    ) -> Union[NDArray[np.floating], pd.DataFrame]:
         """
         Select the columns that were deemed important.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2) or pandas.DataFrame
+        X : array-like(float, ndim=2) or pandas.DataFrame
             Feature matrix.
 
         Returns
         ----------
-        X_selected : array_like(float, ndim=2)
+        X_selected : array-like(float, ndim=2)
             Feature matrix with only the relevant columns.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1081,7 +1065,7 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         else:
             return df.values
 
-    def get_feature_names_out(self):
+    def get_feature_names_out(self) -> NDArray[np.str_]:
         """
         Return the selected features.
 
@@ -1093,7 +1077,7 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return np.asarray(self.column_names_)[self.get_support()]
 
-    def get_support(self):
+    def get_support(self) -> NDArray[np.bool_]:
         """
         Return the selected features.
 
@@ -1106,9 +1090,9 @@ class BorutaSHAPFeatureSelector(TransformerMixin, BaseEstimator):
         return np.array(
             [
                 column in self.__boruta_.accepted
-                for column in self.column_names_
+                for column in self.column_names_  # type: ignore[union-attr]
             ],
-            dtype=bool,
+            dtype=np.bool_,
         )
 
     def _get_tags(self):

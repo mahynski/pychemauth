@@ -4,6 +4,8 @@ Principal Components Analysis (PCA).
 author: nam
 """
 import copy
+import warnings
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +16,9 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof, _logistic_proba
+
+from typing import Union, Sequence, Any, ClassVar
+from numpy.typing import NDArray
 
 
 class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
@@ -32,7 +37,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
 
-    scale_x : scalar(bool), optional(default=False)
+    scale_x : bool, optional(default=False)
         Whether or not to scale X columns by the standard deviation.
 
     robust : str, optional(default="semi")
@@ -46,7 +51,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         points, a robust variant is recommended. This is why "semi" is the
         default value.
 
-    sft : scalar(bool), optional(default=False)
+    sft : bool, optional(default=False)
         Whether or not to use the iterative outlier removal scheme described
         in [2], called "sequential focused trimming."  If not used (default)
         robust estimates of parameters may be attempted; if the iterative
@@ -79,15 +84,22 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
     Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
 
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[float]
+    scale_x: ClassVar[bool]
+    robust: ClassVar[str]
+    sft: ClassVar[bool]
+
     def __init__(
         self,
-        n_components=1,
-        alpha=0.05,
-        gamma=0.01,
-        scale_x=False,
-        robust="semi",
-        sft=False,
-    ):
+        n_components: int = 1,
+        alpha: float = 0.05,
+        gamma: float = 0.01,
+        scale_x: bool = False,
+        robust: str = "semi",
+        sft: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -100,13 +112,13 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "PCA":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -117,17 +129,23 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             "sft": self.sft,
         }
 
-    def fit(self, X, y=None):
+    def fit(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            NDArray[np.floating], NDArray[np.integer], NDArray[np.str_], None
+        ] = None,
+    ) -> "PCA":
         """
         Fit the PCA model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(int or str or float, ndim=1), optional(default=None)
+        y : array-like(int, str or float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -315,18 +333,20 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         return self
 
     @property
-    def sft_history(self):
+    def sft_history(self) -> dict[str, Any]:
         """Return the sequential focused trimming history."""
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__sft_history_)
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Project X into the feature subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
@@ -345,18 +365,26 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__pca_.transform(self.__x_scaler_.transform(X))
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            NDArray[np.floating], NDArray[np.integer], NDArray[np.str_], None
+        ] = None,
+    ) -> NDArray[np.floating]:
         """Fit and transform."""
         self.fit(X, y)
         return self.transform(X)
 
-    def _h_q(self, X):
+    def _h_q(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
         X = check_array(
@@ -367,7 +395,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -384,13 +412,15 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return h_vals, q_vals
 
-    def distance(self, X):
+    def distance(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute how far away points are from this class.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
@@ -410,17 +440,19 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
 
-    def decision_function(self, X, y=None):
+    def decision_function(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]], y=None
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -441,17 +473,19 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
-    def predict_proba(self, X, y=None):
+    def predict_proba(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]], y=None
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(float, ndim=1), optional(default=None)
+        y : array-like(float, ndim=1), optional(default=None)
             Ignored.
 
         Returns
@@ -478,13 +512,15 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return _logistic_proba(self.decision_function(X, y))
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.bool_]:
         """
         Predict if the data are "inliers" (NOT extremes or outliers).
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -499,13 +535,15 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
         # If d < c_crit, it is not extreme not outlier
         return d < self.__c_crit_
 
-    def check_outliers(self, X):
+    def check_outliers(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check where, if ever, extemes and outliers occur in the data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -531,25 +569,30 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return extremes, outliers
 
-    def extremes_plot(self, X, upper_frac=0.25, ax=None):
+    def extremes_plot(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        upper_frac: float = 0.25,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot an "extremes plot" [4] to evalute the quality of the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Data to evaluate the number of non-inliers (outliers + extremes) in.
 
         upper_frac : scalar(float), optional(default=0.25)
             Count the number of extremes and outliers for alpha values corresponding
             to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted.
 
         Note
@@ -574,23 +617,23 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             force_all_finite=True,
             copy=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        N_tot = X.shape[0]
+        N_tot = X.shape[0]  # type: ignore[union-attr]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
-        n_observed = []
+        n_observed_ = []
         for a in alpha_values:
             params = self.get_params()
             params["alpha"] = a
             model_ = PCA(**params)
             model_.fit(X)
             extremes, outliers = model_.check_outliers(X)
-            n_observed.append(np.sum(extremes) + np.sum(outliers))
-        n_observed = np.array(n_observed)
+            n_observed_.append(np.sum(extremes) + np.sum(outliers))
+        n_observed = np.array(n_observed_)
 
         if ax is None:
             fig = plt.figure()
@@ -614,17 +657,22 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return ax
 
-    def loss(self, X, y, eps=1.0e-15):
+    def loss(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[NDArray[np.bool_], Sequence[bool]],
+        eps: float = 1.0e-15,
+    ) -> float:
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bools, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -649,7 +697,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -669,21 +717,25 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
-    def plot_loadings(self, feature_names=None, ax=None):
+    def plot_loadings(
+        self,
+        feature_names: Union[NDArray[np.str_], Sequence[str], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         """
         Make a 2D loadings plot.
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
 
         Note
@@ -729,25 +781,30 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
 
         return ax
 
-    def visualize(self, X, ax=None, log=True):
+    def visualize(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        log: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------
-        X : array_like(str, ndim=1)
-            Columns of features; observations are rows - will be converted to
+        X : array-like(str, ndim=2)
+            Columns are features, observations are rows - will be converted to
             numpy array automatically.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot on.
 
-        log : scalar(bool), optional(default=True)
+        log : bool, optional(default=True)
             Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -759,7 +816,7 @@ class PCA(BaseEstimator):  # Not a proper classifer by sklearn standards
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )

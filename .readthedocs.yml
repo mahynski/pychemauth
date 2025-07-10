@@ -8,11 +8,15 @@ version: 2
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.9"
+    python: "3.10"
     # You can also specify other tool versions:
     # nodejs: "20"
     # rust: "1.70"
     # golang: "1.20"
+  commands:
+    # Customization of build process was necessary since dime-pytorch==1.0.1 was causing some issues
+    - python -m pip install --exists-action=w --no-cache-dir -r docs/requirements.txt
+    - python -m sphinx -T -b html -d docs/_build/doctrees -D language=en docs $READTHEDOCS_OUTPUT/html
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:

@@ -11,6 +11,13 @@ The easiest way to install pychemauth is with `pip <https://pypi.org/project/pip
 
    pip install git+https://github.com/mahynski/pychemauth@main
 
+Sometimes errors related to the inability to find `numpy` can occur during installation; to solve this run `pip install numpy` before install installing pychemauth.  For example:
+
+.. code-block:: python
+   :linenos:
+
+   pip install numpy && pip install git+https://github.com/mahynski/pychemauth@main
+
 You can also download the `repository <https://github.com/mahynski/pychemauth>`_ and install it from there. Check for the most recent version, or whichever is desired, and replace "X.X.X" below.
 
 .. code-block:: bash
@@ -19,7 +26,7 @@ You can also download the `repository <https://github.com/mahynski/pychemauth>`_
    git clone https://github.com/mahynski/pychemauth.git --branch vX.X.X --depth 1
    cd pychemauth
    pip install .
-   pytest # Optional, but recommended to run unittests
+   python -m pytest # Optional, but recommended to run unittests
 
 Note that there are warnings raised by theses tests which indicate certain default checks, used to determine if a class is compatible with sklearn's `estimator api <https://scikit-learn.org/stable/developers/develop.html>`_, have been skipped.  This is expected as certain checks have been disabled intentionally; it does not indicate a problem with the code or its installation.
 

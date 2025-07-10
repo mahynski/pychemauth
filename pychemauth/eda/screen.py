@@ -7,18 +7,21 @@ author: nam
 import inspect
 import itertools
 import warnings
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
 import seaborn as sns
-import sklearn
 import tqdm
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import check_X_y
 
 from pychemauth.preprocessing.feature_selection import JensenShannonDivergence
+
+from typing import Any, Callable, Union, Sequence, Iterable, ClassVar
+from numpy.typing import NDArray
 
 
 class RedFlags:
@@ -46,7 +49,7 @@ class RedFlags:
     >>> r.run(X, y)
     """
 
-    def __init__(self, use=None, tag=""):
+    def __init__(self, use: Union[list, None] = None, tag: str = "") -> None:
         """Instantiate the class."""
         self.perform = {}
         self.all_checks = dict(
@@ -63,20 +66,29 @@ class RedFlags:
             self.perform = self.all_checks
 
     @property
-    def get_checks(self):
+    def get_checks(self) -> dict[Any, Any]:
         """Get a list of all checks that will be performed."""
         return self.perform
 
-    def run(self, X, y=None):
+    def run(
+        self,
+        X: Union[
+            NDArray[np.floating],
+            NDArray[np.integer],
+            Sequence[Sequence[float]],
+            Sequence[Sequence[float]],
+        ],
+        y: Union[Sequence[Any], NDArray[Any]],
+    ) -> None:
         """
         Run all checks.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1)
             Target to predict.
 
         Raises
@@ -85,8 +97,8 @@ class RedFlags:
 
         Note
         ----
-        X may be an object that contains columns of different types of data (e.g., str, bool, floats)
-        while y (if provided) must be either completely composed of floats or strings.
+        `X` may be an object that contains columns of different types of data (e.g., str, bool, floats)
+        while `y` (if provided) must be either completely composed of floats or strings.
         """
         X_safe, y_safe = check_X_y(
             X,
@@ -110,19 +122,23 @@ class RedFlags:
                     item,
                     (
                         float,
+                        np.float_,
                         np.float32,
                         np.float64,
+                        np.floating,
                         int,
+                        np.int_,
                         np.uint,
                         np.int32,
                         np.int64,
+                        np.integer,
                     ),
                 )
-                for item in np.array(y).flatten()
+                for item in y
             ]
         ):
             self.y_type = "float"
-        elif all([isinstance(item, str) for item in np.asarray(y).flatten()]):
+        elif all([isinstance(item, str) for item in y]):
             self.y_type = "str"
         else:
             raise Exception(
@@ -134,23 +150,31 @@ class RedFlags:
         for name, test in self.perform.items():
             test(X=X_safe, y=y_safe)
 
-    def check_nan(self, X, y=None):
+    def check_nan(
+        self,
+        X: Union[
+            NDArray[np.floating],
+            NDArray[np.integer],
+            Sequence[Sequence[float]],
+            Sequence[Sequence[float]],
+        ],
+        y: Union[Sequence[Any], NDArray[Any]],
+    ) -> bool:
         """
         Check if any entries in X or y are NaN.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
-            Target to predict. If these are floating points, also check for
-            NaN values.
+        y : array-like(float, int, or str, ndim=1)
+            Target to predict. If these are floating points, also check for NaN values.
 
         Returns
         -------
-        found : scalar(bool)
-            If there are any NaN values in X or y.
+        found : bool
+            If there are any NaN values in `X` or `y`.
         """
         found = False
         if np.any(np.isnan(np.asarray(X, dtype=np.float64).flatten())):
@@ -168,23 +192,31 @@ class RedFlags:
                     found = True
         return found
 
-    def check_inf(self, X, y=None):
+    def check_inf(
+        self,
+        X: Union[
+            NDArray[np.floating],
+            NDArray[np.integer],
+            Sequence[Sequence[float]],
+            Sequence[Sequence[float]],
+        ],
+        y: Union[Sequence[Any], NDArray[Any]],
+    ) -> bool:
         """
         Check if any entries in X or y are Inf.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
-            Target to predict. If these are floating points, also check for
-            Inf values.
+        y : array-like(float, int, or str, ndim=1)
+            Target to predict. If these are floating points, also check for Inf values.
 
         Returns
         -------
-        found : scalar(bool)
-            If there are any Inf values in X or y.
+        found : bool
+            If there are any Inf values in `X` or `y`.
         """
         found = False
         if np.any(np.isinf(np.asarray(X, dtype=np.float64).flatten())):
@@ -202,22 +234,28 @@ class RedFlags:
                     found = True
         return found
 
-    def check_zero_variance(self, X, y=None):
+    def check_zero_variance(
+        self,
+        X: Union[
+            NDArray[np.floating], NDArray[np.integer], Sequence[Sequence[float]]
+        ],
+        y=None,
+    ) -> bool:
         """
         Check if any columns in X are constant (unsupervised).
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
-        found : scalar(bool)
-            If any columns of X have zero variance.
+        found : bool
+            If any columns of `X` have zero variance.
         """
         tol = 1.0e-12
         std_dev = np.std(np.asarray(X, dtype=np.float64), axis=0)
@@ -230,24 +268,31 @@ class RedFlags:
             return True
         return False
 
-    def check_min_observations(self, X, y, n=5):
+    def check_min_observations(
+        self,
+        X: Union[
+            NDArray[np.floating], NDArray[np.integer], Sequence[Sequence[float]]
+        ],
+        y=None,
+        n: int = 5,
+    ) -> bool:
         r"""
         Check each class has a minimum number of observations.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
-            Target to predict.
+        y : array-like(str or float, ndim=1), optional(default=None)
+            Target to predict. If `None` this test is not performed.
 
         n : scalar(int), optional(default=5)
             Minimum number of observations to expect, else throw warning.
 
         Returns
         -------
-        found : scalar(bool)
+        found : bool
             If any classes have less than `n` observations.
         """
         found = False
@@ -266,32 +311,36 @@ class RedFlags:
                         found = True
         return found
 
-    def check_min_different_values(self, X, y, n=5):
+    def check_min_different_values(
+        self,
+        X: Union[
+            NDArray[np.floating], NDArray[np.integer], Sequence[Sequence[float]]
+        ],
+        y=None,
+        n: int = 5,
+    ) -> bool:
         r"""
         Check each class has a minimum number of unique values in each column of X.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
-            Target to predict.
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
+            Target to predict. If `None` this test is not performed.
 
         n : scalar(int), optional(default=5)
             Minimum number of different values to expect, else throw warning.
 
         Returns
         -------
-        found : scalar(bool)
-            If any classes have less than `n` unique values in any column of X.
+        found : bool
+            If any classes have less than `n` unique values in any column of `X`.
 
         Note
         ----
-        This is important during CV which might split, e.g., a bimodal distribution up so that
-        all observations in the train split(s) are the same, leading to a std = 0, causing
-        standardization to "explode."  As a result, it is recommended that n be at least k
-        in k-fold CV, but should generally be more.
+        This is important during CV which might split, e.g., a bimodal distribution up so that all observations in the train split(s) are the same, leading to a std = 0, causing standardization to "explode."  As a result, it is recommended that `n` be at least `k` in k-fold CV, but should generally be more.
         """
         found = False
         if not (y is None):
@@ -319,16 +368,23 @@ class RedFlags:
 
         return found
 
-    def check_duplicates(self, X, y=None, tol=1.0e-12):
+    def check_duplicates(
+        self,
+        X: Union[
+            NDArray[np.floating], NDArray[np.integer], Sequence[Sequence[float]]
+        ],
+        y=None,
+        tol: float = 1.0e-12,
+    ) -> bool:
         """
         Check if any rows in X are duplicates numerically.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
             Ignored.
 
         tol : scalar(float), optional(default=1.0e-12)
@@ -336,8 +392,8 @@ class RedFlags:
 
         Returns
         -------
-        found : scalar(bool)
-            If any rows of X are duplicates.
+        found : bool
+            If any rows of `X` are duplicates.
         """
         try:
             if np.any(
@@ -360,29 +416,34 @@ class RedFlags:
             )
             return False
 
-    def check_zero_class_variance(self, X, y=None):
+    def check_zero_class_variance(
+        self,
+        X: Union[
+            NDArray[np.floating], NDArray[np.integer], Sequence[Sequence[float]]
+        ],
+        y=None,
+    ) -> bool:
         """
         Check if columns in X are constant for any classes.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or float, ndim=1), optional(default=None)
-            Target to predict. If not provided, this test is skipped.
+        y : array-like(float, int, or str, ndim=1), optional(default=None)
+            Target to predict. If `None` this test is not performed.
 
         Returns
         -------
-        found : scalar(bool)
-            If any classes have columns of X with zero variance.
+        found : bool
+            If any classes have columns of `X` with zero variance.
 
         Notes
         -----
-        For models like SIMCA, which break things up based on class, this
-        is particularly important.
+        For models like SIMCA, which break things up based on class, this is particularly important.
 
-        This test is skipped if NaN or Inf are found in X.
+        This test is skipped if NaN or Inf are found in `X`.
         """
         tol = 1.0e-12
         found = False
@@ -425,7 +486,7 @@ class JSScreen:
         Number of bins to use when computing the Jensen-Shannon
         divergence.
 
-    robust : scalar(bool), optional(default=False)
+    robust : bool, optional(default=False)
         Whether or not use the robust option in JensenShannonDivergence.
 
     Note
@@ -463,7 +524,18 @@ class JSScreen:
     >>> screen.visualize_grid(plt.figure(figsize=(20,20)).gca())
     """
 
-    def __init__(self, n=None, feature_names=None, js_bins=25, robust=False):
+    feature_names: ClassVar[Union[list, NDArray[np.str_], None]]
+    n: ClassVar[Union[int, None]]
+    js_bins: ClassVar[int]
+    robust: ClassVar[bool]
+
+    def __init__(
+        self,
+        n: Union[int, None] = None,
+        feature_names: Union[list, NDArray[np.str_], None] = None,
+        js_bins: int = 25,
+        robust: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -475,13 +547,13 @@ class JSScreen:
         )
         return
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "JSScreen":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n": self.n,
@@ -491,25 +563,27 @@ class JSScreen:
         }
 
     @staticmethod
-    def macroclasses(atomic_classes, n):
+    def macroclasses(
+        atomic_classes: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+        n: Union[int, None],
+    ) -> dict[int, list[tuple]]:
         """
         Create macroclasses from individual, atomic ones.
 
         Parameters
         ----------
-        atomic_classes : array_like(str or int, ndim=1)
+        atomic_classes : array-like(str or int, ndim=1)
             List of classes, can strings or integers, for example.
 
         n : scalar(int) or None
-            Maximum macroclass size; will return all combinations
-            up to the point of containing n atomic classes.  If
-            None, goes from 1 to len(atomic_classes).
+            Maximum macroclass size; will return all combinations up to the point of containing n atomic classes.  If `None`, goes from 1 to len(`atomic_classes`).
 
         Returns
         -------
-        macro : list(tuple)
-            List of combinations of atomic classes in order of n,
-            following Pascal's triangle.
+        macro : dict(int, list(tuple))
+            List of combinations of atomic classes in order of `n`, following Pascal's triangle.
         """
         if n is not None:
             assert n >= 1
@@ -520,13 +594,19 @@ class JSScreen:
         return macro
 
     @staticmethod
-    def transform(y, macroclass, naming=None):
+    def transform(
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+        macroclass: tuple,
+        naming: Union[Callable[..., str], None] = None,
+    ) -> NDArray[np.str_]:
         """
         Transform classes into a macroclass.
 
         Parameters
         ----------
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground-truth classes.
 
         macroclass : tuple(str)
@@ -547,20 +627,24 @@ class JSScreen:
         """
         namer = JSScreen.merge if naming is None else naming
         string_macro = tuple([str(x) for x in macroclass])
-        macro_name = namer(macroclass)
-        y_macro = []
+        macro_name = namer(macroclass)  # type: ignore[operator]
+        y_macro_ = []
         for row in y:
             string_row = str(row)
             if string_row in string_macro:
-                y_macro.append(macro_name)
+                y_macro_.append(macro_name)
             else:
-                y_macro.append(string_row)
-        y_macro = np.array(y_macro, dtype=str)
+                y_macro_.append(string_row)
+        y_macro = np.array(y_macro_, dtype=np.str_)
 
         return y_macro
 
     @staticmethod
-    def merge(names, clause="AND", split=False):
+    def merge(
+        names: Union[str, Iterable[str]],
+        clause: str = "AND",
+        split: bool = False,
+    ) -> Union[str, list[str]]:
         """Naming convention for merging classes."""
         if not clause.startswith(" "):
             clause = " " + clause
@@ -571,29 +655,33 @@ class JSScreen:
             return clause.join(names)
         else:
             # Split apart
-            return names.split(clause)
+            return names.split(clause)  # type: ignore[union-attr]
 
-    def _all_sets(self, y, n):
+    def _all_sets(
+        self,
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+        n: Union[int, None],
+    ) -> dict[int, dict]:
         """
         Get all transformations of y into sets of size [1:n].
 
         Parameters
         ----------
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground-truth classes.
 
         n : scalar(int) or None
-            Maximum macroclass size; will return all combinations
-            up to the point of containing n atomic classes.  If
-            None, goes from 1 to len(atomic_classes).
+            Maximum macroclass size; will return all combinations up to the point of containing `n` atomic classes.  If `None`, goes from 1 to len(`atomic_classes`).
 
         Returns
         -------
-        transforms : dict(dict)
+        transforms : dict(int, dict)
             Dictionary of {n:{macroclass:y}}.
         """
         mc = self.macroclasses(np.unique(y), n)
-        transforms = {}
+        transforms: dict = {}
         for k, v in mc.items():
             transforms[k] = {}
             for i, macro in enumerate(v):
@@ -601,16 +689,22 @@ class JSScreen:
 
         return transforms
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "JSScreen":
         """
         Fit the screen to data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes.
 
         Result
@@ -620,7 +714,7 @@ class JSScreen:
 
         Note
         ----
-        y is converted to a numpy array of strings automatically.
+        `y` is converted to a numpy array of strings automatically.
         """
         self.__X_ = np.array(X)
         self.__y_ = np.array(y, dtype=str)
@@ -628,16 +722,14 @@ class JSScreen:
         self.__transforms_ = self._all_sets(self.__y_, self.n)
 
         self.__js_ = JensenShannonDivergence(
-            **{
-                "per_class": False,
-                "feature_names": None,  # Index
-                "bins": self.js_bins,
-                "robust": self.robust,
-            }
+            per_class=False,
+            feature_names=None,  # Index
+            bins=self.js_bins,
+            robust=self.robust,
         )
 
         self.__row_labels_ = (
-            np.arange(X.shape[1])
+            np.arange(self.__X_.shape[1])
             if self.feature_names is None
             else self.feature_names
         )  # Features are rows
@@ -667,18 +759,20 @@ class JSScreen:
 
         return self
 
-    def visualize_grid(self, ax=None):
+    def visualize_grid(
+        self, ax: Union[matplotlib.pyplot.Axes, None] = None
+    ) -> matplotlib.pyplot.Axes:
         """
         Visualize the results with a heatmap.
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot the result on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         if ax is None:
@@ -697,7 +791,12 @@ class JSScreen:
 
         return ax
 
-    def visualize_classes(self, method="max", ax=None, display=True):
+    def visualize_classes(
+        self,
+        method: str = "max",
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        display: bool = True,
+    ) -> list:
         """
         Visualize the classes by summarizing over the features.
 
@@ -709,14 +808,13 @@ class JSScreen:
         ax : matplotlib.pyplot.axes, optional(default=None)
             Axes to plot the results on.
 
-        display : scalar(bool), optional(default=True)
+        display : bool, optional(default=True)
             Whether to plot the results or not.
 
         Returns
         -------
         best : list(str, float, float)
-            Tuple of columns sorted in descending order based on the "best"
-            score, the score itself, and the standard deviation.
+            Tuple of columns sorted in descending order based on the "best" score, the score itself, and the standard deviation.
         """
         if display:
             if ax is None:
@@ -746,18 +844,23 @@ class JSScreen:
             raise ValueError("Unrecognized method")
 
         if display:
-            ax.bar(
+            ax.bar(  # type: ignore[union-attr]
                 x=[x[0] for x in best],
                 height=[x[1] for x in best],
                 yerr=[x[2] for x in best],
             )
             plt.xticks([x[0] for x in best], rotation=90)
-            ax.set_title("Feature {} +/- 1 ".format(method) + r"$\sigma$")
-            ax.set_ylabel(r"$\nabla \cdot JS$")
+            ax.set_title("Feature {} +/- 1 ".format(method) + r"$\sigma$")  # type: ignore[union-attr]
+            ax.set_ylabel(r"$\nabla \cdot JS$")  # type: ignore[union-attr]
 
         return best
 
-    def visualize_max(self, top=None, bins=25, ax=None):
+    def visualize_max(
+        self,
+        top: Union[int, None] = None,
+        bins: int = 25,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> NDArray[matplotlib.pyplot.Axes]:
         r"""
         Visualize the distribution of the max feature for classes.
 
@@ -769,19 +872,17 @@ class JSScreen:
         bins : scalar(int), optional(default=25)
             Number of bins to use in the histogram.
 
-        ax : array_like(matplotlib.pyplot.axes, ndim=1), optional(default=None)
+        ax : array-like(matplotlib.pyplot.Axes, ndim=1), optional(default=None)
             Axes to plot each macroclasses on. Should have length of :math:`top`.
 
         Returns
         -------
-        ax : array_like(matplotlib.pyplot.axes, ndim=1)
-            Axes results are plotted on.
+        ax : ndarray(matplotlib.pyplot.Axes, ndim=1)
+            Array of axes results are plotted on.
 
         Note
         ----
-        This will actually provide a visualization for all the top
-        macroclasses, so this is usually best when n=1 so only
-        individual atomic classes are visualized.
+        This will actually provide a visualization for all the top macroclasses, so this is usually best when `n`=1 so only individual atomic classes are visualized.
 
         Example
         -------
@@ -810,7 +911,7 @@ class JSScreen:
                 iter(ax)
                 axes = ax.ravel()
             except:
-                axes = [ax]
+                axes = np.array([ax])
 
         best_dict = {a: b for a, b, c in best}
         feat_dict = dict(top_feature)
@@ -849,50 +950,39 @@ class JSScreen:
         """Get the grid of Jensen-Shannon divergences computed."""
         return self.__grid_.copy()
 
-    def interesting(self, threshold=0.7, method="max", min_delta=0.0):
+    def interesting(
+        self,
+        threshold: float = 0.7,
+        method: str = "max",
+        min_delta: float = 0.0,
+    ) -> tuple[list, dict]:
         r"""
         Try to find the "interesting" macroclasses.
 
         Parameters
         ----------
         threshold : scalar(float), optional(default=0.7)
-            The JSD value a set of (macro)classes must be below before merging,
-            but after which they are above is considered "interesting."
+            The JSD value a set of (macro)classes must be below before merging, but after which they are above is considered "interesting."
 
         method : str, optional(default="max")
             Use the "max" or the "mean" of the JS divergences as the metric.
 
         min_delta : scalar(float), optional(default=0.0)
-            Minimum amount the JSD must be raised after merging (macro)classes
-            to be considered "interesting."
+            Minimum amount the JSD must be raised after merging (macro)classes to be considered "interesting."
 
         Returns
         -------
         interesting : list(tuple(str, str), dict(str:float))
-            Summary of incremental changes that meet the "interesting" criteria.
-            See :py:func:`JSScreen.incremental`.
+            Summary of incremental changes that meet the "interesting" criteria. See :py:func:`JSScreen.incremental`.
 
         proposed_combinations : dict(set)
-            Merges that are considered "interesting", dictionary of unique sets
-            formed from these merges.
+            Merges that are considered "interesting", dictionary of unique sets formed from these merges.
 
         Note
         ----
-        We define "interesting merges" as those which cause a
-        positive change of at least `min_delta` and raise the JS divergence to
-        above some `threshold` where it was initially below. Moreover, all the
-        individual classes must have divergences less than the net of all of
-        them less `min_delta` (i.e., merging is exclusively increasing the
-        distinguishibility of the macroclass rather than one simply "bringing
-        up the average").
+        We define "interesting merges" as those which cause a positive change of at least `min_delta` and raise the JS divergence to above some `threshold` where it was initially below. Moreover, all the individual classes must have divergences less than the net of all of them less `min_delta` (i.e., merging is exclusively increasing the distinguishibility of the macroclass rather than one simply "bringing up the average").
 
-        Because the divergences must be low for the atomic classes, it can
-        happen that this proposes (B,C,D) as a class (whose complement is A)
-        but not (A,) directly; this ie because B,C,D may overlap each other
-        and so have low JS divergences, while A may be easily separable to
-        begin with so it fails that check.  Ultimately, the result is the same
-        but it might seem counterintuitive that this does not always propose
-        "symmetric" suggestions.
+        Because the divergences must be low for the atomic classes, it can happen that this proposes (B,C,D) as a class (whose complement is A) but not (A,) directly; this ie because B,C,D may overlap each other and so have low JS divergences, while A may be easily separable to begin with so it fails that check.  Ultimately, the result is the same but it might seem counterintuitive that this does not always propose "symmetric" suggestions.
         """
         interesting = []
         for row in self.incremental(method=method):
@@ -907,8 +997,8 @@ class JSScreen:
             ):
                 interesting.append(row)
 
-        proposed_combinations = {}
-        performances = {}
+        proposed_combinations: dict = {}
+        performances: dict = {}
         idx = 0
         for row in interesting:
             union = set(self.merge(row[0][0], split=True)).union({row[0][1]})
@@ -924,7 +1014,7 @@ class JSScreen:
 
         return interesting, proposed_combinations
 
-    def incremental(self, method="max"):
+    def incremental(self, method: str = "max") -> list:
         """
         Find the changes due to the addition of a single class to a macroclass.
 
@@ -961,9 +1051,9 @@ class JSScreen:
         the constituent classes.
         """
         if method == "max":
-            function = np.max
+            function_ = np.max
         elif method == "mean":
-            function = np.mean
+            function_ = np.mean  # type: ignore[assignment]
         else:
             raise ValueError("Unrecognized method.")
 
@@ -971,7 +1061,7 @@ class JSScreen:
         k = {}
         for j, combination in enumerate(self.__column_labels_):
             k[j] = set(self.merge(combination, split=True))
-            d[j] = function(self.__grid_[:, j])
+            d[j] = function_(self.__grid_[:, j])
 
         def find(set_):
             for j, v in k.items():
@@ -1006,45 +1096,49 @@ class JSBinary:
     js_bins : scalar(int), optional(default=25)
         Number of bins to use when computing the Jensen-Shannon divergence.
 
-    robust : scalar(bool), optional(default=False)
+    robust : bool, optional(default=False)
         Whether to robust option for JensenShannonDivergence.
 
     Note
     ----
-    For a classification problem, look at the maximum JSD that can exists
-    across all features between pairs of classes.  This creates a binary
-    comparison between individual classes instead of a one-vs-all comparison
-    done in JSScreen.
+    For a classification problem, look at the maximum JSD that can exists across all features between pairs of classes.  This creates a binary comparison between individual classes instead of a one-vs-all comparison done in JSScreen.
 
-    It can be helpful to look for the "elbow" as you plot number of bins vs.
-    max JSD to get a sense for the optimal value.
+    It can be helpful to look for the "elbow" as you plot number of bins vs. max JSD to get a sense for the optimal value.
     """
 
-    def __init__(self, js_bins=25, robust=False):
+    js_bins: ClassVar[int]
+    robust: ClassVar[bool]
+
+    def __init__(self, js_bins: int = 25, robust: bool = False) -> None:
         """Instantiate the class."""
         self.set_params(**{"js_bins": js_bins, "robust": robust})
-        return
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "JSBinary":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {"js_bins": self.js_bins, "robust": self.robust}
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "JSBinary":
         """
         Fit the screen to data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Features matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Ground truth classes.
 
         Returns
@@ -1053,12 +1147,10 @@ class JSBinary:
             Fitted model.
         """
         js = JensenShannonDivergence(
-            **{
-                "per_class": True,  # Sorts by max automatically
-                "feature_names": None,  # Index
-                "bins": self.js_bins,
-                "robust": self.robust,
-            }
+            per_class=True,  # Sorts by max automatically
+            feature_names=None,  # Index
+            bins=self.js_bins,
+            robust=self.robust,
         )
 
         self.__enc_ = LabelEncoder()
@@ -1088,17 +1180,19 @@ class JSBinary:
         return self
 
     @property
-    def matrix(self):
+    def matrix(self) -> NDArray[np.floating]:
         """Return the matrix of maximum JS divergence values."""
         return self.__matrix_.copy()
 
-    def top_features(self, feature_names=None):
+    def top_features(
+        self, feature_names: Union[Sequence[Any], NDArray[Any], None] = None
+    ) -> NDArray[Any]:
         """
         Return which feature was responsible for the max JS divergence.
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of feature names. Results are internally stored as
             indices so if this is provided, converts indices to names
             based on this array; otherwise a matrix of indices is
@@ -1127,18 +1221,20 @@ class JSBinary:
                         names[i, j] = "NONE"
             return names
 
-    def visualize(self, ax=None):
+    def visualize(
+        self, ax: Union[matplotlib.pyplot.Axes, None] = None
+    ) -> matplotlib.pyplot.Axes:
         """
         Visualize the results with a heatmap.
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot the result on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         if ax is None:

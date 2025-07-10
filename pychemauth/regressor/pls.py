@@ -4,6 +4,7 @@ Projection to Latent Structures (PLS).
 author: nam
 """
 import copy
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +16,9 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
+from typing import Any, Union, Sequence, ClassVar
+from numpy.typing import NDArray
+
 
 class PLS(RegressorMixin, BaseEstimator):
     """
@@ -23,8 +27,7 @@ class PLS(RegressorMixin, BaseEstimator):
     Parameters
     ----------
     n_components : scalar(int), optional(default=1)
-        Number of dimensions to project into. Should be in the range
-        [1, min(n_samples-1, n_features)].
+        Number of dimensions to project into. Should be in the range [1, min(`n_samples`-1, `n_features`)].
 
     alpha : scalar(float), optional(default=0.05)
         Type I error rate (signficance level).
@@ -32,57 +35,48 @@ class PLS(RegressorMixin, BaseEstimator):
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
 
-    scale_x : scalar(bool), optional(default=False)
-        Whether or not to scale X columns by the standard deviation.
+    scale_x : bool, optional(default=False)
+        Whether or not to scale `X` columns by the standard deviation.
 
-    robust : scalar(bool), optional(default=True)
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        True (default) is described in [3] and uses robust DoF estimation, otherwise
-        classical estimators are used. If the dataset is clean (no outliers)
-        it is best practice to use a classical method [3], however, to initially
-        test for and potentially remove these points, a robust variant is recommended.
-        This is why `True` is the default value.
+    robust : bool, optional(default=True)
+        Whether or not to apply robust methods to estimate degrees of freedom. True (default) is described in [3] and uses robust DoF estimation, otherwise classical estimators are used. If the dataset is clean (no outliers) it is best practice to use a classical method [3], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why `True` is the default value.
 
-    sft : scalar(bool), optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in [2], called "sequential focused trimming."  If not used (default)
-        robust estimates of parameters may be attempted; if the iterative
-        approach is used, these robust estimates are only computed during the
-        outlier removal loop(s) while the final "clean" data uses classical
-        estimates.  This option may throw away data it is originally provided
-        for training; it keeps only "regular" samples (inliers and extremes)
-        to train the model.
+    sft : bool, optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described in [2], called "sequential focused trimming."  If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.
 
     Note
     ----
-    * X and y are always centered internally, y is never scaled.
+    * `X` and `y` are always centered internally, y is never scaled.
 
-    * A single, scalar output (y) is expected for each observation. This is to allow
-    for outlier detection and analysis following [1-2].
+    * A single, scalar output (`y`) is expected for each observation. This is to allow for outlier detection and analysis following [1-2].
 
     * Ref [2] illustrates how to extend this to multiple responses in the future (PLS2).
 
     References
     ----------
-    [1] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
+    [1] "Acceptance areas for multivariate classification derived by projection methods," Pomerantsev, Journal of Chemometrics 22 (2008) 601-609.
 
-    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev,
-    Analytical Chemistry 92 (2020) 2656−2664.
+    [2] "Detection of Outliers in Projection-Based Modeling," Rodionova and Pomerantsev, Analytical Chemistry 92 (2020) 2656−2664.
 
-    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
+
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[float]
+    scale_x: ClassVar[bool]
+    robust: ClassVar[bool]
+    sft: ClassVar[bool]
 
     def __init__(
         self,
-        n_components=1,
-        alpha=0.05,
-        gamma=0.01,
-        scale_x=False,
-        robust=True,
-        sft=False,
-    ):
+        n_components: int = 1,
+        alpha: float = 0.05,
+        gamma: float = 0.01,
+        scale_x: bool = False,
+        robust: bool = True,
+        sft: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -95,13 +89,13 @@ class PLS(RegressorMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "PLS":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -112,7 +106,7 @@ class PLS(RegressorMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def _column_y(self, y):
+    def _column_y(self, y) -> NDArray[np.floating]:
         """Convert y to column format."""
         y = np.array(y)
         if y.ndim != 2:
@@ -120,29 +114,32 @@ class PLS(RegressorMixin, BaseEstimator):
 
         return y
 
-    def _matrix_X(self, X):
+    def _matrix_X(self, X: Union[Sequence, NDArray]) -> NDArray[np.floating]:
         """Check that observations are rows of X."""
-        X = np.asarray(X, dtype=np.float64)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
+        X_ = np.asarray(X, dtype=np.float64)
+        if X_.ndim == 1:
+            X_ = X_.reshape(-1, 1)
         assert (
-            X.shape[1] == self.n_features_in_
+            X_.shape[1] == self.n_features_in_
         ), "Incorrect number of features given in X."
 
-        return X
+        return X_
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> "PLS":
         """
         Fit the PLS model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
@@ -363,15 +360,17 @@ class PLS(RegressorMixin, BaseEstimator):
         return self
 
     @property
-    def sft_history(self):
+    def sft_history(self) -> dict[str, Any]:
         """Return the sequential focused trimming history."""
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__sft_history_)
 
-    def _h_q(self, X):
+    def _h_q(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Compute inner and outer (X) distances."""
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -379,12 +378,12 @@ class PLS(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        X_ = self.__x_scaler_.transform(X)
+        X_ = self.__x_scaler_.transform(X_)
         x_scores = self.__pls_.transform(X_)
 
         x_scores_t_ = self.transform(self.__X_)
@@ -408,7 +407,11 @@ class PLS(RegressorMixin, BaseEstimator):
 
         return h, q
 
-    def _f(self, h, q):
+    def _f(
+        self,
+        h: Union[Sequence[float], NDArray[np.floating]],
+        q: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """Full (X) distance, Eq. 3 in [2]."""
         check_is_fitted(self, "is_fitted_")
         return (
@@ -416,10 +419,14 @@ class PLS(RegressorMixin, BaseEstimator):
             + self.__Nq_ * np.array(q).ravel() / self.__q0_
         )
 
-    def _z(self, X, y):
+    def _z(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """Y residual squared, Eq. 7 in [2]."""
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -429,14 +436,18 @@ class PLS(RegressorMixin, BaseEstimator):
             y_numeric=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        return ((self.predict(X) - y) ** 2).ravel()
+        return ((self.predict(X_) - y_) ** 2.0).ravel()
 
-    def _g(self, X, y):
+    def _g(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """XY total distance, Eq. 9 in [2]."""
         check_is_fitted(self, "is_fitted_")
         h, q = self._h_q(X)
@@ -447,22 +458,24 @@ class PLS(RegressorMixin, BaseEstimator):
         )  # = f + Nz*z/z0
         return g
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
-        Project X into the PLS subspace to create the x-scores.
+        Project `X` into the PLS subspace to create the x-scores.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
         -------
-        x-scores : array_like(float, ndim=2)
-            Projection of X via PLS into score space.
+        x-scores : ndarray(float, ndim=2)
+            Projection of `X` via PLS into score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -470,41 +483,46 @@ class PLS(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        return self.__pls_.transform(self.__x_scaler_.transform(X))
+        return self.__pls_.transform(self.__x_scaler_.transform(X_))
 
-    def fit_transform(self, X, y):
+    def fit_transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """
         Fit and transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
-        x-scores : array_like(float, ndim=2)
-            Projection of X via PLS into score space.
+        x-scores : ndarray(float, ndim=2)
+            Projection of `X` via PLS into score space.
         """
         self.fit(X, y)
         return self.transform(X)
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Predict the values for a given set of features.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -513,7 +531,7 @@ class PLS(RegressorMixin, BaseEstimator):
             Predicted output for each observation.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -521,45 +539,43 @@ class PLS(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         return self.__y_scaler_.inverse_transform(
-            self.__pls_.predict(self.__x_scaler_.transform(X))
+            self.__pls_.predict(self.__x_scaler_.transform(X_))
         ).ravel()
 
-    def pls2_coeff(self, feature_names=None, ax=None, return_coeff=False):
+    def pls2_coeff(
+        self,
+        feature_names: Union[Sequence[str], NDArray[np.str_], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        return_coeff: bool = False,
+    ) -> Union[matplotlib.pyplot.Axes, NDArray[np.floating]]:
         """
         Plot the coefficients in the PLS model to examine variable importance.
 
         Parameters
         ----------
         feature_names : list, optional(default=None)
-            Names of each feature (column) in X; if None, each is numbered starting
-            from 1.
+            Names of each feature (column) in `X`; if None, each is numbered starting from 1.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
-            Axes to plot results on.  If None, a new figure is created.
+        ax : matplotlib.pyplot.Axes, optional(default=None)
+            Axes to plot results on.  If `None`, a new figure is created.
 
-        return_coeff : scalar(bool), optional(default=False)
+        return_coeff : bool, optional(default=False)
             Whether to return the PLS coefficients instead of the figure axis.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes or ndarray
-            Figure axes being plotted on or the PLS coefficients depending on
-            the value of `return_coeff`.
+        ax : matplotlib.pyplot.Axes or ndarray
+            Figure axes being plotted on or the PLS coefficients depending on the value of `return_coeff`.
 
         Warning
         -------
-        Predictions are made according to `Y - Y_mean = coef@(X - X_mean)/scale + intercept`;
-        since Y is centered the intercept = 0, if `scale_x=True` then scale = std(X),
-        otherwise it is just unity. The coefficients are affected by the scale of
-        each feature in X.  For interpretation, use `scale_x=True` so X is autoscaled.
-        This way the magnitude of the coefficient corresponds to the significance
-        of the feature. Note that X and Y are always centered.
+        Predictions are made according to `Y - Y_mean = coef@(X - X_mean)/scale + intercept`; since `Y` is centered the intercept = 0, if `scale_x=True` then scale = std(`X`), otherwise it is just unity. The coefficients are affected by the scale of each feature in `X`.  For interpretation, use `scale_x=True` so `X` is autoscaled. This way the magnitude of the coefficient corresponds to the significance of the feature. Note that `X` and `Y` are always centered.
         """
         check_is_fitted(self, "is_fitted_")
         if ax is None:
@@ -582,18 +598,21 @@ class PLS(RegressorMixin, BaseEstimator):
         else:
             return ax
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> float:
         """
         Compute the coefficient of determination (R^2) as the score.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
@@ -601,7 +620,7 @@ class PLS(RegressorMixin, BaseEstimator):
             Coefficient of determination (R^2).
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -611,36 +630,37 @@ class PLS(RegressorMixin, BaseEstimator):
             y_numeric=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        ss_res = np.sum((self.predict(X) - y) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        ss_res = np.sum((self.predict(X_) - y_) ** 2)
+        ss_tot = np.sum((y_ - np.mean(y_)) ** 2)
         return 1.0 - ss_res / ss_tot
 
-    def check_x_outliers(self, X):
+    def check_x_outliers(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check if outliers exist in the X data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
         -------
         extremes : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls between acceptance threshold
-            (belongs to class) and the outlier threshold.
+            Boolean mask of `X` if each point falls between acceptance threshold (belongs to class) and the outlier threshold.
 
         outliers : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls beyond the outlier threshold.
+            Boolean mask of `X` if each point falls beyond the outlier threshold.
 
         Note
         ----
-        This uses the X matrix's "full distance" in [2] (cf. Eq. 3).
+        This uses the `X` matrix's "full distance" in [2] (cf. Eq. 3).
         """
         check_is_fitted(self, "is_fitted_")
         f = self._f(*self._h_q(X))
@@ -650,27 +670,29 @@ class PLS(RegressorMixin, BaseEstimator):
 
         return extremes, outliers
 
-    def check_xy_outliers(self, X, y):
+    def check_xy_outliers(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check if outliers and extremes exist in the XY data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
         extremes : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls between acceptance threshold
-            (belongs to class) and the outlier threshold.
+            Boolean mask of `X` if each point falls between acceptance threshold (belongs to class) and the outlier threshold.
 
         outliers : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls beyond the outlier threshold.
+            Boolean mask of `X` if each point falls beyond the outlier threshold.
 
         Note
         ----
@@ -684,28 +706,33 @@ class PLS(RegressorMixin, BaseEstimator):
 
         return extremes, outliers
 
-    def visualize(self, X, y, figsize=None, log=True):
+    def visualize(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+        figsize: Union[tuple[int, int], None] = None,
+        log: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         figsize : tuple(int, int), optional(default=None)
             Figure size.
 
-        log : scalar(bool), optional(default=True)
+        log : bool, optional(default=True)
             Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes the results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -719,7 +746,7 @@ class PLS(RegressorMixin, BaseEstimator):
             y_numeric=True,
             copy=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -727,7 +754,7 @@ class PLS(RegressorMixin, BaseEstimator):
         fig, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize)
 
         # 1. X plot
-        h_, q_ = self._h_q(X)
+        h_, q_ = self._h_q(X_)
         h_lim = np.linspace(0, self.__x_crit_ * self.__h0_ / self.__Nh_, 1000)
         h_lim_out = np.linspace(
             0, self.__x_out_ * self.__h0_ / self.__Nh_, 1000

@@ -9,6 +9,10 @@ Here are some links to other resources:
 
 * `"Cross-Validation," The Pennsylvania State University, STAT 555 (2018). <https://online.stat.psu.edu/stat555/node/118/>`_
 
+In the examples provided here, we will assume all data is `independent and identically distributed <https://en.wikipedia.org/wiki/Independent_and_identically_distributed_random_variables>`_ (IID).  This means there is no internal structure to the data so we can use basic k-fold or other simplistic data splits for cross-validation.  However, if you have multiple measurements that are part of a group you should probably use a "group" variant (e.g., GroupKFold vs. KFold) instead.  For example, if you have a dataset where multiple measurements come from the same person, place, or year in a dataset that spans multiple people, places, or times.  These "group" variants ensure that when one group is placed in the training set it does not appear in the test set; thus, data does not "leak" between these folds, which would otherwise lead to an overly optimistic model. Refer to the documentation in the `compare <https://pychemauth.readthedocs.io/en/latest/pychemauth.analysis.html#pychemauth.analysis.compare.Compare>`_ submodule for more information.
+
+For regression problems, the `Kennard-Stone <https://pypi.org/project/kennard-stone/>`_ algorithm might also be useful for creating balanced splits.  This and other "rational" data splits have been implemented in a scikit-learn-compatible python library called `"astartes" <https://github.com/JacksonBurns/astartes>`_ which you can also refer to.  PyChemAuth currently makes use of various data-splitters available in scikit-learn (summarized `here <https://scikit-learn.org/dev/api/sklearn.model_selection.html>`_) and provides KFold Kennard-Stone via `this <https://pypi.org/project/kennard-stone/>`_ package.  Additional compatibility may be provided in the future.
+
 .. nbgallery::
    :hidden:
 

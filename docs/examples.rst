@@ -17,5 +17,6 @@ API Examples
    jupyter/api/feature_selection
    jupyter/api/comparing_pipelines
    jupyter/api/model_inspection
+   jupyter/api/cnn_spectral_classification
    jupyter/api/learning_curves
    jupyter/api/sharing_models

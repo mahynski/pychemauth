@@ -5,6 +5,7 @@ author: nam
 """
 import copy
 import warnings
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +15,10 @@ from sklearn.decomposition import PCA
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
 from pychemauth.preprocessing.scaling import CorrectedScaler
-from pychemauth.utils import estimate_dof, _logistic_proba
+from pychemauth.utils import estimate_dof, _logistic_proba, _occ_metrics
+
+from typing import Any, ClassVar, Union, Sequence
+from numpy.typing import NDArray
 
 
 class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
@@ -30,103 +34,65 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         Significance level for SIMCA model. Only used for DD-SIMCA at the moment.
 
     gamma : scalar(float), optional(default=None)
-        Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment.
-        Typically, `gamma=0.01` for many applications.  If `None` then no outlier detection is
-        performed on the training data; this also disables the `sft` option
-        which only makes sense if you specify a `gamma` value.
+        Outlier significance level for SIMCA model. Only used for DD-SIMCA at the moment. Typically, `gamma=0.01` for many applications.  If `None` then no outlier detection is performed on the training data; this also disables the `sft` option which only makes sense if you specify a `gamma` value.
 
     target_class : scalar(str or int), optional(default=None)
-        The class used to fit the SIMCA model; the rest are used
-        to test specificity.
+        The class used to fit the SIMCA model; the rest are used to test specificity.
 
     style : str, optional(default="dd-simca")
         Type of SIMCA to use ("simca" or "dd-simca")
 
     use : str, optional(default="rigorous")
-        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc")
-        (default="rigorous"). See Ref. [1] for more details.  The "acc" option
-        uses accuracy instead of TSNS or TEFF metrics; this enables more straightforward
-        comparison to discriminative classifiers, but is not conventional.
+        Which methodology to use to evaluate the model ("rigorous", "compliant", "acc") (default="rigorous"). See Ref. [1] for more details.  The "acc" option uses accuracy instead of TSNS or TEFF metrics; this enables more straightforward comparison to discriminative classifiers, but is not conventional.
 
-    scale_x : scalar(bool), optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+    scale_x : bool, optional(default=True)
+        Whether or not to scale `X` by its sample standard deviation or not. This depends on the meaning of `X` and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that `X` is always centered.
 
     robust : str, optional(default="semi")
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        This is only used with DD-SIMCA. "full" is not implemented yet, but
-        involves robust PCA and robust degrees of freedom estimation; "semi"
-        (default) is described in [3] and uses classical PCA but robust DoF
-        estimation; all other values revert to classical PCA and classical DoF
-        estimation. If the dataset is clean (no outliers) it is best practice
-        to use a classical method [3], however, to initially test for and
-        potentially remove these points, a robust variant is recommended. This
-        is why "semi: is the default value. If `sft`=True then this value is
-        ignored and a robust method is applied to iteratively clean the dataset,
-        while the final fitting uses the classical approach.
+        Whether or not to apply robust methods to estimate degrees of freedom. This is only used with DD-SIMCA. "full" is not implemented yet, but involves robust PCA and robust degrees of freedom estimation; "semi" (default) is described in [3] and uses classical PCA but robust DoF estimation; all other values revert to classical PCA and classical DoF estimation. If the dataset is clean (no outliers) it is best practice to use a classical method [3], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why "semi: is the default value. If `sft`=True then this value is ignored and a robust method is applied to iteratively clean the dataset, while the final fitting uses the classical approach.
 
-    sft : scalar(bool), optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in Ref. [2], called "sequential focused trimming."  This is only used
-        with DD-SIMCA. If not used (default) robust estimates of parameters may
-        be attempted; if the iterative approach is used, these robust estimates
-        are only computed during the outlier removal loop(s) while the final
-        "clean" data uses classical estimates.  This option may throw away data
-        it is originally provided for training; it keeps only "regular" samples
-        (inliers and extremes) to train the model.  If a `gamma` value is not 
-        specified then this option is not available.
+    sft : bool, optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described in Ref. [2], called "sequential focused trimming."  This is only used with DD-SIMCA. If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.  If a `gamma` value is not specified then this option is not available.
 
     Note
     ----
-    Essentially, a SIMCA model is trained for one target class. The target is
-    set when this class is instantiated and must be one of (but doesn't need
-    to be the only) class found in the training set (this is checked
-    automatically).  During testing (.score()), points are broken up by
-    class and based on the method, may be used to see how well the target class
-    can be distinguished from each alternative.  This allows you to pass points
-    that belong to other classes during training - they are just ignored.  This
-    is important for integration with other scikit-learn, etc. workflows.
+    Essentially, a SIMCA model is trained for one target class. The target is set when this class is instantiated and must be one of (but doesn't need to be the only) class found in the training set (this is checked automatically).  During testing (.score()), points are broken up by class and based on the method, may be used to see how well the target class can be distinguished from each alternative.  This allows you to pass points that belong to other classes during training - they are just ignored.  This is important for integration with other scikit-learn, etc. workflows.
 
-    Note that when you are optimizing the model using TEFF, TSPS is
-    computed by using the alternative classes.  In that case, the model choice
-    is influenced by these alternatives.  This is a "compliant" approach,
-    however, if you use TSNS instead of TEFF the model only uses information
-    about the target class itself.  This is a "rigorous" approach which can
-    be important to consider to avoid bias in the model.
+    Note that when you are optimizing the model using TEFF, TSPS is computed by using the alternative classes.  In that case, the model choice is influenced by these alternatives.  This is a "compliant" approach, however, if you use TSNS instead of TEFF the model only uses information about the target class itself.  This is a "rigorous" approach which can be important to consider to avoid bias in the model.
 
-    When TEFF is used to choose a model, this is a "compliant" approach,
-    whereas when TSNS is used instead, this is a "rigorous" approach.
-    In rigorous models, alpha should be fixed as other hyperparameters are adjusted
-    to match this target; in compliant approaches this can be allowed to vary
-    and the model with the best efficiency is selected. [1]
+    When TEFF is used to choose a model, this is a "compliant" approach, whereas when TSNS is used instead, this is a "rigorous" approach. In rigorous models, alpha should be fixed as other hyperparameters are adjusted to match this target; in compliant approaches this can be allowed to vary and the model with the best efficiency is selected. [1]
 
     References
     ----------
-    [1] "Rigorous and compliant approaches to one-class classification,"
-    Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell.
-    Lab. Sys. (2016) 89-96.
+    [1] "Rigorous and compliant approaches to one-class classification," Rodionova, O., Oliveri, P., and Pomerantsev, A. Chem. and Intell. Lab. Sys. (2016) 89-96.
 
-    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [2] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
 
-    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
     """
+
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[Union[float, None]]
+    target_class: ClassVar[Union[str, int, None]]
+    style: ClassVar[str]
+    use: ClassVar[str]
+    scale_x: ClassVar[bool]
+    robust: ClassVar[str]
+    sft: ClassVar[bool]
 
     def __init__(
         self,
-        n_components=1,
-        alpha=0.05,
-        gamma=None,
-        target_class=None,
-        style="dd-simca",
-        use="rigorous",
-        scale_x=True,
-        robust="semi",
-        sft=False,
-    ):
+        n_components: int = 1,
+        alpha: float = 0.05,
+        gamma: Union[float, None] = None,
+        target_class: Union[str, int, None] = None,
+        style: str = "dd-simca",
+        use: str = "rigorous",
+        scale_x: bool = True,
+        robust: str = "semi",
+        sft: bool = False,
+    ) -> None:
         """Instantiate the classifier."""
         self.set_params(
             **{
@@ -142,13 +108,13 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "SIMCA_Authenticator":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -162,18 +128,23 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> "SIMCA_Authenticator":
         """
         Fit the SIMCA authenticator model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
-            Class labels or indices. Should include some examples of
-            "target_class".
+        y : array-like(str or int, ndim=1)
+            Class labels or indices. Should include some examples of "target_class".
 
         Returns
         -------
@@ -188,7 +159,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         must be part of the pipeline for those steps to work automatically.
         However, a user may manually provide only the data of interest.
         """
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -198,7 +169,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             y_numeric=False,
             copy=False,
         )
-        self.n_features_in_ = X.shape[1]
+        self.n_features_in_ = X_.shape[1]
         self.classes_ = [True, False]  # For sklearn compatibility
 
         # Fit model to target data
@@ -221,20 +192,24 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             raise ValueError("{} is not a recognized style.".format(self.style))
 
         assert self.target_class in np.unique(
-            y
+            y_
         ), "target_class not in training set"
-        self.__model_.fit(X[y == self.target_class], y[y == self.target_class])
+        self.__model_.fit(
+            X_[y_ == self.target_class], y_[y_ == self.target_class]
+        )
         self.is_fitted_ = True
 
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Transform into the SIMCA subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -257,18 +232,23 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         )
         return self.__model_.transform(X)
 
-    def fit_transform(self, X, y):
+    def fit_transform(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> NDArray[np.floating]:
         """
         Fit then transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
-            Class labels or indices. Should include some examples of
-            "target_class".
+        y : array-like(str or int, ndim=1)
+            Class labels or indices. Should include some examples of "target_class".
 
         Returns
         -------
@@ -282,13 +262,15 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         _ = self.fit(X, y)
         return self.transform(X)
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.bool_]:
         """
         Make a prediction.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -305,19 +287,21 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__model_.predict(X)
 
-    def predict_proba(self, X):
+    def predict_proba(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
         Returns
@@ -335,19 +319,21 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__model_.predict_proba(X)
 
-    def decision_function(self, X):
+    def decision_function(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -375,14 +361,14 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__model_.decision_function(X)
 
     @property
-    def model(self):
+    def model(self) -> Union["SIMCA_Model", "DDSIMCA_Model"]:
         """
         Return the trained undelying SIMCA Model.
 
@@ -394,16 +380,22 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__model_)
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ):
         r"""
         Score the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices.
 
         Returns
@@ -439,28 +431,35 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             m = self.metrics(X, y)
             return m["TEFF"]
         elif self.use.lower() == "acc":
-            # For accuracy we need to convert y to boolean array of inliers vs. outliers
-            y_in = np.asarray(y) == self.target_class
-            return self.__model_.accuracy(X, y_in)
+            # Technically we do not need the target class to be present to
+            # compute accuracy.
+            m = self.metrics(X, y)
+            return m["ACC"]
         else:
-            raise ValueError("Unrecognized setting use=" + str(self.use))
+            raise ValueError("Unrecognized setting use = " + str(self.use))
 
-    def metrics(self, X, y):
+    def metrics(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+    ) -> dict[str, float]:
         """
         Compute figures of merit for the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Input feature matrix.
 
-        y : array_like(str or int, ndim=1)
+        y : array-like(str or int, ndim=1)
             Class labels or indices.
 
         Returns
         -------
-        metrics : dict(str:float)
-            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS"}.
+        metrics : dict(str, float)
+            Dictionary of {"TSNS", "TSPS", "TEFF", "CSPS", "ACC"}.
 
         Note
         ----
@@ -470,7 +469,7 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
         as a geometric mean of TSNS and TSPS.
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -479,51 +478,18 @@ class SIMCA_Authenticator(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        self.__alternatives_ = [
-            c for c in sorted(np.unique(y)) if c != self.target_class
-        ]
+        metrics, self.__alternatives_ = _occ_metrics(
+            X=X_,
+            y=y_,
+            target_class=self.target_class,  # type: ignore[arg-type]
+            predict_function=self.predict,
+        )
 
-        CSPS_ = {}
-        for class_ in self.__alternatives_:
-            mask = y == class_
-            CSPS_[class_] = 1.0 - np.sum(
-                self.__model_.predict(X[mask])
-            ) / np.sum(mask)
-
-        mask = y != self.target_class
-        if np.sum(mask) == 0:
-            # Testing on nothing but the target class, can't evaluate TSPS
-            TSPS_ = np.nan
-        else:
-            TSPS_ = 1.0 - np.sum(self.__model_.predict(X[mask])) / np.sum(mask)
-
-        mask = y == self.target_class
-        if np.sum(mask) == 0:
-            # Testing on nothing but alternative classes, can't evaluate TSNS
-            TSNS_ = np.nan
-        else:
-            TSNS_ = np.sum(self.__model_.predict(X[mask])) / np.sum(
-                mask
-            )  # TSNS = CSNS for SIMCA
-
-        if np.isnan(TSNS_):
-            TEFF_ = TSPS_
-        elif np.isnan(TSPS_):
-            TEFF_ = TSNS_
-        else:
-            TEFF_ = np.sqrt(TSNS_ * TSPS_)
-
-        metrics = {
-            "TEFF": TEFF_,
-            "TSNS": TSNS_,
-            "TSPS": TSPS_,
-            "CSPS": CSPS_,
-        }
         return metrics
 
     def _get_tags(self):
@@ -565,52 +531,41 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
     alpha : scalar(float), optional(default=0.05)
         Significance level.
 
-    scale_x : scalar(bool), optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+    scale_x : bool, optional(default=True)
+        Whether or not to scale `X` by its sample standard deviation or not. This depends on the meaning of `X` and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that `X` is always centered.
 
-    In general, you need a separate SIMCA object for each class in the dataset
-    you wish to characterize. This code is based on implementation described in
-    [1].  An F-test is performed based on the squared orthogonal distance (OD);
-    if it is in excess of some critical value a point is not assigned to a
-    class, otherwise it is.  Since a different SIMCA object is trained to
-    characterize different classes, it is possible that testing a point on a
-    different SIMCA class will result in multiple class assignments; however,
-    each individual SIMCA class is binary.
+    In general, you need a separate SIMCA object for each class in the dataset you wish to characterize. This code is based on implementation described in [1].  An F-test is performed based on the squared orthogonal distance (OD); if it is in excess of some critical value a point is not assigned to a class, otherwise it is.  Since a different SIMCA object is trained to characterize different classes, it is possible that testing a point on a different SIMCA class will result in multiple class assignments; however, each individual SIMCA class is binary.
 
-    Improvements have been suggested, including the use of Mahalanobis distance
-    instead of the OD (see discussion in [3]), however we implement a more
-    "classic" version here.
+    Improvements have been suggested, including the use of Mahalanobis distance instead of the OD (see discussion in [3]), however we implement a more "classic" version here.
 
     References
     ----------
-    [1] "Robust classification in high dimensions based on the SIMCA Method,"
-    Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems
-    79 (2005) 10-21.
+    [1] "Robust classification in high dimensions based on the SIMCA Method," Vanden Branden and Hubert, Chemometrics and Intelligent Laboratory Systems 79 (2005) 10-21.
 
-    [2] "Pattern recognition by means of disjoint principal components models,"
-    S. Wold, Pattern Recognition 8 (1976) 127–139.
+    [2] "Pattern recognition by means of disjoint principal components models," S. Wold, Pattern Recognition 8 (1976) 127–139.
 
-    [3] "Decision criteria for soft independent modelling of class analogy
-    applied to near infrared data" De Maesschalk et al., Chemometrics and
-    Intelligent Laboratory Systems 47 (1999) 65-77.
+    [3] "Decision criteria for soft independent modelling of class analogy applied to near infrared data" De Maesschalk et al., Chemometrics and Intelligent Laboratory Systems 47 (1999) 65-77.
     """
 
-    def __init__(self, n_components, alpha=0.05, scale_x=True):
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    scale_x: ClassVar[bool]
+
+    def __init__(
+        self, n_components: int, alpha: float = 0.05, scale_x: bool = True
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{"n_components": n_components, "alpha": alpha, "scale_x": scale_x}
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "SIMCA_Model":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -618,18 +573,28 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             "scale_x": self.scale_x,
         }
 
-    def fit(self, X, y=None):
+    def fit(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> "SIMCA_Model":
         """
         Fit the SIMCA model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
@@ -697,20 +662,22 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         self.is_fitted_ = True
         return self
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Project X into the feature subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : ndarray(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
@@ -722,41 +689,53 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__pca_.transform(self.__ss_.transform(X))
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> NDArray[np.floating]:
         """
         Fit and transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : array-like(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         self.fit(X, y)
         return self.transform(X)
 
-    def distance(self, X):
+    def distance(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute the F score (distance) for a given set of observations.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -774,7 +753,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -797,13 +776,15 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return F
 
-    def decision_function(self, X):
+    def decision_function(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -825,13 +806,15 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__f_crit_))
 
-    def predict_proba(self, X):
+    def predict_proba(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -860,13 +843,15 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return _logistic_proba(self.decision_function(X))
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.bool_]:
         """
         Predict whether each point is an inlier.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -881,17 +866,22 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
         # If f < f_crit, it belongs to the class
         return F < self.__f_crit_
 
-    def loss(self, X, y, eps=1.0e-15):
+    def loss(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+        eps: float = 1.0e-15,
+    ) -> float:
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -916,7 +906,7 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -936,17 +926,21 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Return the accuracy of the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -964,23 +958,27 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.accuracy(X, y)
 
-    def accuracy(self, X, y):
+    def accuracy(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Get the fraction of correct predictions.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -998,11 +996,11 @@ class SIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        y = y.reshape(-1, 1)
+        y = y.reshape(-1, 1)  # type: ignore[union-attr]
         if not isinstance(y[0][0], (np.bool_, bool)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
@@ -1049,72 +1047,48 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         Significance level.
 
     gamma : scalar(float), optional(default=None)
-        Outlier significance level.  If `None` then no outlier detection is
-        performed on the training data; this also disables the `sft` option
-        which only makes sense if you specify a `gamma` value.
+        Outlier significance level.  If `None` then no outlier detection is performed on the training data; this also disables the `sft` option which only makes sense if you specify a `gamma` value.
 
-    scale_x : scalar(bool), optional(default=True)
-        Whether or not to scale X by its sample standard deviation or not.
-        This depends on the meaning of X and is up to the user to
-        determine if scaling it (by the standard deviation) makes sense.
-        Note that X is always centered.
+    scale_x : bool, optional(default=True)
+        Whether or not to scale X by its sample standard deviation or not. This depends on the meaning of X and is up to the user to determine if scaling it (by the standard deviation) makes sense. Note that X is always centered.
 
     robust : str, optional(default="semi")
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        "full" is not implemented yet, but involves robust PCA and robust
-        degrees of freedom estimation; "semi" (default) is described in [2] and
-        uses classical PCA but robust DoF estimation; all other values
-        revert to classical PCA and classical DoF estimation.
-        If the dataset is clean (no outliers) it is best practice to use a classical
-        method [2], however, to initially test for and potentially remove these
-        points, a robust variant is recommended. This is why "semi" is the
-        default value. If `sft`=True then this value is ignored and a robust
-        method is applied to iteratively clean the dataset, while the final
-        fitting uses the classical approach.
+        Whether or not to apply robust methods to estimate degrees of freedom. "full" is not implemented yet, but involves robust PCA and robust degrees of freedom estimation; "semi" (default) is described in [2] and uses classical PCA but robust DoF estimation; all other values revert to classical PCA and classical DoF estimation. If the dataset is clean (no outliers) it is best practice to use a classical method [2], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why "semi" is the default value. If `sft`=True then this value is ignored and a robust method is applied to iteratively clean the dataset, while the final fitting uses the classical approach.
 
-    sft : scalar(bool), optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in [3], called "sequential focused trimming."  If not used (default)
-        robust estimates of parameters may be attempted; if the iterative
-        approach is used, these robust estimates are only computed during the
-        outlier removal loop(s) while the final "clean" data uses classical
-        estimates.  This option may throw away data it is originally provided
-        for training; it keeps only "regular" samples (inliers and extremes)
-        to train the model.  If a `gamma` value is not specified then this
-        option is not available.
+    sft : bool, optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described in [3], called "sequential focused trimming."  If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.  If a `gamma` value is not specified then this option is not available.
 
     Note
     ----
-    DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared
-    distribution, to determine the acceptance criteria to belong to a class.
-    The degrees of freedom in this model are estimated from a data-driven
-    approach. This implementation follows [1].
+    DD-SIMCA uses a combination of OD and SD, modeled by a chi-squared distribution, to determine the acceptance criteria to belong to a class. The degrees of freedom in this model are estimated from a data-driven approach. This implementation follows [1].
 
-    As in SIMCA, this is designed to be a binary classification tool (yes/no)
-    for a single class.  A separate object must be trained for each class you
-    wish to model.
+    As in SIMCA, this is designed to be a binary classification tool (yes/no) for a single class.  A separate object must be trained for each class you wish to model.
 
     References
     ----------
-    [1] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
+    [1] "Acceptance areas for multivariate classification derived by projection methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
 
-    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [2] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and
-    Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
+    [3] "Detection of outliers in projection-based modeling," Rodionova, O., and Pomerantsev, A., Anal. Chem. 92 (2020) 2656-2664.
     """
+
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[Union[float, None]]
+    scale_x: ClassVar[bool]
+    robust: ClassVar[str]
+    sft: ClassVar[bool]
 
     def __init__(
         self,
-        n_components,
-        alpha=0.05,
-        gamma=None,
-        scale_x=True,
-        robust="semi",
-        sft=False,
-    ):
+        n_components: int,
+        alpha: float = 0.05,
+        gamma: Union[float, None] = None,
+        scale_x: bool = True,
+        robust: str = "semi",
+        sft: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -1127,13 +1101,13 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "DDSIMCA_Model":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -1144,18 +1118,28 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def fit(self, X, y=None):
+    def fit(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> "DDSIMCA_Model":
         """
         Fit the SIMCA model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows which correspond to the
             class being modeled - this will be converted to a numpy array
             automatically.
 
-        y : array_like(str or int, ndim=1), optional(default=None)
+        y : array-like(str or int, ndim=1), optional(default=None)
             Ignored. If passed, it is checked that they are all identical and this
             label is used; otherwise the name "Training Class" is assigned.
 
@@ -1283,8 +1267,8 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         else:
             # SFT only really makes sense if you have an outlier significance level
             if self.gamma is None:
-                raise Exception('Specify a gamma value to use sft.')
-            
+                raise Exception("Specify a gamma value to use sft.")
+
             X_tmp = np.array(X).copy()
             total_data_points = X_tmp.shape[0]
             X_out = np.empty((0, X_tmp.shape[1]), dtype=type(X_tmp))
@@ -1356,23 +1340,25 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         return self
 
     @property
-    def sft_history(self):
+    def sft_history(self) -> dict[str, Any]:
         """Return the sequential focused trimming history."""
         return copy.deepcopy(self.__sft_history_)
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Project X into the feature subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : ndarray(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1384,31 +1370,47 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.__pca_.transform(self.__ss_.transform(X))
 
-    def fit_transform(self, X, y=None):
+    def fit_transform(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[
+            Sequence[int],
+            Sequence[str],
+            NDArray[np.integer],
+            NDArray[np.str_],
+            None,
+        ] = None,
+    ) -> NDArray[np.floating]:
         """
         Fit and transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to numpy array automatically.
 
+        y : array-like(str or int, ndim=1), optional(default=None)
+            Ignored. If passed, it is checked that they are all identical and this
+            label is used; otherwise the name "Training Class" is assigned.
+
         Returns
         -------
-        t-scores : array_like(float, ndim=2)
+        t-scores : ndarray(float, ndim=2)
             Projection of X via PCA into a score space.
         """
         self.fit(X, y)
         return self.transform(X)
 
-    def _h_q(self, X_raw):
+    def _h_q(
+        self, X_raw: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Compute the h (SD) and q (OD) distances."""
         check_is_fitted(self, "is_fitted_")
         X_raw = check_array(
@@ -1419,7 +1421,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X_raw.shape[1] != self.n_features_in_:
+        if X_raw.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -1436,13 +1438,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return h_vals, q_vals
 
-    def distance(self, X):
+    def distance(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute how far away points are from this class.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted
             to a numpy array automatically.
 
@@ -1462,13 +1466,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return self.__Nh_ * h / self.__h0_ + self.__Nq_ * q / self.__q0_
 
-    def decision_function(self, X):
+    def decision_function(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Compute the decision function for each sample.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1490,13 +1496,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         check_is_fitted(self, "is_fitted_")
         return -np.sqrt(self.distance(X)) - (-np.sqrt(self.__c_crit_))
 
-    def predict_proba(self, X):
+    def predict_proba(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.floating]:
         """
         Predict the probability that observations are inliers.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1527,13 +1535,15 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return _logistic_proba(self.decision_function(X))
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> NDArray[np.bool_]:
         """
         Predict whether each point is an inlier.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1547,17 +1557,22 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         # If c < c_crit, it belongs to the class
         return self.distance(X) < self.__c_crit_
 
-    def loss(self, X, y, eps=1.0e-15):
+    def loss(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+        eps: float = 1.0e-15,
+    ) -> float:
         r"""
         Compute the negative log-loss, or logistic/cross-entropy loss.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1)
             Correct labels; True for inlier, False for outlier.
 
         eps : scalar(float), optional(default=1.0e-15)
@@ -1582,7 +1597,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
@@ -1602,17 +1617,21 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             y_in * np.log(p_in) + (1.0 - y_in) * np.log(1.0 - p_in)
         ) / len(X)
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Return the accuracy of the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1630,23 +1649,27 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
         return self.accuracy(X, y)
 
-    def accuracy(self, X, y):
+    def accuracy(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        y: Union[Sequence[bool], NDArray[np.bool_]],
+    ) -> float:
         """
         Get the fraction of correct predictions.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(bool, ndim=1), optional(default=None)
+        y : array-like(bool, ndim=1), optional(default=None)
             Correct labels; True for inlier, False for outlier.
 
         Returns
@@ -1664,24 +1687,26 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        y = y.reshape(-1, 1)
+        y = y.reshape(-1, 1)  # type: ignore[union-attr]
         if not isinstance(y[0][0], (bool, np.bool_)):
             raise ValueError("y must be provided as a Boolean array")
         X_pred = self.predict(X)
 
         return np.sum(X_pred == y.ravel()) / X_pred.shape[0]
 
-    def check_outliers(self, X):
+    def check_outliers(
+        self, X: Union[NDArray[np.floating], Sequence[Sequence[float]]]
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check if extremes and outliers exist in the data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
@@ -1708,25 +1733,30 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return extremes, outliers
 
-    def extremes_plot(self, X, upper_frac=0.25, ax=None):
+    def extremes_plot(
+        self,
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        upper_frac: float = 0.25,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+    ) -> matplotlib.pyplot.Axes:
         r"""
-        Plot an "extremes plot" [2] to evaluae the quality of the model.
+        Plot an "extremes plot" [2] to evaluate the quality of the model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Data to evaluate the number of outliers + extremes in.
 
         upper_frac : scalar(float), optional(default=0.25)
             Count the number of extremes and outliers for :math:`\alpha` values corresponding
             to :math:`n_{\rm exp}` = [1, X.shape[0]*upper_frac], where :math:`\alpha = n_{\rm exp} / N_{\rm tot}`.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot on.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted.
 
         Note
@@ -1751,24 +1781,24 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        N_tot = X.shape[0]
+        N_tot = X.shape[0]  # type: ignore[union-attr]
         n_values = np.arange(1, int(upper_frac * N_tot) + 1)
         alpha_values = n_values / N_tot
 
-        n_observed = []
+        n_observed_ = []
         for a in alpha_values:
             params = self.get_params()
             params["alpha"] = a
             model_ = DDSIMCA_Model(**params)
             model_.fit(X)
             extremes, outliers = model_.check_outliers(X)
-            n_observed.append(np.sum(extremes) + np.sum(outliers))
-        n_observed = np.array(n_observed)
+            n_observed_.append(np.sum(extremes) + np.sum(outliers))
+        n_observed = np.array(n_observed_)
 
         if ax is None:
             fig = plt.figure()
@@ -1793,17 +1823,21 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
         return ax
 
     def plot_loadings(
-        self, feature_names=None, ax=None, fontsize=None, feature_offset=(0, 0)
-    ):
+        self,
+        feature_names: Union[Sequence[str], NDArray[np.str_], None] = None,
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        fontsize: Union[int, None] = None,
+        feature_offset: tuple[int, int] = (0, 0),
+    ) -> matplotlib.pyplot.Axes:
         """
         Make a 2D loadings plot.
 
         Parameters
         ----------
-        feature_names : array_like(str, ndim=1), optional(default=None)
+        feature_names : array-like(str, ndim=1), optional(default=None)
             List of names of each columns in X. Otherwise displays indices.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axes to plot on.
 
         fontsize : scalar(int), optional(default=None)
@@ -1814,7 +1848,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
 
         Note
@@ -1831,6 +1865,9 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             raise ValueError(
                 "Cannot visualize when using less than 2 components."
             )
+
+        if feature_names is None:
+            feature_names = [str(i) for i in range(self.n_features_in_)]
 
         if len(feature_names) != self.n_features_in_:
             raise ValueError("Must provide a name for each column.")
@@ -1862,34 +1899,43 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
 
         return ax
 
-    def visualize(self, X, y, ax=None, log=True, outlier_curve=True):
+    def visualize(
+        self,
+        X: Union[Sequence[bool], NDArray[np.bool_]],
+        y: Union[
+            Sequence[int], Sequence[str], NDArray[np.integer], NDArray[np.str_]
+        ],
+        ax: Union[matplotlib.pyplot.Axes, None] = None,
+        log: bool = True,
+        outlier_curve: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Columns of features; observations are rows - will be converted to
             numpy array automatically.
 
-        y : array_like(str, ndim=1)
+        y : array-like(str or int, ndim=1)
             Labels for observations in X.
 
-        ax : matplotlib.pyplot.axes, optional(default=None)
+        ax : matplotlib.pyplot.Axes, optional(default=None)
             Axis object to plot on.
 
-        log : scalar(bool), optional(default=True)
+        log : bool, optional(default=True)
             Whether or not to transform the axes using a natural logarithm.
 
-        outlier_curve : scalar(bool), optional(default=True)
+        outlier_curve : bool, optional(default=True)
             Whether or not to display the outlier threshold curve and characterize
-            any points as "extreme" if you specified a `gamma` value.  If False, 
-            then all points will be labeled as inliers vs. outliers only, based 
+            any points as "extreme" if you specified a `gamma` value.  If False,
+            then all points will be labeled as inliers vs. outliers only, based
             on your alpha value.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")
@@ -1902,7 +1948,7 @@ class DDSIMCA_Model(ClassifierMixin, BaseEstimator):
             force_all_finite=True,
             y_numeric=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X.shape[1] != self.n_features_in_:  # type: ignore[union-attr]
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )

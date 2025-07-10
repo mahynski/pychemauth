@@ -5,6 +5,7 @@ author: nam
 """
 import copy
 import scipy
+import matplotlib
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,6 +17,9 @@ from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pychemauth.preprocessing.scaling import CorrectedScaler
 from pychemauth.utils import estimate_dof
 
+from typing import Any, Union, Sequence, ClassVar
+from numpy.typing import NDArray
+
 
 class PCR(RegressorMixin, BaseEstimator):
     """
@@ -24,8 +28,7 @@ class PCR(RegressorMixin, BaseEstimator):
     Parameters
     ----------
     n_components : scalar(int), optional(default=1)
-        Number of dimensions to project into. Should be in the range
-        [1, num_features].
+        Number of dimensions to project into. Should be in the range [1, `num_features`].
 
     alpha : scalar(float), optional(default=0.05)
         Type I error rate (signficance level).
@@ -33,42 +36,24 @@ class PCR(RegressorMixin, BaseEstimator):
     gamma : scalar(float), optional(default=0.01)
         Significance level for determining outliers.
 
-    scale_x : scalar(bool), optional(default=False)
+    scale_x : bool, optional(default=False)
         Whether or not to scale X columns by the standard deviation.
 
-    center_y : scalar(bool), optional(default=False)
+    center_y : bool, optional(default=False)
         Whether ot not to center the Y responses.
 
-    scale_y : scalar(bool), optional(default=False)
+    scale_y : bool, optional(default=False)
         Whether or not to scale Y by its standard deviation.
 
     robust : str, optional(default="semi")
-        Whether or not to apply robust methods to estimate degrees of freedom.
-        "full" is not implemented yet, but involves robust PCA and robust
-        degrees of freedom estimation; "semi" (default) is described in [3] and
-        uses classical PCA but robust DoF estimation; all other values
-        revert to classical PCA and classical DoF estimation.
-        If the dataset is clean (no outliers) it is best practice to use a classical
-        method [3], however, to initially test for and potentially remove these
-        points, a robust variant is recommended. This is why "semi" is the
-        default value.
+        Whether or not to apply robust methods to estimate degrees of freedom. "full" is not implemented yet, but involves robust PCA and robust degrees of freedom estimation; "semi" (default) is described in [3] and uses classical PCA but robust DoF estimation; all other values revert to classical PCA and classical DoF estimation. If the dataset is clean (no outliers) it is best practice to use a classical method [3], however, to initially test for and potentially remove these points, a robust variant is recommended. This is why "semi" is the default value.
 
-    sft : scalar(bool), optional(default=False)
-        Whether or not to use the iterative outlier removal scheme described
-        in [2], called "sequential focused trimming."  If not used (default)
-        robust estimates of parameters may be attempted; if the iterative
-        approach is used, these robust estimates are only computed during the
-        outlier removal loop(s) while the final "clean" data uses classical
-        estimates.  This option may throw away data it is originally provided
-        for training; it keeps only "regular" samples (inliers and extremes)
-        to train the model.
+    sft : bool, optional(default=False)
+        Whether or not to use the iterative outlier removal scheme described in [2], called "sequential focused trimming."  If not used (default) robust estimates of parameters may be attempted; if the iterative approach is used, these robust estimates are only computed during the outlier removal loop(s) while the final "clean" data uses classical estimates.  This option may throw away data it is originally provided for training; it keeps only "regular" samples (inliers and extremes) to train the model.
 
     Note
     ----
-    This is designed to regress a single, scalar target for each observation.
-    X data is always (column) centered, but may or may not be scaled
-    by its standard deviation. Y data may or may not be centered and/or
-    scaled.
+    This is designed to regress a single, scalar target for each observation. `X` data is always (column) centered, but may or may not be scaled by its standard deviation. `Y` data may or may not be centered and/or scaled.
 
     This is almost identical to
     >>> pcr = make_pipeline(StandardScaler(), PCA(n_components=1), LinearRegression(fit_intercept=True))
@@ -81,27 +66,33 @@ class PCR(RegressorMixin, BaseEstimator):
 
     [1] Pomerantsev AL., Chemometrics in Excel, John Wiley & Sons, Hoboken NJ, 20142.
 
-    [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling",
-    Anal. Chem. 2020, 92, 2656−2664.
+    [2] Rodionova OY., Pomerantsev AL. "Detection of Outliers in Projection-Based Modeling", Anal. Chem. 2020, 92, 2656−2664.
 
-    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and
-    Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
+    [3] "Concept and role of extreme objects in PCA/SIMCA," Pomerantsev, A. and Rodionova, O., Journal of Chemometrics 28 (2014) 429-438.
 
-    [4] "Acceptance areas for multivariate classification derived by projection
-    methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
+    [4] "Acceptance areas for multivariate classification derived by projection methods," Pomerantsev, A., Journal of Chemometrics 22 (2008) 601-609.
     """
+
+    n_components: ClassVar[int]
+    alpha: ClassVar[float]
+    gamma: ClassVar[float]
+    scale_x: ClassVar[bool]
+    center_y: ClassVar[bool]
+    scale_y: ClassVar[bool]
+    robust: ClassVar[str]
+    sft: ClassVar[bool]
 
     def __init__(
         self,
-        n_components=1,
-        alpha=0.05,
-        gamma=0.01,
-        scale_x=False,
-        center_y=False,
-        scale_y=False,
-        robust="semi",
-        sft=False,
-    ):
+        n_components: int = 1,
+        alpha: float = 0.05,
+        gamma: float = 0.01,
+        scale_x: bool = False,
+        center_y: bool = False,
+        scale_y: bool = False,
+        robust: str = "semi",
+        sft: bool = False,
+    ) -> None:
         """Instantiate the class."""
         self.set_params(
             **{
@@ -116,13 +107,13 @@ class PCR(RegressorMixin, BaseEstimator):
             }
         )
 
-    def set_params(self, **parameters):
+    def set_params(self, **parameters: Any) -> "PCR":
         """Set parameters; for consistency with scikit-learn's estimator API."""
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
 
-    def get_params(self, deep=True):
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
         """Get parameters; for consistency with scikit-learn's estimator API."""
         return {
             "n_components": self.n_components,
@@ -135,18 +126,21 @@ class PCR(RegressorMixin, BaseEstimator):
             "sft": self.sft,
         }
 
-    def fit(self, X, y):
+    def fit(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> "PCR":
         """
         Fit the PCR model.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
@@ -377,15 +371,17 @@ class PCR(RegressorMixin, BaseEstimator):
         return self
 
     @property
-    def sft_history(self):
+    def sft_history(self) -> dict[str, Any]:
         """Return the sequential focused trimming history."""
         check_is_fitted(self, "is_fitted_")
         return copy.deepcopy(self.__sft_history_)
 
-    def _h_q(self, X):
+    def _h_q(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
         """Compute inner and outer (X) distances."""
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -393,13 +389,13 @@ class PCR(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
         # These h, q should give identical results as formulas used with SIMCA
-        x_scores = self.transform(X)
+        x_scores = self.transform(X_)
         h = np.diagonal(
             np.matmul(
                 np.matmul(
@@ -419,7 +415,7 @@ class PCR(RegressorMixin, BaseEstimator):
         q = np.sum(
             (
                 self.__pca_.inverse_transform(x_scores)
-                - self.__x_scaler_.transform(X)
+                - self.__x_scaler_.transform(X_)
             )
             ** 2,
             axis=1,
@@ -427,7 +423,11 @@ class PCR(RegressorMixin, BaseEstimator):
 
         return h, q
 
-    def _f(self, h, q):
+    def _f(
+        self,
+        h: Union[Sequence[float], NDArray[np.floating]],
+        q: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """Full (X) distance, Eq. 3 in [2]."""
         check_is_fitted(self, "is_fitted_")
         return (
@@ -435,12 +435,20 @@ class PCR(RegressorMixin, BaseEstimator):
             + self.__Nq_ * np.array(q).ravel() / self.__q0_
         )
 
-    def _z(self, X, y):
+    def _z(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: NDArray[np.floating],
+    ) -> NDArray[np.floating]:
         """Y residual squared, Eq. 7 in [2]."""
         check_is_fitted(self, "is_fitted_")
-        return ((self.predict(X) - y) ** 2).ravel()
+        return ((self.predict(X) - y) ** 2.0).ravel()
 
-    def _g(self, X, y):
+    def _g(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: NDArray[np.floating],
+    ) -> NDArray[np.floating]:
         """XY total distance, Eq. 9 in [2]."""
         check_is_fitted(self, "is_fitted_")
         h, q = self._h_q(X)
@@ -451,13 +459,15 @@ class PCR(RegressorMixin, BaseEstimator):
         )  # = f + Nz*z/z0
         return g
 
-    def transform(self, X):
+    def transform(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Project X into the PCA subspace.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -466,7 +476,7 @@ class PCR(RegressorMixin, BaseEstimator):
             Projection of X via PCA into a score space.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -474,41 +484,46 @@ class PCR(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        return self.__pca_.transform(self.__x_scaler_.transform(X))
+        return self.__pca_.transform(self.__x_scaler_.transform(X_))
 
-    def fit_transform(self, X, y):
+    def fit_transform(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> NDArray[np.floating]:
         """
         Fit and transform.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
         t-scores : ndarray(float, ndim=2)
-            Projection of X via PCA into a score space.
+            Projection of `X` via PCA into a score space.
         """
         self.fit(X, y)
         return self.transform(X)
 
-    def predict(self, X):
+    def predict(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> NDArray[np.floating]:
         """
         Predict the values for a given set of features.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
@@ -517,7 +532,7 @@ class PCR(RegressorMixin, BaseEstimator):
             Predicted output for each observation.
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -525,29 +540,32 @@ class PCR(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
 
-        T_test = self.transform(X)
+        T_test = self.transform(X_)
 
         return self.__y_scaler_.inverse_transform(
             self.__intercept_ + np.matmul(T_test, self.__coefs_)
         ).ravel()
 
-    def score(self, X, y):
+    def score(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> float:
         r"""
         Compute the coefficient of determination (:math:`R^2`) as the score.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
@@ -555,7 +573,7 @@ class PCR(RegressorMixin, BaseEstimator):
             Coefficient of determination (:math:`R^2`).
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -566,34 +584,35 @@ class PCR(RegressorMixin, BaseEstimator):
             copy=True,
         )
 
-        ss_res = np.sum((self.predict(X) - y) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        ss_res = np.sum((self.predict(X_) - y_) ** 2)
+        ss_tot = np.sum((y_ - np.mean(y_)) ** 2)
         return 1.0 - ss_res / ss_tot
 
-    def check_x_outliers(self, X):
+    def check_x_outliers(
+        self, X: Union[Sequence[Sequence[float]], NDArray[np.floating]]
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check if outliers and extremes exist in the X data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         Returns
         -------
         extremes : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls between acceptance threshold
-            (belongs to class) and the outlier threshold.
+            Boolean mask of `X` if each point falls between acceptance threshold (belongs to class) and the outlier threshold.
 
         outliers : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls beyond the outlier threshold.
+            Boolean mask of `X` if each point falls beyond the outlier threshold.
 
         Note
         ----
-        This uses the X matrix's "full distance" in [2] (cf. Eq. 3).
+        This uses the `X` matrix's "full distance" in [2] (cf. Eq. 3).
         """
         check_is_fitted(self, "is_fitted_")
-        X = check_array(
+        X_ = check_array(
             X,
             accept_sparse=False,
             dtype=np.float64,
@@ -601,35 +620,37 @@ class PCR(RegressorMixin, BaseEstimator):
             force_all_finite=True,
             copy=False,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        f = self._f(*self._h_q(X))
+        f = self._f(*self._h_q(X_))
 
         extremes = (self.__x_crit_ <= f) & (f < self.__x_out_)
         outliers = f >= self.__x_out_
 
         return extremes, outliers
 
-    def check_xy_outliers(self, X, y):
+    def check_xy_outliers(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """
         Check if outliers and extremes exist in the XY data.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         Returns
         -------
         extremes : ndarray(bool, ndim=1)
-            Boolean mask of X if each point falls between acceptance threshold
-            (belongs to class) and the outlier threshold.
+            Boolean mask of X if each point falls between acceptance threshold (belongs to class) and the outlier threshold.
 
         outliers : ndarray(bool, ndim=1)
             Boolean mask of X if each point falls beyond the outlier threshold.
@@ -639,7 +660,7 @@ class PCR(RegressorMixin, BaseEstimator):
         This uses the system's "total distance" in [2] (cf. Eq. 9).
         """
         check_is_fitted(self, "is_fitted_")
-        X, y = check_X_y(
+        X_, y_ = check_X_y(
             X,
             y,
             accept_sparse=False,
@@ -649,39 +670,44 @@ class PCR(RegressorMixin, BaseEstimator):
             y_numeric=True,
             copy=True,
         )
-        if X.shape[1] != self.n_features_in_:
+        if X_.shape[1] != self.n_features_in_:
             raise ValueError(
                 "The number of features in predict is different from the number of features in fit."
             )
-        g = self._g(X, y)
+        g = self._g(X_, y_)
 
         extremes = (self.__xy_crit_ <= g) & (g < self.__xy_out_)
         outliers = g >= self.__xy_out_
 
         return extremes, outliers
 
-    def visualize(self, X, y, figsize=None, log=True):
+    def visualize(
+        self,
+        X: Union[Sequence[Sequence[float]], NDArray[np.floating]],
+        y: Union[Sequence[float], NDArray[np.floating]],
+        figsize: Union[tuple[int, int], None] = None,
+        log: bool = True,
+    ) -> matplotlib.pyplot.Axes:
         r"""
         Plot the :math:`\Chi^{2}` acceptance area with observations on distance plot.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
-        y : array_like(float, ndim=1)
-            Response values. Should only have a single scalar response for each
-            observation.
+        y : array-like(float, ndim=1)
+            Response values. Should only have a single scalar response for each observation.
 
         figsize : tuple(int, int), optional(default=None)
             Figure size.
 
-        log : scalar(bool), optional(default=True)
+        log : bool, optional(default=True)
             Whether or not to transform the axes using a natural logarithm.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes the results are plotted on.
         """
         check_is_fitted(self, "is_fitted_")

@@ -7,8 +7,6 @@ original sources is made available when appropriate.
 
 author: nam
 """
-import itertools
-
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,28 +15,35 @@ import seaborn as sns
 import tqdm
 from bokeh.io import output_notebook, show
 from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Slider
+from bokeh.models import ColumnDataSource
+from bokeh.models import Slider  # type: ignore[attr-defined]
 from bokeh.plotting import figure
 from bokeh.sampledata.periodic_table import elements
 from bokeh.transform import dodge, factor_cmap
 from sklearn.preprocessing import LabelEncoder
 
+from typing import Any, Callable, Union, Sequence
+from numpy.typing import NDArray
+
 
 class InspectData:
     """Class containing tools used to inspect raw data."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the class."""
         pass
 
     @staticmethod
-    def cluster_elbow(X, clusters=range(1, 11)):
+    def cluster_elbow(
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        clusters: Sequence[int] = range(1, 11),
+    ) -> matplotlib.pyplot.Axes:
         """
         Compute cluster elbow metric.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         clusters : list(int), optional(default=range(1, 11))
@@ -46,7 +51,7 @@ class InspectData:
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes the result is plotted on.
 
         Note
@@ -83,22 +88,25 @@ class InspectData:
         return plt.gca()
 
     @staticmethod
-    def cluster_silhouette(X, clustering):
+    def cluster_silhouette(
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        clustering: Any,
+    ) -> matplotlib.pyplot.Axes:
         """
         Plot silhouette curves.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Feature matrix.
 
         clustering : sklearn.cluster
-            Clustering algorithm that implements a .fit_predict method,
+            Clustering algorithm that implements a `.fit_predict` method,
             e.g., sklearn.cluster.KMeans.
 
         Returns
         -------
-        ax : matplotlib.pyplot.axes
+        ax : matplotlib.pyplot.Axes
             Axes the result is plotted on.
 
         Note
@@ -164,8 +172,11 @@ class InspectData:
 
     @staticmethod
     def cluster_periodic_table(
-        X, step=0.1, hover=False, notebook_url="http://localhost:8888"
-    ):
+        X: pd.DataFrame,
+        step: float = 0.1,
+        hover: bool = False,
+        notebook_url: str = "http://localhost:8888",
+    ) -> None:
         """
         Interactively cluster elements in the periodic table.
 
@@ -179,10 +190,10 @@ class InspectData:
         step : scalar(float), optional(default=0.1)
             Increments to use on the slider.
 
-        hover : scalar(bool), optional(default=False)
+        hover : bool, optional(default=False)
             Whether to show elemental properties when the mouse tip hovers over them.
 
-        notebook_url : scalar(str), optional(default="http://localhost:8888")
+        notebook_url : str, optional(default="http://localhost:8888")
             The URL of the notebook being used, including the port.  If you are running
             a Jupyter notebook server locally the default value is adequate; however, if
             you are accessing this remotely you need to specify the complete address so
@@ -393,21 +404,21 @@ class InspectData:
 
     @staticmethod
     def cluster_collinear(
-        X,
-        feature_names=None,
-        figsize=None,
-        t=None,
-        display=True,
-        figname=None,
-        highlight=True,
-        return_linkage=False,
-    ):
+        X: Union[NDArray[np.floating], Sequence[Sequence[float]]],
+        feature_names: Union[Sequence[str], NDArray[np.str_], None] = None,
+        figsize: Union[tuple[int, int], None] = None,
+        t: Union[float, None] = None,
+        display: bool = True,
+        figname: Union[str, None] = None,
+        highlight: bool = True,
+        return_linkage: bool = False,
+    ) -> list:
         """
         Identify collinear features using the Spearman rank order correlation.
 
         Parameters
         ----------
-        X : array_like(float, ndim=2)
+        X : array-like(float, ndim=2)
             Dense feature matrix.
 
         feature_names : list, optional(default=None)
@@ -420,17 +431,17 @@ class InspectData:
         t :  scalar(float), optional(default=None)
             Ward clustering threshold to determine the number of clusters.
 
-        display : scalar(bool), optional(default=None)
+        display : bool, optional(default=None)
             Whether or not to visualize results.
 
         figname : str, optional(default=None)
             If display is True, can also save to this file.
 
-        highlight : scalar(bool), optiona(default=True)
+        highlight : bool, optiona(default=True)
             If True, highlight the features selected on the output by adding
             asterisks and capitalization.
 
-        return_linkage : scalar(bool), optional(default=False)
+        return_linkage : bool, optional(default=False)
             If True, return the linkage matrix.
 
         Returns
@@ -440,12 +451,12 @@ class InspectData:
             the indices of the columns in X.
 
         cluster_id_to_feature_ids : defaultdict(list)
-            Dictinary of {cluster id: features that belong}.
+            Dictionary of {cluster id: features that belong}.
 
-        fig : matplotlib.pyplot.figure or None
+        fig : matplotlib.figure.Figure or None
             Figure the result is plotted on if `display` is True, otherwise None.
 
-        dist_linkage : scipy.cluster.hierarchy.linkage
+        dist_linkage : ndarray(float)
             If `return_linkage` is True then return the linkage used for hierarchical
             clustering.
 
@@ -569,17 +580,18 @@ class InspectData:
 
         return results
 
+    @staticmethod
     def minimize_cluster_label_entropy(
-        cluster_id_to_feature_ids,
-        lookup,
-        X,
-        cutoff_factor=0.9,
-        n_restarts=1,
-        max_iters=1000,
-        seed=0,
-        early_stopping=-1,
-        T=0.25,
-    ):
+        cluster_id_to_feature_ids: dict[int, list],
+        lookup: Callable[[Union[int, str]], Union[int, str]],
+        X: pd.DataFrame,
+        cutoff_factor: float = 0.9,
+        n_restarts: int = 1,
+        max_iters: int = 1000,
+        seed: int = 0,
+        early_stopping: int = -1,
+        T: float = 0.25,
+    ) -> list:
         """
         Identify a set of features that are categorically similar.
 
@@ -688,7 +700,7 @@ class InspectData:
             )
 
         # Look up all features to make sure lookup() works
-        categories = set()
+        categories: set = set()
         for k, features_in in safe_features.items():
             try:
                 categories = categories.union(
@@ -768,13 +780,15 @@ class InspectData:
         return [converted[k] for k in sorted(converted.keys())]
 
     @staticmethod
-    def pairplot(df, figname=None, **kwargs):
+    def pairplot(
+        df: pd.DataFrame, figname: Union[str, None] = None, **kwargs: Any
+    ) -> "sns.PairGrid":
         """
         Plot pairs of features against each other to look for trends.
 
         Parameters
         ----------
-        df : DataFrame
+        df : pandas.DataFrame
             DataFrame with (dense) X predictors.  It may or may not contain a
             column for the prediction target.  For classification tasks, this
             can be visualized using "hue" as shown below.
@@ -787,7 +801,7 @@ class InspectData:
 
         Returns
         -------
-        pair : PairGrid
+        pair : seaborn.PairGrid
             Seaborn PairGrid instance from seaborn.pairplot().
 
         Note
