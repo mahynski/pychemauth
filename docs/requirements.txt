@@ -96,7 +96,7 @@ pybtex-docutils==1.0.3
     # via sphinxcontrib-bibtex
 pydata-sphinx-theme==0.13.3
     # via sphinx-book-theme
-pygments==2.16.1
+pygments==2.20.0
     # via
     #   accessible-pygments
     #   nbconvert
@@ -127,7 +127,7 @@ six==1.16.0
     #   python-dateutil
 snowballstemmer==2.2.0
     # via sphinx
-soupsieve==2.8.4
+soupsieve==2.9
     # via beautifulsoup4
 sphinx==6.2.1
     # via
