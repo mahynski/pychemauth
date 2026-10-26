@@ -22,7 +22,7 @@ beautifulsoup4==4.12.2
     #   pydata-sphinx-theme
 bleach[css]==6.4.0
     # via nbconvert
-certifi==2024.7.4
+certifi==2026.10.19
     # via requests
 charset-normalizer==3.2.0
     # via requests
@@ -70,7 +70,7 @@ mistune==3.3.3
     # via nbconvert
 nbclient==0.8.0
     # via nbconvert
-nbconvert==7.17.1
+nbconvert==7.17.2
     # via nbsphinx
 nbformat==5.9.2
     # via
@@ -78,7 +78,7 @@ nbformat==5.9.2
     #   nbconvert
     #   nbsphinx
 nbsphinx==0.9.2
-    # via -r requirements.in
+    # via -r docs/requirements.in
 packaging==23.1
     # via
     #   nbconvert
@@ -109,7 +109,7 @@ pyyaml==6.0.1
 pyzmq==25.1.1
     # via jupyter-client
 readthedocs-sphinx-search==0.3.2
-    # via -r requirements.in
+    # via -r docs/requirements.in
 referencing==0.30.2
     # via
     #   jsonschema
@@ -131,7 +131,7 @@ soupsieve==2.9
     # via beautifulsoup4
 sphinx==6.2.1
     # via
-    #   -r requirements.in
+    #   -r docs/requirements.in
     #   nbsphinx
     #   pydata-sphinx-theme
     #   sphinx-book-theme
@@ -143,13 +143,13 @@ sphinx==6.2.1
     #   sphinxcontrib-qthelp
     #   sphinxcontrib-serializinghtml
 sphinx-book-theme==1.0.1
-    # via -r requirements.in
+    # via -r docs/requirements.in
 sphinx-gallery==0.14.0
-    # via -r requirements.in
+    # via -r docs/requirements.in
 sphinxcontrib-applehelp==1.0.7
     # via sphinx
 sphinxcontrib-bibtex==2.5.0
-    # via -r requirements.in
+    # via -r docs/requirements.in
 sphinxcontrib-devhelp==1.0.5
     # via sphinx
 sphinxcontrib-htmlhelp==2.0.4
@@ -173,7 +173,9 @@ traitlets==5.9.0
     #   nbformat
     #   nbsphinx
 typing-extensions==4.7.1
-    # via pydata-sphinx-theme
+    # via
+    #   mistune
+    #   pydata-sphinx-theme
 urllib3==2.8.0
     # via requests
 webencodings==0.5.1
